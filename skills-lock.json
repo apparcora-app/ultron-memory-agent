@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "resume-writing": {
+      "source": "clawhub.ai",
+      "sourceUrl": "https://clawhub.ai/mike47512/skills/resume-writing",
+      "sourceType": "well-known",
+      "computedHash": "f83623421fc790f61f6ca70a9ec447ef1e8eb40be5610c61923bca4051846264",
+      "wellKnownDigest": "sha256:f3550e8667006ab588fb2d96c17127b1a8899b35f0d29cffbe53743b892f4786"
+    }
+  }
+}

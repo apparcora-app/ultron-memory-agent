@@ -1,0 +1,83 @@
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python bytecode & packaging
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Databases, Cache & Runtime State
+data/
+qdrant_data/
+output/
+reports/
+scratch/
+swarm_output/
+
+# Temporary / Scratch scripts & Dumps
+temp_py.py
+temp_exec.py
+test_debug.py
+test_raw.py
+test_split.py
+test_tokens.py
+test_cache.txt
+patch*.py
+fix*.py
+
+# Personal & Career Documents
+JOB_HUNTING_DOSSIER.md
+cv_audit_dump*.txt
+cv_style_dump*.txt
+*.docx
+*.xlsx
+word_check.png
+
+# Generated deliverables / Run reports
+deliverable.md
+deliverable.txt
+financial_deliverable.txt
+financial_report.md
+financial_report.txt
+compound_interest_results.csv
+compound_return_*.txt
+compound_return_*.md
+
+# External submodules / repositories
+browser-use/
+
+# Agent IDE & System state
+.agents/
+.agent/
+.user_uploaded/
+*.log
+.DS_Store
+Thumbs.db

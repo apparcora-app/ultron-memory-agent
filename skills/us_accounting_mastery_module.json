@@ -1,0 +1,38 @@
+{
+  "module_name": "Ultron_Official_US_Accounting_Mastery",
+  "version": "2.0",
+  "sources": [
+    "FASB Accounting Standards Codification (ASC)",
+    "AICPA CPA Exam Blueprints (FAR / REG)",
+    "Internal Revenue Code (IRC) & IRS Publication 538 / 334"
+  ],
+  "core_frameworks": {
+    "ASC_606_Revenue_Recognition": {
+      "steps": [
+        "1. Identify the contract(s) with a customer",
+        "2. Identify the performance obligations in the contract",
+        "3. Determine the transaction price",
+        "4. Allocate the transaction price to the performance obligations",
+        "5. Recognize revenue when (or as) the entity satisfies a performance obligation"
+      ]
+    },
+    "ASC_842_Leases": {
+      "classification": "Operating vs. Finance Lease",
+      "criteria": [
+        "Transfer of ownership by end of lease term",
+        "Purchase option reasonably certain to be exercised",
+        "Lease term is major part (>= 75%) of remaining economic life",
+        "Present value of lease payments equals or exceeds substantially all (>= 90%) of fair value",
+        "Underlying asset is of such specialized nature that it has no alternative use to lessor"
+      ],
+      "balance_sheet_impact": "Recognize Right-of-Use (ROU) Asset and Lease Liability."
+    },
+    "Corporate_Tax_Safe_Harbor": {
+      "estimated_tax_rules": "To avoid underpayment penalties for corporations/S-Corps/LLCs, pay the lesser of: 100% of prior year tax liability (if prior year was 12 months and showed positive tax) or 90% of current year tax liability."
+    },
+    "Forensic_Reconciliation_Rules": {
+      "transposition_check": "If trial balance difference is divisible by 9, investigate transposition errors ($54 vs $45).",
+      "sign_error_check": "If difference is divisible by 2, check for wrong debit/credit posting direction."
+    }
+  }
+}

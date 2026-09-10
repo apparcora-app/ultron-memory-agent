@@ -1,0 +1,48 @@
+{
+    "asc_606_revenue_recognition": {
+        "standard": "FASB ASC 606",
+        "title": "Revenue from Contracts with Customers (5-Step Model)",
+        "steps": [
+            "1. Identify the contract with a customer",
+            "2. Identify the performance obligations in the contract",
+            "3. Determine the transaction price",
+            "4. Allocate the transaction price to the performance obligations",
+            "5. Recognize revenue when (or as) the entity satisfies a performance obligation"
+        ],
+        "application": "Automated contract parsing and milestone-based revenue schedule generation."
+    },
+    "irs_pub_15_payroll_tax": {
+        "standard": "IRS Publication 15 (Circular E)",
+        "title": "Employer's Tax Guide - Federal Withholding & FICA",
+        "components": {
+            "social_security": "6.2% employee + 6.2% employer up to wage base limit",
+            "medicare": "1.45% employee + 1.45% employer (+ 0.9% Additional Medicare Tax for wages > $200k)",
+            "futa": "6.0% on first $7,000 of employee wages (subject to state tax credits up to 5.4%)"
+        },
+        "application": "Automated payroll reconciliation, quarterly Form 941 verification, and W-2/W-3 tie-outs."
+    },
+    "double_entry_bookkeeping_rules": {
+        "standard": "GAAP Double-Entry Accounting Equation",
+        "equation": "Assets = Liabilities + Equity",
+        "normal_balances": {
+            "Assets": "Debit (Increase) / Credit (Decrease)",
+            "Liabilities": "Credit (Increase) / Debit (Decrease)",
+            "Equity": "Credit (Increase) / Debit (Decrease)",
+            "Revenue": "Credit (Increase) / Debit (Decrease)",
+            "Expenses": "Debit (Increase) / Credit (Decrease)"
+        },
+        "application": "General ledger automated journal entry validation and trial balance equality enforcement."
+    },
+    "bank_reconciliation_framework": {
+        "standard": "Standard Forensic Accounting & Audit Procedures",
+        "steps": [
+            "1. Compare company Cash General Ledger ending balance with Bank Statement ending balance.",
+            "2. Add deposits in transit to bank balance.",
+            "3. Subtract outstanding checks from bank balance.",
+            "4. Add interest earned and electronic collections to book balance.",
+            "5. Subtract bank service fees, NSF checks, and EFT payments from book balance.",
+            "6. Ensure Adjusted Book Balance == Adjusted Bank Balance ($0.00 variance)."
+        ],
+        "application": "Automated bank feed reconciliation for bookkeeping clients and anomaly detection."
+    }
+}

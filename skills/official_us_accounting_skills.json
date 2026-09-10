@@ -1,0 +1,15 @@
+{
+  "fasb_asc": {
+    "url": "https://www.fasb.org/standards",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  "aicpa_cpa": {
+    "url": "https://www.aicpa-cima.com/resources/landing/cpa-exam",
+    "title": "|  | AICPA & CIMA",
+    "snippet": "This site is brought to you by the Association of International Certified Professional Accountants, the global voice of the accounting and finance profession, founded by the American Institute of CPAs and The Chartered Institute of Management Accountants. CA Do Not Sell or Share My Personal Information"
+  },
+  "irs_tax": {
+    "url": "https://www.irs.gov/businesses/small-businesses-self-employed/accounting-periods-and-methods",
+    "error": "HTTP Error 404: Not Found"
+  }
+}

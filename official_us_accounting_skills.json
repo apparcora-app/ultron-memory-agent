@@ -1,0 +1,21 @@
+{
+    "authoritative_source": "Local System Workspace / Official Repositories",
+    "installed_skills": [
+        "accounting",
+        "accounting_advisory",
+        "accounting_audit",
+        "excel-live-control",
+        "excel_data_analyst",
+        "financial_market_data",
+        "financial_valuation",
+        "hubspot",
+        "hubspot-crm-data-hygiene",
+        "hubspot-customer-prep",
+        "hubspot-pipeline-health",
+        "payments",
+        "seo_audit",
+        "swiftui-performance-audit",
+        "tax_professional"
+    ],
+    "status": "fully_integrated_into_agent_runtime"
+}
