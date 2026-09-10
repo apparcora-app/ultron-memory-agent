@@ -1,6 +1,7 @@
 @echo off
 title ULTRON EMERGENCY KILL-SWITCH
 color 4F
+cd /d "%~dp0.."
 echo ======================================================================
 echo  [EMERGENCY KILL-SWITCH ACTIVATED] TERMINATING ULTRON MAINFRAME
 echo ======================================================================

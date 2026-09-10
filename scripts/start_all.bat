@@ -1,6 +1,6 @@
 @echo off
 title ULTRON PROTOCOL - Sovereign Launcher
-cd /d "E:\Personal Data\Apps\AI Agents\mem0_agent"
+cd /d "%~dp0.."
 echo ============================================================
 echo   [ULTRON PROTOCOL] INITIALIZING ALL SOVEREIGN SERVICES
 echo ============================================================

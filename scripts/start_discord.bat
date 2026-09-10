@@ -1,6 +1,6 @@
 @echo off
 title ULTRON PROTOCOL - Discord Bridge
-cd /d "E:\Personal Data\Apps\AI Agents\mem0_agent"
+cd /d "%~dp0.."
 echo ============================================================
 echo   [ULTRON PROTOCOL] DISCORD MOBILE & DESKTOP BRIDGE
 echo   Connecting to Discord Gateway...

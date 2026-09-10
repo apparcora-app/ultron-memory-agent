@@ -28,7 +28,7 @@ from pathlib import Path
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # Ensure project root is in sys.path
-PROJECT_ROOT = Path(r"E:\Personal Data\Apps\AI Agents\mem0_agent").resolve()
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # UTF-8 stdout bootstrap for Windows console
