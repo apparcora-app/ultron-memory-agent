@@ -63,7 +63,34 @@ def _get_default_llm_caller() -> Callable[[str, str], str]:
     """
     cfg = LLMConfig()
 
-    # Try Gemini first if key is present
+    # Try OpenRouter first if selected provider or key is present
+    if (cfg.provider == "openrouter" or "openrouter" in cfg.gemini_model) and cfg.openrouter_api_key:
+        try:
+            from openai import OpenAI
+            client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=cfg.openrouter_api_key,
+            )
+
+            def _call_openrouter(prompt: str, system_prompt: str) -> str:
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                model_id = cfg.gemini_model.replace("openrouter/", "") if cfg.gemini_model.startswith("openrouter/") else cfg.gemini_model
+                resp = client.chat.completions.create(
+                    model=model_id,
+                    messages=messages,
+                    temperature=0.2,
+                )
+                if resp.choices and resp.choices[0].message.content:
+                    return resp.choices[0].message.content.strip()
+                return ""
+
+            return _call_openrouter
+        except Exception:
+            pass
+
+    # Try Gemini if key is present
     if cfg.gemini_api_key:
         try:
             from google import genai

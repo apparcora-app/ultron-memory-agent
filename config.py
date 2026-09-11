@@ -16,6 +16,7 @@ LLM stack
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from dataclasses import dataclass, field
 from dotenv import load_dotenv
 
@@ -248,7 +249,7 @@ class ToolConfig:
 
     # Workspace root for file operations.
     workspace_root: str = field(
-        default_factory=lambda: _get("TOOL_WORKSPACE_ROOT", "E:\\Personal Data\\")
+        default_factory=lambda: _get("TOOL_WORKSPACE_ROOT", str(Path(__file__).resolve().parent))
     )
 
     # Max output chars returned to Claude per tool call.
@@ -263,7 +264,7 @@ class EmailConfig:
     Configuration for Ultron's Autonomous Email & Inbox Engine.
     Supports multi-profile IMAP search & reading and SMTP sending.
     """
-    enabled: bool = field(default_factory=lambda: _get("EMAIL_ENABLED", "true").lower() in ("true", "1", "yes"))
+    enabled: bool = field(default_factory=lambda: _get("EMAIL_ENABLED", "false").lower() in ("true", "1", "yes"))
     imap_host: str = field(default_factory=lambda: _get("EMAIL_IMAP_HOST", "imap.gmail.com"))
     imap_port: int = field(default_factory=lambda: int(_get("EMAIL_IMAP_PORT", "993")))
     smtp_host: str = field(default_factory=lambda: _get("EMAIL_SMTP_HOST", "smtp.gmail.com"))
@@ -272,13 +273,13 @@ class EmailConfig:
     default_profile: str = field(default_factory=lambda: _get("EMAIL_DEFAULT_PROFILE", "primary"))
 
     # Profiles mapping
-    primary_user: str = field(default_factory=lambda: _get("primary_EMAIL_USER", "hanzla.rehman@primarybooksntax.com"))
+    primary_user: str = field(default_factory=lambda: _get("primary_EMAIL_USER", ""))
     primary_password: str = field(default_factory=lambda: _get("primary_EMAIL_PASSWORD", ""))
 
-    reach_user: str = field(default_factory=lambda: _get("REACH_EMAIL_USER", "reach.hanzla@gmail.com"))
+    reach_user: str = field(default_factory=lambda: _get("REACH_EMAIL_USER", ""))
     reach_password: str = field(default_factory=lambda: _get("REACH_EMAIL_PASSWORD", ""))
 
-    personal_user: str = field(default_factory=lambda: _get("PERSONAL_EMAIL_USER", "hanzlahmalik123@gmail.com"))
+    personal_user: str = field(default_factory=lambda: _get("PERSONAL_EMAIL_USER", ""))
     personal_password: str = field(default_factory=lambda: _get("PERSONAL_EMAIL_PASSWORD", ""))
 
     drafts_dir: str = field(default_factory=lambda: _get("EMAIL_DRAFTS_DIR", "./data/email_drafts"))

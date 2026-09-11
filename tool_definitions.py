@@ -113,7 +113,7 @@ ULTRON_TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "command": {
                     "type": "string",
-                    "description": "The shell command to execute. Example: 'dir E:\\Invoices' or 'python script.py'",
+                    "description": "The shell command to execute. Example: 'dir' or 'python script.py'",
                 },
                 "working_directory": {
                     "type": "string",
@@ -141,7 +141,7 @@ ULTRON_TOOLS: list[dict[str, Any]] = [
                 },
                 "path": {
                     "type": "string",
-                    "description": "The file or directory path. Example: 'E:\\Personal Data\\reports\\summary.txt'",
+                    "description": "The file or directory path. Example: 'reports/summary.txt' or 'data/file.csv'",
                 },
                 "content": {
                     "type": "string",
@@ -1203,7 +1203,7 @@ class ToolExecutor:
             # If not a desktop shortcut, check system commands & standard apps
             app_lower = app_name.lower()
             if app_lower == "explorer":
-                path = args or "E:\\Personal Data"
+                path = args or self._cfg.workspace_root or "."
                 cmd = f'explorer "{path}"'
             elif app_lower == "code":
                 path = args or "."
@@ -1286,7 +1286,7 @@ class ToolExecutor:
 
         # 1. Resolve safe target path
         if not os.path.isabs(filename):
-            default_dir = r"E:\Personal Data" if os.path.exists(r"E:\Personal Data") else self._project_root
+            default_dir = self._cfg.workspace_root if os.path.exists(self._cfg.workspace_root) else self._project_root
             target_path = os.path.join(default_dir, filename)
         else:
             target_path = filename

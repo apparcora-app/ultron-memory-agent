@@ -11,7 +11,7 @@
 4. Only after steps 1-3 are applied: proceed with structural audit, key metric extraction, and executive data synthesis per the Advanced Excel & Financial Table Analyst skill.
 
 ## Reference Implementation
-See: `E:\Personal Data\Apps\AI Agents\mem0_agent\utils\csv_loader.py` -> `safe_read_csv()`
+See: `utils/csv_loader.py` -> `safe_read_csv()`
 
 ## Rationale
 - `on_bad_lines='skip'` handles malformed/inconsistent row lengths.

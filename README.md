@@ -1,18 +1,19 @@
 # 🧠 Ultron Memory Agent
 
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Vector Store](https://img.shields.io/badge/Vector%20Store-ChromaDB%20%7C%20Qdrant-green.svg)](https://www.trychroma.com/)
 [![Memory Engine](https://img.shields.io/badge/Memory-Mem0-purple.svg)](https://github.com/mem0ai/mem0)
 [![Orchestration](https://img.shields.io/badge/Orchestrator-LangGraph%20%7C%20CrewAI-orange.svg)](https://langchain-ai.github.io/langgraph/)
+[![Framework](https://img.shields.io/badge/Framework-FastAPI%20%7C%20Discord.py-red.svg)](https://fastapi.tiangolo.com/)
 
-> **Ultron Memory Agent** is an enterprise-grade autonomous AI agentic architecture built on persistent long-term memory, dynamic multi-model reasoning triage, Tree-of-Thoughts (ToT) exploration, and multi-agent swarm orchestration.
+> **Ultron Memory Agent** is an enterprise-grade autonomous AI cognitive system featuring persistent long-term memory, dynamic multi-model complexity routing, Tree-of-Thoughts (ToT) exploration, multi-agent swarm orchestration, and an emergency sovereign killswitch.
 
 ---
 
 ## 🏛️ System Architecture
 
-`	ext
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                            INTERACTION INTERFACES                           │
 │     ┌──────────────────────┬──────────────────────┬───────────────────┐     │
@@ -25,8 +26,8 @@
 │                    COGNITIVE CONTROL & REASONING CORE                       │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
 │  │                     Intelligent Model Router                          │  │
-│  │   • Tier 1 Fast / Daily (Gemini 3.8 Flash)                            │  │
-│  │   • Tier 2 Deep Reasoning (Claude 3.5 Sonnet / DeepSeek-V3)           │  │
+│  │   • Tier 1 Fast / Daily (Gemini 3.8 Flash / Haiku 4.5)                │  │
+│  │   • Tier 2 Deep Reasoning (Gemini Thinking / Claude 3.5 Sonnet)       │  │
 │  └──────────────────────────────────┬────────────────────────────────────┘  │
 │                                     │                                       │
 │  ┌──────────────────────────────────▼────────────────────────────────────┐  │
@@ -34,7 +35,7 @@
 │  │   • Hierarchical Planner & Goal DAG Manager                           │  │
 │  │   • Tree-of-Thoughts (ToT) Multi-Branch Evaluation Engine             │  │
 │  │   • Graph RAG & Episodic Trajectory Memory (ExpeL)                    │  │
-│  │   • LangGraph State Machine & CrewAI Multi-Agent Swarms               │  │
+│  │   • LangGraph Cyclic State Machine & CrewAI Multi-Agent Swarms        │  │
 │  └──────────────────────────────────┬────────────────────────────────────┘  │
 └─────────────────────────────────────┼───────────────────────────────────────┘
                                       │
@@ -52,70 +53,80 @@
                                       │
 ┌─────────────────────────────────────▼───────────────────────────────────────┐
 │                      GOVERNANCE, SAFETY & AUDIT GATES                       │
-│   • Execution Ledger Gate & Budget Guard (Hard Spend / Token Thresholds)   │
-│   • In-Flight Critic Gate & Confidence Filter                               │
-│   • Sovereign Emergency Killswitch (Cryptographically Signed Fast-Halt)     │
+│   • Execution Ledger Gate & Budget Guard (Hard Spend / Token Caps)          │
+│   • Sliding-Window Rate Limiter & In-Flight Critic Gate                     │
+│   • Sovereign Emergency Killswitch (Fast-Halt Process Lockdown)             │
 └─────────────────────────────────────────────────────────────────────────────┘
-`
+```
 
 ---
 
-## ⚡ Key Highlights
+## ⚡ Technical Deep-Dives
 
-### 1. Dual-Phase Memory Pipeline (Mem0 + Vector Store)
-* **Retrieval Phase**: Queries vector embeddings using Reciprocal Rank Fusion (RRF) across ChromaDB and Qdrant to inject relevant historical context into the prompt before generating an answer.
-* **Mutation Phase**: Runs fact extraction on conversation turns to detect updates and contradictions (e.g. correcting preferences) and dispatches clean ADD/UPDATE/DELETE operations.
+### 1. Dual-Phase Memory Pipeline (Mem0 + Hybrid RRF)
+* **Pre-Inference Retrieval**: Queries dense semantic vector embeddings across the local vector database using Reciprocal Rank Fusion (RRF) to retrieve the top-\(K\) relevant historical memories and user preferences before formulating a prompt.
+* **Post-Inference Mutation**: Automatically runs asynchronous background fact extraction to discover novel statements, detect contradictions, and issue deterministic `ADD`, `UPDATE`, or `DELETE` commands to maintain memory consistency across long horizons.
 
-### 2. Intelligent Cost & Complexity Router
-* Incoming directives are triaged in real time:
-  * **Low-complexity / Quick tool tasks** are routed to high-throughput, cost-effective models (**Gemini 3.8 Flash**).
-  * **High-complexity / Architectural analysis** is escalated to deep-reasoning models (**Claude 3.5 Sonnet / DeepSeek-Chat**).
+### 2. Dynamic Cost & Latency Model Routing
+* Evaluates input complexity before allocating compute:
+  * **Low-Complexity Tasks**: General queries, simple formatting, and high-frequency tool calls route to ultra-fast, low-cost models (**Gemini 3.8 Flash**).
+  * **High-Complexity Tasks**: Architectural synthesis, multi-source reconciliation, and deep recursive reasoning escalate to high-reasoning models (**Claude 3.5 Sonnet / Gemini Thinking**).
 
 ### 3. Tree-of-Thoughts (ToT) & Graph RAG
-* Explores multiple solution trajectories concurrently using forward lookahead, heuristic scoring, and automatic backtracking for complex multi-step reasoning.
-* Retains a persistent knowledge graph linking concepts, goals, and outcomes.
+* **Tree-of-Thoughts Engine**: Spawns multiple reasoning branches, evaluates intermediate states via heuristic evaluation functions, and backtracks upon encountering suboptimal trajectories.
+* **Knowledge Graph RAG**: Maintains a structured entity-relation graph in SQLite alongside semantic vector indexes, allowing the agent to traverse relationships between people, projects, repositories, and historical decisions.
 
-### 4. Enterprise Safety & Sovereign Killswitch
-* **Budget Limits**: Configurable hard daily spending and token caps with early warning triggers.
-* **Emergency Halt**: Instant cryptographic lockdown via scripts/kill.bat or scripts/killswitch.ps1 to stop all agent processes in emergency scenarios.
+### 4. Enterprise Governance & Sovereign Killswitch
+* **Budget Guardrails**: Enforces hard daily spend limits (USD) and token thresholds with proactive budget consumption warnings.
+* **Sliding-Window Rate Limiting**: Protects execution endpoints from burst overload (120 req/min).
+* **Emergency Killswitch**: Provides instant, system-wide process termination and lockfile generation via `scripts/kill.bat` or `scripts/killswitch.ps1`.
 
 ---
 
-## 📂 Repository Structure
+## 📂 Repository Layout
 
-`	ext
+```text
 ultron-memory-agent/
-├── tests/                        # Comprehensive test & verification suite
-│   ├── conftest.py               # Shared fixtures & path configuration
-│   ├── test_model_routing.py     # Triage & LLM complexity test
-│   ├── test_compaction.py        # Token & output compaction test
-│   ├── test_tool_routing.py      # Dynamic tool dispatch verification
-│   ├── verify_crewai_swarm.py    # CrewAI multi-agent integration test
-│   └── verify_langgraph_handoff.py# LangGraph cyclic handoff test
-├── scripts/                      # Operational & deployment launchers
-│   ├── start_all.bat             # Launch Web HUD + Discord Gateway
-│   ├── start_web.bat             # FastAPI Cybernetic Web HUD
-│   ├── start_discord.bat         # Discord Bridge runner
-│   ├── kill.bat                  # Emergency one-touch process killswitch
-│   ├── killswitch.ps1            # PowerShell lockdown script
-│   └── audit_all_systems.py      # Master 5-pillar architecture audit suite
-├── reference_data/               # Authoritative datasets (SEC CIK tickers, etc.)
-│   ├── sec_company_tickers.json
-│   └── official_us_accounting_skills.json
-├── static/                       # Web HUD frontend assets (HTML, CSS, JS)
-├── accounting_modules/           # US GAAP, Bookkeeping, and Payroll engines
+├── tests/                        # Automated unit & integration test suite
+│   ├── __init__.py
+│   ├── conftest.py               # Shared test fixtures & ROOT_DIR bootstrapping
+│   ├── test_async_subprocess.py  # Asynchronous subprocess isolation test
+│   ├── test_compaction.py        # Large tool output compaction verification
+│   ├── test_isolation.py         # File ingestion isolation test
+│   ├── test_model_routing.py     # Dynamic model triage test
+│   ├── test_semantic_search.py   # Semantic vector search & RRF test
+│   ├── test_tool_cache.py        # Tool output caching & bypass test
+│   ├── test_tool_routing.py      # Dynamic tool routing & triage test
+│   ├── verify_crewai_swarm.py    # CrewAI multi-agent swarm test
+│   ├── verify_langchain_pipeline.py # LangChain tool-calling & memory test
+│   ├── verify_langgraph_handoff.py  # LangGraph 2-step state machine test
+│   └── verify_ledger_integration.py # Activity ledger & SSE verification
+├── scripts/                      # Operational launchers & management utilities
+│   ├── audit_all_systems.py      # Master 5-pillar architectural audit suite
+│   ├── eval_benchmark.py         # Golden evaluation performance benchmark
+│   ├── kill.bat                  # Emergency one-touch process killswitch (CMD)
+│   ├── killswitch.ps1            # Emergency lockdown script (PowerShell)
+│   ├── start_all.bat             # Concurrent launcher (Web HUD + Discord)
+│   ├── start_discord.bat         # Standalone Discord bot bridge
+│   └── start_web.bat             # Standalone FastAPI Web HUD
+├── reference_data/               # Authoritative static datasets
+│   ├── official_us_accounting_skills.json
+│   └── sec_company_tickers.json
+├── static/                       # Cybernetic Web HUD frontend assets (HTML/CSS/JS)
+├── accounting_modules/           # US GAAP, bookkeeping, and payroll logic
 ├── tax_modules/                  # Corporate and individual tax modules
-├── config.py                     # Dataclasses, custom prompts & env loader
+├── config.py                     # Centralized settings, dataclasses & env loader
 ├── agent.py                      # MemoryAgent core implementation
-├── main.py                       # Rich CLI interface & slash commands
-├── app.py                        # FastAPI web mainframe
-├── discord_bot.py                # Discord bot client
-├── pyproject.toml                # Modern Python packaging & tool settings
-├── requirements.txt              # Production dependency manifest
-├── .env.example                  # Environment configuration template
-├── .gitignore                    # Hardened security & privacy exclusions
-└── README.md                     # Documentation
-`
+├── main.py                       # Rich terminal interactive CLI
+├── app.py                        # FastAPI Cybernetic Web Mainframe
+├── discord_bot.py                # Discord mobile & desktop bridge
+├── pyproject.toml                # PEP 517/621 build config & tool settings
+├── requirements.txt              # Production dependency specifications
+├── LICENSE                       # MIT License
+├── .env.example                  # Sanitized environment template
+├── .gitignore                    # Zero-trust secret quarantine rules
+└── README.md                     # System documentation
+```
 
 ---
 
@@ -123,98 +134,103 @@ ultron-memory-agent/
 
 ### 1. Prerequisites
 * Python 3.10, 3.11, or 3.12
-* (Optional) Docker Desktop if running Qdrant in a container (ChromaDB runs 100% locally with zero setup).
+* Windows, Linux, or macOS
 
-### 2. Installation
-`ash
+### 2. Environment Setup
+```bash
 # Clone the repository
 git clone https://github.com/apparcora-app/ultron-memory-agent.git
 cd ultron-memory-agent
 
-# Create and activate a virtual environment
+# Create and activate virtual environment
 python -m venv .venv
 
-# Windows
+# Windows (Command Prompt / PowerShell)
 .venv\Scripts\activate
+
 # Linux / macOS
 source .venv/bin/activate
 
-# Install dependencies
+# Install production dependencies
 pip install -r requirements.txt
-`
+```
 
-### 3. Environment Configuration
-Copy the template and configure your API keys:
-`ash
+### 3. Configuration
+Copy the configuration template and populate your API credentials:
+```bash
 cp .env.example .env
-`
-Edit .env to supply your credentials:
-`ini
-LLM_PROVIDER=openrouter
-OPENROUTER_API_KEY=your_key_here
-ANTHROPIC_API_KEY=your_key_here
-GEMINI_API_KEY=your_key_here
+```
+
+Configure your preferred LLM provider in `.env`:
+```ini
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key_here
 VECTOR_STORE_PROVIDER=chroma
-`
+VECTOR_STORE_PATH=./data/chroma
+```
 
 ### 4. Running the Agent
 
 #### Interactive Rich CLI
-`ash
+```bash
 python main.py
-`
+```
 *CLI Slash Commands:*
-* /memories — Inspect all long-term memories in the vector store
-* /forget <id> — Prune a specific memory entry
-* /clear — Reset active session history while retaining long-term memory
-* /quit — Exit
+* `/memories` — Inspect all memories stored in the vector store
+* `/forget <id>` — Prune a specific memory entry
+* `/clear` — Reset active session while retaining long-term memories
+* `/quit` — Exit session
 
 #### Cybernetic Web HUD (FastAPI)
-`ash
-# Run standalone
+```bash
+# Direct launch
 python app.py
-# Or use the launcher
+
+# Or via operational launcher
 scripts/start_web.bat
-`
-Navigate to http://localhost:8000 to interact with the visual dashboard.
+```
+Navigate to `http://localhost:8000` to interact with the visual dashboard and live SSE event stream.
 
-#### Discord Bot Bridge
-`ash
+#### Discord Bot Gateway
+```bash
 python discord_bot.py
-`
+```
 
-#### Launch Everything Concurrently
-`cmd
+#### Launch All Services Concurrently
+```cmd
 scripts\start_all.bat
-`
+```
 
 ---
 
 ## 🧪 Testing & Verification
 
-Run the automated test suite using pytest:
-`ash
-# Run all unit tests
+Run the test suite using pytest or run test scripts directly:
+
+```bash
+# Run tests with pytest
 pytest tests/ -v
 
-# Run specific integration verifications
+# Run targeted subsystem verifications
 python tests/test_model_routing.py
 python tests/test_compaction.py
-`
+python tests/test_tool_routing.py
+python tests/verify_langchain_pipeline.py
+python tests/verify_ledger_integration.py
 
-Run the master 5-pillar architecture audit:
-`ash
+# Run the master 5-pillar architectural audit
 python scripts/audit_all_systems.py
-`
+```
 
 ---
 
-## 🛡️ Security & Privacy
-* **Zero Hardcoded Secrets**: All sensitive keys and tokens are loaded strictly via .env (which is excluded from Git via .gitignore).
-* **Air-Gapped Local Vector Storage**: When using ChromaDB, all embeddings and memories are persisted on the local filesystem (./data/chroma) without transmitting private memory records to third-party vector clouds.
-* **Fail-Safe Killswitch**: Any anomaly can be halted immediately by running scripts/kill.bat.
+## 🛡️ Zero-Trust Security & Secrets Isolation
+* **Zero Hardcoded Secrets**: All credentials, tokens, and keys are strictly quarantined from version control and loaded dynamically at runtime via `.env`.
+* **Local Vector Persistence**: All embeddings and memories default to local disk storage (`./data/chroma`), ensuring confidential memory records are never exfiltrated to external clouds.
+* **Instant Emergency Lockdown**: Any system anomaly or runaway loop can be halted instantly using `scripts/kill.bat` or `scripts/killswitch.ps1`.
 
 ---
 
 ## 📄 License
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the terms of the [MIT License](LICENSE).
+Author: **Hanzla Rehman** ([@apparcora-app](https://github.com/apparcora-app))

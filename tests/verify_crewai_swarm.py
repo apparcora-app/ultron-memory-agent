@@ -35,7 +35,7 @@ if sys.platform == "win32":
 from crewai_pipeline import UltronCrewEngine
 from telemetry import TelemetryEngine
 
-DB_PATH = Path(__file__).resolve().parent / "data" / "telemetry.db"
+DB_PATH = ROOT_DIR / "data" / "telemetry.db"
 
 
 def get_event_counts():

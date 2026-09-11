@@ -20,6 +20,8 @@ Ultron Modules
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 import json
 import re
 import time
@@ -1492,13 +1494,15 @@ class MemoryAgent:
         # Add tool-use instructions to the system prompt
         tool_instruction = ""
         if self._tool_cfg.enabled:
+            user_profile = os.environ.get("USERPROFILE", str(Path.home()))
+            workspace_dir = self._tool_cfg.workspace_root
+            agent_dir = str(Path(__file__).resolve().parent)
             tool_instruction = (
                 "\n\n── Host System Environment & Workspace ─────────────────────────\n"
-                "• Host OS: Windows (PowerShell / CMD)\n"
-                "• Boss Username: reach (USERPROFILE: C:\\Users\\reach)\n"
-                "• Downloads Directory: C:\\Users\\reach\\Downloads\n"
-                "• Workspace Root: E:\\Personal Data\\\n"
-                "• Mem0 Agent Root: E:\\Personal Data\\Apps\\AI Agents\\mem0_agent\\\n\n"
+                f"• Host OS: Windows ({sys.platform})\n"
+                f"• User Profile: {user_profile}\n"
+                f"• Workspace Root: {workspace_dir}\n"
+                f"• Agent Root: {agent_dir}\n\n"
                 "── Autonomous Execution Engine ──────────────────────────────────\n"
                 "You have direct access to system tools to execute actions on Boss's Windows machine:\n"
                 "  • search_emails: Search inbox by sender, subject, query across accounts ('primary', 'reach', 'personal').\n"
