@@ -13,9 +13,17 @@ import os
 import re
 import time
 import uuid
+import asyncio
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
+
+from concurrency import (
+    atomic_write_json,
+    safe_read_json,
+    StateConcurrencyConflictError,
+    default_lock_registry,
+)
 
 SESSIONS_DIR = Path(__file__).parent / "data" / "sessions"
 SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
@@ -24,8 +32,13 @@ SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 class ChatSessionManager:
     """Manages persistent multi-chat sessions on disk."""
 
-    def __init__(self, sessions_dir: Path = SESSIONS_DIR) -> None:
-        self.sessions_dir = sessions_dir
+    def __init__(
+        self,
+        sessions_dir: Union[Path, str] = SESSIONS_DIR,
+        storage_dir: Optional[Union[Path, str]] = None,
+    ) -> None:
+        target = storage_dir if storage_dir is not None else sessions_dir
+        self.sessions_dir = Path(target)
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
 
     def _get_session_path(self, user_id: str, session_id: str) -> Path:
@@ -80,6 +93,7 @@ class ChatSessionManager:
             "user_id": user_id,
             "title": title,
             "module_id": module_id,
+            "version": 1,
             "created_at": now_iso,
             "updated_at": now_iso,
             "messages": [],
@@ -87,30 +101,53 @@ class ChatSessionManager:
         }
 
         path = self._get_session_path(user_id, session_id)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(session_data, f, indent=2, ensure_ascii=False)
+        atomic_write_json(path, session_data)
 
         return session_data
 
     def get_session(self, user_id: str, session_id: str) -> dict[str, Any] | None:
-        """Load a session from disk."""
+        """Load a session from disk safely with integer version field."""
         path = self._get_session_path(user_id, session_id)
         if not path.exists():
             return None
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
+            data = safe_read_json(path)
+            if isinstance(data, dict) and "version" not in data:
+                data["version"] = 1
+            return data
         except Exception as e:
             print(f"  [SESSION] Error loading {path}: {e}")
             return None
 
-    def save_session(self, user_id: str, session_id: str, data: dict[str, Any]) -> bool:
-        """Save session data to disk."""
-        data["updated_at"] = datetime.utcnow().isoformat() + "Z"
+    def save_session(
+        self,
+        user_id: str,
+        session_id: str,
+        data: dict[str, Any],
+        expected_version: Optional[int] = None,
+    ) -> bool:
+        """
+        Save session data to disk using Optimistic Concurrency Control (OCC)
+        and atomic write-replace semantics.
+        Raises StateConcurrencyConflictError if expected_version != actual on disk.
+        """
         path = self._get_session_path(user_id, session_id)
+        if path.exists() and expected_version is not None:
+            existing = self.get_session(user_id, session_id)
+            if existing:
+                actual_v = existing.get("version", 1)
+                if expected_version != actual_v:
+                    raise StateConcurrencyConflictError(
+                        resource_id=f"session:{session_id}",
+                        expected_version=expected_version,
+                        actual_version=actual_v,
+                    )
+
+        current_v = data.get("version", 1)
+        data["version"] = current_v + 1
+        data["updated_at"] = datetime.utcnow().isoformat() + "Z"
         try:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
+            atomic_write_json(path, data)
             return True
         except Exception as e:
             print(f"  [SESSION] Error saving {path}: {e}")
@@ -198,8 +235,40 @@ class ChatSessionManager:
                 session["title"] = auto_title
 
         session["module_id"] = module_id
-        self.save_session(user_id, session_id, session)
+        expected_v = session.get("version", 1)
+        self.save_session(user_id, session_id, session, expected_version=expected_v)
         return session
+
+    async def append_turn_async(
+        self,
+        user_id: str,
+        session_id: str,
+        user_text: str,
+        reply_text: str,
+        model_used: str = "",
+        model_display: str = "",
+        tool_actions: list[dict[str, Any]] | None = None,
+        files: list[dict[str, Any]] | None = None,
+        module_id: str = "ultron_prime",
+        skills_used: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """
+        Thread-safe & async re-entrant append turn with granular session lock and OCC.
+        """
+        async with default_lock_registry.acquire_lock(f"session:{session_id}"):
+            return await asyncio.to_thread(
+                self.append_turn,
+                user_id=user_id,
+                session_id=session_id,
+                user_text=user_text,
+                reply_text=reply_text,
+                model_used=model_used,
+                model_display=model_display,
+                tool_actions=tool_actions,
+                files=files,
+                module_id=module_id,
+                skills_used=skills_used,
+            )
 
     def _generate_title(self, text: str) -> str:
         clean = re.sub(r"[^\w\s-]", "", text).strip()

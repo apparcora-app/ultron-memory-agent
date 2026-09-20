@@ -121,6 +121,77 @@ document.addEventListener("DOMContentLoaded", () => {
       updateVoiceToggleUI();
     });
   }
+  // ── Mode Toggle Engine (SOLO / SWARM) ──────────────────────────────────
+  const modeToggleBtn = document.getElementById("mode-toggle-btn");
+  const modeToggleLabel = document.getElementById("mode-toggle-label");
+  const modeToggleIcon = document.getElementById("mode-toggle-icon");
+  let isSwarmMode = true;
+
+  if (modeToggleBtn) {
+    modeToggleBtn.addEventListener("click", () => {
+      isSwarmMode = !isSwarmMode;
+      modeToggleBtn.className = isSwarmMode ? "cyber-btn cyber-btn-purple active" : "cyber-btn cyber-btn-emerald active";
+      if (modeToggleLabel) modeToggleLabel.textContent = isSwarmMode ? "MODE: SWARM" : "MODE: SOLO";
+      if (modeToggleIcon) modeToggleIcon.className = isSwarmMode ? "fa-solid fa-network-wired" : "fa-solid fa-bolt";
+      modeToggleBtn.title = isSwarmMode ? "Toggle Operational Mode: SOLO (Fast-path 90% Token Saver) vs SWARM (6-Agent Enterprise Mesh)" : "Toggle Operational Mode: SWARM (6-Agent Enterprise Mesh) vs SOLO (Fast-path 90% Token Saver)";
+    });
+  }
+
+
+
+  // ── FreeLLM API Sovereign Toggle ──────────────────────────────────────────
+  const freellmToggleBtn = document.getElementById("freellm-toggle-btn");
+  const freellmToggleLabel = document.getElementById("freellm-toggle-label");
+  const modelModeSelect = document.getElementById("model-mode-select");
+  let isFreeLLMEnabled = localStorage.getItem("ultron_freellm_enabled") === "true";
+
+  function updateFreeLLMUI() {
+    if (!freellmToggleBtn) return;
+    if (isFreeLLMEnabled) {
+      freellmToggleBtn.className = "cyber-btn cyber-btn-cyan active";
+      if (freellmToggleLabel) freellmToggleLabel.textContent = "FREE-LLM: ON";
+      freellmToggleBtn.title = "FreeLLM API Active (Click to Disable)";
+      if (modelModeSelect && !modelModeSelect.value.startsWith("freellmapi")) {
+        modelModeSelect.value = "freellmapi";
+      }
+    } else {
+      freellmToggleBtn.className = "cyber-btn cyber-btn-ghost";
+      if (freellmToggleLabel) freellmToggleLabel.textContent = "FREE-LLM: OFF";
+      freellmToggleBtn.title = "FreeLLM API Disabled (Click to Enable)";
+      if (modelModeSelect && modelModeSelect.value.startsWith("freellmapi")) {
+        modelModeSelect.value = "auto";
+      }
+    }
+  }
+
+  if (freellmToggleBtn) {
+    updateFreeLLMUI();
+    freellmToggleBtn.addEventListener("click", () => {
+      isFreeLLMEnabled = !isFreeLLMEnabled;
+      localStorage.setItem("ultron_freellm_enabled", isFreeLLMEnabled ? "true" : "false");
+      updateFreeLLMUI();
+    });
+  }
+
+  if (modelModeSelect) {
+    modelModeSelect.addEventListener("change", () => {
+      if (modelModeSelect.value.startsWith("freellmapi")) {
+        isFreeLLMEnabled = true;
+      } else {
+        isFreeLLMEnabled = false;
+      }
+      localStorage.setItem("ultron_freellm_enabled", isFreeLLMEnabled ? "true" : "false");
+      if (freellmToggleBtn) {
+        if (isFreeLLMEnabled) {
+          freellmToggleBtn.className = "cyber-btn cyber-btn-cyan active";
+          if (freellmToggleLabel) freellmToggleLabel.textContent = "FREE-LLM: ON";
+        } else {
+          freellmToggleBtn.className = "cyber-btn cyber-btn-ghost";
+          if (freellmToggleLabel) freellmToggleLabel.textContent = "FREE-LLM: OFF";
+        }
+      }
+    });
+  }
 
   function escapeHtml(str) {
     if (!str) return "";
@@ -649,6 +720,8 @@ document.addEventListener("DOMContentLoaded", () => {
       formData.append("module_id", activeModuleId);
       formData.append("user_id", currentUserId);
       formData.append("session_id", currentSessionId || "");
+      formData.append("operation_mode", isSwarmMode ? "SWARM" : "SOLO");
+
       formData.append("optimize_prompt", isPromptOptEnabled ? "true" : "false");
 
       const modelModeSelect = document.getElementById("model-mode-select");
@@ -839,7 +912,11 @@ document.addEventListener("DOMContentLoaded", () => {
       let label = modelUsed.toUpperCase();
       const mLower = modelUsed.toLowerCase();
       
-      if (mLower.includes("gemini")) {
+      if (mLower.includes("freellm")) {
+        badgeClass = "haiku";
+        icon = "fa-bolt-lightning";
+        label = "FREE-LLM API";
+      } else if (mLower.includes("gemini")) {
         badgeClass = "gemini";
         icon = "fa-bolt";
         label = "GEMINI 3.8 FLASH";

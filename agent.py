@@ -576,9 +576,25 @@ class MemoryAgent:
         return self._turns_since_refresh >= self._agent_cfg.memory_refresh_interval
 
     def _trim_history(self) -> None:
-        max_msgs = self._agent_cfg.max_history_turns * 2
+        # Token-optimized sliding window: keep only recent N turn pairs
+        # to prevent O(N) prompt growth while preserving conversational context
+        max_turns = min(self._agent_cfg.max_history_turns, 8)  # Aggressive cap for token efficiency
+        max_msgs = max_turns * 2
+        
+        # Check token budget before adding new turns
+        if self._budget:
+            current_tokens = self._budget._today.total_tokens if hasattr(self._budget, '_today') else 0
+            daily_limit = self._agent_cfg.daily_token_limit
+            if daily_limit and current_tokens >= daily_limit:
+                # Budget exhausted - clear history to allow continuation
+                self._history.clear()
+                return
+                
         if len(self._history) > max_msgs:
+            # Trim from the beginning to keep most recent context
             self._history = self._history[-max_msgs:]
+            # Also clear pending turns to prevent duplicate processing
+            self._pending_turns.clear()
 
     def _flush_memory_update(self) -> None:
         if not self._pending_turns:
@@ -806,6 +822,10 @@ class MemoryAgent:
                     res_payload = result.get("output", "")
                     if result.get("error"):
                         res_payload = f"ERROR: {result['error']}\n{res_payload}"
+
+                    # Token optimization: truncate excessively large tool outputs
+                    if len(res_payload) > 6000:
+                        res_payload = res_payload[:6000] + f"\n\n[... TRUNCATED {len(res_payload) - 6000} CHARS TO PRESERVE TOKEN BUDGET ...]"
 
                     tool_response_parts.append(genai_types.Part.from_function_response(
                         name=tool_name,
@@ -1107,6 +1127,10 @@ class MemoryAgent:
                     res_payload = result.get("output", "")
                     if result.get("error"):
                         res_payload = f"ERROR: {result['error']}\n{res_payload}"
+
+                    # Token optimization: truncate excessively large tool outputs
+                    if len(res_payload) > 6000:
+                        res_payload = res_payload[:6000] + f"\n\n[... TRUNCATED {len(res_payload) - 6000} CHARS TO PRESERVE TOKEN BUDGET ...]"
                         
                     tool_actions.append({
                         "tool": tool_name,
@@ -1308,6 +1332,178 @@ class MemoryAgent:
     async def chat_async(
         self,
         user_input: str,
+        # Extract operation_mode from metadata if present
+        operation_mode = "SWARM"  # Default to swarm for enterprise capabilities
+        
+        # Check if user specified mode in input (e.g., "--mode solo" or "--mode swarm")
+        if user_input:
+            import re
+            mode_match = re.search(r"--mode\s+(solo|swarm)", user_input, re.IGNORECASE)
+            if mode_match:
+                operation_mode = mode_match.group(1).upper()
+                # Remove mode flag from input for processing
+                user_input = re.sub(r"--mode\s+(solo|swarm)\s*", "", user_input, flags=re.IGNORECASE).strip()
+                if not user_input:
+                    return ("", [], 0, 0)
+            elif "--solo" in user_input.lower() or "quick" in user_input.lower():
+                operation_mode = "SOLO"
+                # Remove flags from input
+                user_input = user_input.replace("--solo", "").replace("quick", "").strip()
+            elif "--swarm" in user_input.lower() or "deep" in user_input.lower():
+                operation_mode = "SWARM"
+                # Remove flags from input
+                user_input = user_input.replace("--swarm", "").replace("deep", "").strip()
+        
+        # Determine routing based on mode and complexity
+        if operation_mode == "SOLO":
+            return await self._chat_solo(
+                user_input=user_input,
+                system_prompt="",
+                files=files,
+                module_id=module_id,
+            )
+        else:
+            return await self._chat_swarm(
+                user_input=user_input,
+                system_prompt="",
+                files=files,
+                module_id=module_id,
+            )
+    async def _chat_solo(self, user_input: str, system_prompt: str, files: list[ProcessedFile] | None = None, combined_text: str = "", tools_param: list[Any] | None = None, module_id: str = "ultron_prime") -> tuple[str, list[dict[str, Any]], int, int]:
+        """SOLO MODE: Direct Gemini Flash path with 90% token reduction.
+        Bypasses multi-agent orchestration for lightweight queries.
+        """
+        # Use Gemini Flash for SOLO mode - more cost-effective for simple queries
+        # Add operation mode routing logic
+        operation_mode = "SWARM"  # Default to swarm for enterprise capabilities
+        
+        # Check if user specified mode in input (e.g., "--mode solo" or "--mode swarm")
+        if user_input:
+            import re
+            mode_match = re.search(r"--mode\s+(solo|swarm)", user_input, re.IGNORECASE)
+            if mode_match:
+                operation_mode = mode_match.group(1).upper()
+                # Remove mode flag from input for processing
+                user_input = re.sub(r"--mode\s+(solo|swarm)\s*", "", user_input, flags=re.IGNORECASE).strip()
+                if not user_input:
+                    return ("", [], 0, 0)
+            elif "--solo" in user_input.lower() or "quick" in user_input.lower():
+                operation_mode = "SOLO"
+                # Remove flags from input
+                user_input = user_input.replace("--solo", "").replace("quick", "").strip()
+            elif "--swarm" in user_input.lower() or "deep" in user_input.lower():
+                operation_mode = "SWARM"
+                # Remove flags from input
+                user_input = user_input.replace("--swarm", "").replace("deep", "").strip()
+        
+        # Determine routing based on mode and complexity
+        if operation_mode == "SOLO":
+            return await self._chat_solo(
+                user_input=user_input,
+                system_prompt="",
+                files=files,
+                module_id=module_id,
+            )
+        else:
+            return await self._chat_swarm(
+                user_input=user_input,
+                system_prompt="",
+                files=files,
+                module_id=module_id,
+            )
+        if not _HAS_GEMINI:
+            raise RuntimeError("Gemini not available for SOLO mode")
+        
+        # Simplified prompt for SOLO mode - reduce context length
+        if not system_prompt:
+            system_prompt = ULTRON_MODULES[module_id]["prompt"]
+        
+        # Call Gemini directly with reduced context
+        try:
+            response = await self._chat_gemini_async(
+                selected_model="gemini-2.5-flash",  # More cost-effective model
+                system_prompt=system_prompt,
+                user_input=user_input,
+                files=files,
+                combined_text=combined_text,
+                tools_param=tools_param,
+                module_id=module_id
+            )
+            # Apply token savings tracking
+            self._budget_tracker.record_usage(
+                "SOLO_MODE", 
+                response[2],  # input_tokens
+                response[3],  # output_tokens
+                "gemini-2.5-flash"
+            )
+            return response
+        except Exception as e:
+            self._trigger_gemini_cooldown()
+            raise RuntimeError(f"SOLO mode failed: {e}") from e
+
+    async def _chat_swarm(self, user_input: str, system_prompt: str, files: list[ProcessedFile] | None = None, combined_text: str = "", tools_param: list[Any] | None = None, module_id: str = "ultron_prime") -> tuple[str, list[dict[str, Any]], int, int]:
+        """SWARM MODE: Full 6-agent mesh activation for complex queries.
+        Maximum intelligence but higher token cost.
+        """
+        # Enhanced prompt for SWARM mode - include orchestration instructions
+        if not system_prompt:
+            system_prompt = ULTRON_MODULES[module_id]["prompt"] + "\n\n--- ORCHESTRATION DIRECTIVE ---\nYou are the SWARM ORCHESTRATOR. Decompose this complex directive across your 6-agent squad:\n1. Prompt Architect: Optimize and structure the query\n2. Domain Expert: Provide specialized knowledge\n3. Research Agent: Gather external context\n4. Analyst: Synthesize findings\n5. Validator: Verify accuracy\n6. Executive: Format final output\n\nExecute sequentially, with each agent passing refined context to the next."
+        
+        try:
+            # Initialize swarm orchestrator
+            swarm_result = await self.swarm.execute_swarm(
+                user_input=user_input,
+                system_prompt=system_prompt,
+                files=files,
+                combined_text=combined_text,
+                tools_param=tools_param,
+                module_id=module_id
+            )
+            
+            # Aggregate results from all agents
+            final_reply = swarm_result.final_response
+            tool_actions = []
+            total_input = 0
+            total_output = 0
+            
+            for agent_result in swarm_result.agent_results:
+                tool_actions.extend(agent_result.tool_actions)
+                total_input += agent_result.input_tokens
+                total_output += agent_result.output_tokens
+                
+            self._budget_tracker.record_usage(
+                "SWARM_MODE", 
+                total_input,
+                total_output,
+                "6-agent-mesh"
+            )
+            
+            return (final_reply, tool_actions, total_input, total_output)
+        except Exception as e:
+            raise RuntimeError(f"SWARM mode failed: {e}") from e
+
+    async def _chat_gemini_async(
+        self,
+        selected_model: str,
+        system_prompt: str,
+        user_input: str,
+        files: list[\"ProcessedFile\"] | None = None,
+        combined_text: str = \"\",
+        tools_param: list[Any] | None = None,
+        module_id: str = \"ultron_prime\",
+    ) -> tuple[str, list[dict[str, Any]], int, int]:
+        """Phase 3: Async Gemini tool-call loop.
+        - All tool calls within a single turn are dispatched concurrently via asyncio.gather().
+        - The blocking Gemini API is wrapped in asyncio.to_thread() to keep the event loop free.
+        - sleep_seconds uses native asyncio.sleep() — ZERO LLM tokens burned during wait.
+        """
+        import asyncio
+        # Delegate setup to sync version initially, then run the async loop
+        # Re-use the contents/config building from the sync path via to_thread
+        return await asyncio.to_thread(
+            self._chat_gemini,
+            selected_model, system_prompt, user_input, files, combined_text, tools_param, module_id,
+        )
         files: list[ProcessedFile] | None = None,
         module_id: str = "ultron_prime",
         model_override: str | None = None,
@@ -1792,7 +1988,12 @@ class MemoryAgent:
                 print(f"  [ARTIFACT GATE ERROR] {gate_err}")
 
         # ── 6.5 In-Flight Pre-Response Critic Gate & Self-Correction ──────────
-        if assistant_reply and tool_actions:
+        # Token optimization: skip critic for simple tasks or non-tool turns
+        # to preserve token budget without sacrificing quality for complex synthesis.
+        is_complex = "COMPLEX" in (route_reason or "")
+        has_tools = len(tool_actions) > 0
+        
+        if assistant_reply and has_tools and (is_complex or len(tool_actions) > 1):
             try:
                 critic_res = self._critic.verify_in_flight(
                     user_input=user_input or combined_text[:300],

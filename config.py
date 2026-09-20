@@ -100,6 +100,10 @@ class LLMConfig:
     anthropic_api_key: str = field(default_factory=lambda: _get("ANTHROPIC_API_KEY", ""))
     gemini_api_key: str = field(default_factory=lambda: _get("GEMINI_API_KEY", ""))
     openrouter_api_key: str = field(default_factory=lambda: _get("OPENROUTER_API_KEY", ""))
+    freellmapi_base_url: str = field(default_factory=lambda: _get("FREELLMAPI_BASE_URL", "http://localhost:3001/v1"))
+    freellmapi_api_key: str = field(default_factory=lambda: _get("FREELLMAPI_API_KEY", "sk-freellmapi-local"))
+    freellmapi_enabled: bool = field(default_factory=lambda: _get("FREELLMAPI_ENABLED", "false").lower() in ("true", "1", "yes"))
+    freellmapi_model: str = field(default_factory=lambda: _get("FREELLMAPI_MODEL", "auto"))
 
     # ── Gemini Matrix ────────────────────────────────────────────────────────
     gemini_model: str = field(

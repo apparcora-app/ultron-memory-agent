@@ -33,6 +33,16 @@ from chat_session_manager import ChatSessionManager
 from ledger_service import ledger_service
 from killswitch import is_system_locked, trigger_emergency_lockdown, release_lockdown, get_lockdown_details
 
+from contracts import (
+    ChatRequestPayload,
+    SessionCreatePayload,
+    SessionRenamePayload,
+    KillswitchTriggerPayload,
+    KillswitchUnlockPayload,
+    ContractValidationError,
+    validate_contract,
+)
+
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 
@@ -100,6 +110,19 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(ContractValidationError)
+async def contract_validation_exception_handler(request: Request, exc: ContractValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "error_type": "ContractValidationError",
+            "detail": exc.to_dict(),
+            "message": str(exc),
+        },
+    )
+
+
 # â”€â”€ API Endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @app.get("/api/status")
@@ -125,12 +148,14 @@ async def killswitch_status():
 
 @app.post("/api/killswitch/trigger")
 async def killswitch_trigger(source: str = Form("HUD_EMERGENCY_BUTTON"), reason: str = Form("Operator emergency override")):
+    validate_contract(KillswitchTriggerPayload, {"source": source, "reason": reason})
     lock_data = trigger_emergency_lockdown(source=source, reason=reason)
     return {"success": True, "lockdown": lock_data}
 
 
 @app.post("/api/killswitch/unlock")
 async def killswitch_unlock(secret_key: str = Form(...)):
+    validate_contract(KillswitchUnlockPayload, {"secret_key": secret_key})
     ok = release_lockdown(secret_key=secret_key)
     if not ok:
         raise HTTPException(status_code=403, detail="Invalid unlock passphrase.")
@@ -161,6 +186,7 @@ async def create_new_session(
     module_id: str = Form("ultron_prime"),
     title: str = Form("New Directives"),
 ):
+    validate_contract(SessionCreatePayload, {"user_id": user_id, "module_id": module_id, "title": title})
     try:
         agent = get_or_create_agent(user_id)
         agent.clear_session_history()
@@ -198,6 +224,7 @@ async def rename_session(
     title: str = Form(...),
     user_id: str = Form("boss"),
 ):
+    validate_contract(SessionRenamePayload, {"title": title, "user_id": user_id})
     try:
         updated = session_mgr.rename_session(user_id=user_id, session_id=session_id, new_title=title)
         if not updated:
@@ -223,6 +250,8 @@ async def chat_endpoint(
     user_id: str = Form("boss"),
     session_id: str = Form(""),
     message: str = Form(""),
+    operation_mode: str = Form("SWARM"),
+
     module_id: str = Form("ultron_prime"),
     model_override: str = Form("auto"),
     model_mode: str = Form("auto"),
@@ -236,6 +265,17 @@ async def chat_endpoint(
         module_id = module_id if isinstance(module_id, str) else "ultron_prime"
         effective_model = model_override if model_override != "auto" else model_mode
         should_opt = str(optimize_prompt).lower() in ("true", "1", "yes")
+
+        # Validate Ingress Request Contract (Fail-Fast)
+        validate_contract(ChatRequestPayload, {
+            "user_id": user_id,
+            "session_id": session_id,
+            "message": message,
+            "module_id": module_id,
+            "model_override": model_override,
+            "model_mode": model_mode,
+            "optimize_prompt": should_opt,
+        })
 
         agent = get_or_create_agent(user_id)
         
@@ -290,9 +330,14 @@ async def chat_endpoint(
             {"name": pf.filename, "type": pf.file_type, "size": pf.file_size}
             for pf in processed_files
         ]
+        # Pass operation mode if needed or set on agent
+        # The agent.chat_async already handles the mode extraction from user_input
+        # If passed explicitly, we could inject it here.
+        
 
-        # Append turn to persistent session storage on disk
-        updated_session = session_mgr.append_turn(
+
+        # Append turn to persistent session storage on disk (Thread-safe & Session-Locked)
+        updated_session = await session_mgr.append_turn_async(
             user_id=user_id,
             session_id=session_id,
             user_text=message,

@@ -14,6 +14,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
+from guardrails.ast_sandbox import ASTSecurityViolation, ASTValidator
+from guardrails.limits import ExecutionLimitExceeded, MAX_RECURSION_LIMIT
+
+
 @dataclass
 class SandboxConfig:
     """Safety boundaries for Ultron's autonomous tool execution."""
@@ -67,8 +71,8 @@ class SandboxConfig:
         r"del\s+/[sfq]",           # aggressive delete flags
     ])
 
-    # Max tool iterations per single user directive.
-    max_tool_iterations: int = 10
+    # Max tool iterations per single user directive (hard boundary cap = 5).
+    max_tool_iterations: int = MAX_RECURSION_LIMIT
 
     # Command execution timeout (seconds).
     command_timeout: int = 30
@@ -89,6 +93,7 @@ class Sandbox:
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
         self.config = config or SandboxConfig()
+        self.ast_validator = ASTValidator()
         self._blocked_re = [
             re.compile(pat, re.IGNORECASE)
             for pat in self.config.blocked_patterns
@@ -188,13 +193,16 @@ class Sandbox:
 
     def validate_python_code(self, code: str) -> None:
         """
-        Basic validation of Python code to block obviously dangerous operations.
-
-        Raises SandboxViolation if dangerous patterns are detected.
+        Validates Python code statically using ASTValidator and dangerous pattern checks.
+        Raises ASTSecurityViolation or SandboxViolation if unsafe constructs are detected.
         """
         if not code or not code.strip():
             raise SandboxViolation("Empty Python code.")
 
+        # 1. AST-level static security inspection (blocks eval, exec, __import__, unwhitelisted imports, unauthorized writes)
+        self.ast_validator.validate_python_code(code)
+
+        # 2. Heuristic checks for dangerous shell/system execution patterns
         dangerous_patterns = [
             (r"\bos\.system\s*\(\s*['\"].*?(format|shutdown|del\s+/|rm\s+-rf)", "OS system call with dangerous command"),
             (r"\bshutil\.rmtree\s*\(\s*['\"][A-Z]:\\\\?['\"]", "Recursive deletion of drive root"),
@@ -235,9 +243,14 @@ class Sandbox:
         return output
 
     def check_iteration_limit(self, current: int) -> None:
-        """Raise if the agentic loop has exceeded max iterations."""
+        """Raise ExecutionLimitExceeded if the agentic loop has exceeded max iterations."""
         if current >= self.config.max_tool_iterations:
-            raise SandboxViolation(
-                f"🚫 ITERATION LIMIT: Reached maximum of {self.config.max_tool_iterations} tool calls "
-                f"for this directive. Breaking loop to prevent runaway execution."
+            raise ExecutionLimitExceeded(
+                message=(
+                    f"🚫 ITERATION LIMIT: Reached maximum of {self.config.max_tool_iterations} tool calls "
+                    f"for this directive. Breaking loop to prevent runaway execution."
+                ),
+                current_step=current,
+                limit=self.config.max_tool_iterations,
+                reason="recursion_limit_exceeded",
             )

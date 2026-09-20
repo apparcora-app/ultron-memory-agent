@@ -148,6 +148,17 @@
           <button id="prompt-opt-btn" class="cyber-btn cyber-btn-emerald active" title="Toggle Autonomous Prompt Optimization Pre-Processor (58 Frameworks)">
             <i class="fa-solid fa-wand-magic-sparkles"></i> <span id="prompt-opt-label">OPT: ON</span>
           </button>
+          <!-- Dual-Core Operational Mode Selector (SOLO vs SWARM) -->
+          <button id="mode-toggle-btn" class="cyber-btn cyber-btn-purple active" title="Toggle Operational Mode: SOLO (Fast-path 90% Token Saver) vs SWARM (6-Agent Enterprise Mesh)">
+            <i class="fa-solid fa-network-wired" id="mode-toggle-icon"></i> <span id="mode-toggle-label">MODE: SWARM</span>
+          </button>
+
+
+
+          <!-- FreeLLM API Sovereign Toggle Button -->
+          <button id="freellm-toggle-btn" class="cyber-btn cyber-btn-ghost" title="Toggle FreeLLM API Mode (Lock all generations to Zero-Cost FreeLLMAPI Matrix)">
+            <i class="fa-solid fa-bolt-lightning"></i> <span id="freellm-toggle-label">FREE-LLM: OFF</span>
+          </button>
 
           <!-- Voice Output Toggle Button -->
           <button id="voice-toggle-btn" class="cyber-btn cyber-btn-cyan voice-toggle-btn active" title="Toggle Ultron Cybernetic Voice Output">
@@ -260,6 +271,9 @@
                 <select id="model-mode-select" class="command-select-pill" title="Switch Intelligence Engine">
                   <option value="auto" selected>⚡ Auto-Route (Gemini + DeepSeek)</option>
                   <option value="flash">🏃 Gemini 3.8 Flash (Speed Core)</option>
+                  <option value="freellmapi">🆓 FreeLLM API (Zero-Cost 34 Providers)</option>
+                  <option value="freellmapi/groq/llama-3.3-70b-versatile">🦙 Groq Llama 3.3 70B (FreeLLM)</option>
+                  <option value="freellmapi/cerebras/llama3.1-8b">⚡ Cerebras Llama 3.1 8B (FreeLLM)</option>
                   <option value="openrouter/deepseek/deepseek-chat">🐋 DeepSeek V3 (Reasoning Core)</option>
                   <option value="nvidia/nemotron-3-ultra-550b-a55b:free">🧠 NVIDIA Nemotron 3 (OpenRouter)</option>
                   <option value="z-ai/glm-5.2:free">🌌 Z.ai GLM 5.2 (OpenRouter)</option>

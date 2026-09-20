@@ -7,14 +7,14 @@ to detect hallucinated numbers, unfulfilled tool calls, and severe factual error
 
 from __future__ import annotations
 
-from reflection_engine import (
-    InFlightCritic,
+from guardrails.critic import (
+    InFlightCriticGate,
     CriticResult,
 )
 
-# First-class alias for Critic Gate
-CriticGate = InFlightCritic
-InFlightCriticGate = InFlightCritic
+# First-class backward compatible aliases
+InFlightCritic = InFlightCriticGate
+CriticGate = InFlightCriticGate
 
 __all__ = [
     "InFlightCritic",

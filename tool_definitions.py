@@ -24,6 +24,16 @@ from pathlib import Path
 from typing import Any
 
 from sandbox import Sandbox, SandboxConfig, SandboxViolation
+from guardrails.ast_sandbox import ASTSecurityViolation
+from guardrails.limits import ExecutionLimitExceeded, dispatch_with_timeout, DEFAULT_TOOL_TIMEOUT_SEC
+from concurrency import atomic_write, atomic_write_json
+from governance import default_process_tracker
+from contracts import (
+    ContractValidationError,
+    TOOL_INPUT_CONTRACTS,
+    TOOL_OUTPUT_CONTRACTS,
+    validate_contract,
+)
 
 
 # ── Anthropic Tool Schemas ────────────────────────────────────────────────────
@@ -556,6 +566,11 @@ class ToolExecutor:
                 "duration_ms": int,    # execution time in milliseconds
             }
         """
+        # ── Ingress Contract Validation (Fail-Fast) ───────────────────────────
+        if tool_name in TOOL_INPUT_CONTRACTS:
+            validated = validate_contract(TOOL_INPUT_CONTRACTS[tool_name], tool_input)
+            tool_input = validated.model_dump()
+
         import collections
         import json
         import hashlib
@@ -615,9 +630,13 @@ class ToolExecutor:
                     "result": result.copy()
                 }
 
+            if tool_name in TOOL_OUTPUT_CONTRACTS:
+                validated_out = validate_contract(TOOL_OUTPUT_CONTRACTS[tool_name], result)
+                result = validated_out.model_dump()
+
             return result
 
-        except SandboxViolation as e:
+        except (SandboxViolation, ASTSecurityViolation) as e:
             duration_ms = int((time.time() - start) * 1000)
             return {
                 "success": False,
@@ -634,19 +653,30 @@ class ToolExecutor:
                 "duration_ms": duration_ms,
             }
 
-    async def execute_async(self, tool_name: str, tool_input: dict[str, Any]) -> dict[str, Any]:
+    async def execute_async(
+        self,
+        tool_name: str,
+        tool_input: dict[str, Any],
+        timeout_sec: float = DEFAULT_TOOL_TIMEOUT_SEC,
+    ) -> dict[str, Any]:
         """
-        Phase 3: Non-blocking async tool execution.
+        Non-blocking async tool execution wrapped in timeout middleware (asyncio.wait_for).
         """
         import asyncio
-        if tool_name == "sleep_seconds":
-            return await self._handle_sleep_seconds_async(tool_input)
-        if tool_name == "execute_command":
-            return await self._handle_execute_command_async(tool_input)
-        if tool_name == "run_python":
-            return await self._handle_run_python_async(tool_input)
-        # Run all other blocking tools in a thread to keep the event loop free
-        return await asyncio.to_thread(self.execute, tool_name, tool_input)
+        if tool_name in TOOL_INPUT_CONTRACTS:
+            validated = validate_contract(TOOL_INPUT_CONTRACTS[tool_name], tool_input)
+            tool_input = validated.model_dump()
+
+        async def _run_tool():
+            if tool_name == "sleep_seconds":
+                return await self._handle_sleep_seconds_async(tool_input)
+            return await asyncio.to_thread(self.execute, tool_name, tool_input)
+
+        res = await dispatch_with_timeout(_run_tool(), timeout_sec=timeout_sec, tool_name=tool_name)
+
+        if tool_name in TOOL_OUTPUT_CONTRACTS:
+            res = validate_contract(TOOL_OUTPUT_CONTRACTS[tool_name], res).model_dump()
+        return res
 
     async def _handle_sleep_seconds_async(self, args: dict[str, Any]) -> dict[str, Any]:
         """True async sleep — zero LLM token burns, zero CPU spin during the wait."""
@@ -720,10 +750,7 @@ class ToolExecutor:
                     mem_data = json.load(f)
                     
             mem_data[filename] = findings
-            
-            with open(file_mem_path, "w", encoding="utf-8") as f:
-                json.dump(mem_data, f, indent=4)
-                
+            atomic_write_json(file_mem_path, mem_data, indent=4)
             return {"success": True, "output": f"Successfully stored findings for {filename} into local file memory.", "error": None}
         except Exception as e:
             return {"success": False, "output": "", "error": str(e)}
@@ -788,14 +815,12 @@ class ToolExecutor:
                 errors="replace",
                 cwd=working_dir,
             )
+            default_process_tracker.register(p)
             
             try:
                 stdout_data, stderr_data = p.communicate(timeout=self.sandbox.config.command_timeout)
             except subprocess.TimeoutExpired:
-                if is_win:
-                    subprocess.run(f"taskkill /F /T /PID {p.pid}", shell=True, capture_output=True)
-                else:
-                    p.kill()
+                default_process_tracker.terminate(p.pid, timeout_sec=2.0)
                 # Flush pipes to prevent hanging
                 stdout_data, stderr_data = p.communicate()
                 return {
@@ -803,6 +828,8 @@ class ToolExecutor:
                     "output": (stdout_data or "") + (stderr_data or ""),
                     "error": f"Command timed out after {self.sandbox.config.command_timeout}s. Process tree forcefully terminated.",
                 }
+            finally:
+                default_process_tracker.unregister(p.pid)
 
             output = ""
             if stdout_data:
@@ -872,10 +899,7 @@ class ToolExecutor:
 
     def _file_write(self, path: str, content: str) -> dict[str, Any]:
         try:
-            # Create parent directories if needed
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(content)
+            atomic_write(path, content)
             size = os.path.getsize(path)
             return {
                 "success": True,

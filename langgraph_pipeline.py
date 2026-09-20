@@ -24,6 +24,12 @@ from config import LLMConfig
 from skill_manager import SkillManager
 from swarm_orchestrator import SWARM_SQUAD
 from telemetry import TelemetryEngine
+from contracts import (
+    SwarmHandoffStateContract,
+    ContractValidationError,
+    validate_contract,
+)
+from guardrails.limits import ExecutionLimitExceeded
 
 # ── 1. Explicit State Schema ──────────────────────────────────────────────────
 
@@ -53,6 +59,7 @@ class SwarmHandoffState(TypedDict):
     current_step: str
     errors: List[str]
     total_duration_sec: float
+    version: int
 
 
 # ── 2. Default LLM Caller Helper ──────────────────────────────────────────────
@@ -190,6 +197,9 @@ class LangGraphTwoStepSwarm:
         Step 1 Node: Titan (Backend, API & Systems Engineer).
         Generates backend architectures, database schemas, and API contracts.
         """
+        # ── Inter-Node State Contract Validation (Fail-Fast) ──────────────────
+        validate_contract(SwarmHandoffStateContract, dict(state))
+
         t0 = time.time()
         agent_info = self.squad["titan"]
         task_id = f"task_titan_{uuid.uuid4().hex[:6]}"
@@ -250,6 +260,7 @@ Output concrete, clean code and API contracts.
             "titan_execution_time_ms": float(duration_ms),
             "current_step": "titan",
             "errors": errors,
+            "version": state.get("version", 1) + 1,
         }
 
     def _nexus_node(self, state: SwarmHandoffState) -> dict[str, Any]:
@@ -257,6 +268,9 @@ Output concrete, clean code and API contracts.
         Step 2 Node: Nexus (Frontend, Mobile UI & Design Specialist).
         Directly consumes Titan's backend output to construct the frontend UI & client.
         """
+        # ── Inter-Node State Contract Validation (Fail-Fast) ──────────────────
+        validate_contract(SwarmHandoffStateContract, dict(state))
+
         t0 = time.time()
         agent_info = self.squad["nexus"]
         task_id = f"task_nexus_{uuid.uuid4().hex[:6]}"
@@ -324,6 +338,7 @@ Output production-ready UI components and client integration logic.
             "nexus_execution_time_ms": float(duration_ms),
             "current_step": "nexus",
             "errors": errors,
+            "version": state.get("version", 1) + 1,
         }
 
     def _build_graph(self):
@@ -372,13 +387,29 @@ Output production-ready UI components and client integration logic.
             "current_step": "START",
             "errors": [],
             "total_duration_sec": 0.0,
+            "version": 1,
         }
 
-        # Invoke the compiled LangGraph state machine
-        final_state: SwarmHandoffState = self.graph.invoke(initial_state)
+        # Validate initial state (Fail-Fast)
+        validate_contract(SwarmHandoffStateContract, dict(initial_state))
+
+        try:
+            # Invoke the compiled LangGraph state machine
+            final_state: SwarmHandoffState = self.graph.invoke(initial_state)
+        except ExecutionLimitExceeded as limit_err:
+            final_state = dict(initial_state)  # type: ignore
+            final_state["errors"] = [str(limit_err)]
+            final_state["current_step"] = "FAILED_LIMIT_EXCEEDED"
+            final_state["titan_status"] = "FAILED"
+            final_state["nexus_status"] = "FAILED"
+            final_state["titan_output"] = f"Execution boundary cap breached: {limit_err}"
+            final_state["nexus_output"] = "Swarm pipeline aborted safely to prevent runaway resource spend."
 
         total_duration = round(time.time() - t0, 3)
         final_state["total_duration_sec"] = total_duration
+
+        # Validate final state contract
+        validate_contract(SwarmHandoffStateContract, dict(final_state))
 
         # Wire overall pipeline run into TelemetryEngine (SWARM_RUN)
         if self.telemetry:

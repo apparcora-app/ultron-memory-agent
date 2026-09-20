@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from governance import default_resource_registry
+
 
 @dataclass
 class MCPTool:
@@ -48,6 +50,7 @@ class MCPManager:
         self._stdio_bridges = {}
         self._register_default_mcp_tools()
         self._load_stdio_servers()
+        default_resource_registry.register_cleanup_hook(self.close_all)
 
     def _load_stdio_servers(self) -> None:
         """Load external MCP servers via Stdio using the mcp SDK."""
@@ -236,3 +239,15 @@ class MCPManager:
         if uri not in self._resources:
             raise KeyError(f"MCP Resource not found: {uri}")
         return self._resources[uri].reader()
+
+    def close_all(self) -> None:
+        """Deterministically terminates and cleans up all active MCP stdio bridges."""
+        for name, bridge in list(self._stdio_bridges.items()):
+            try:
+                if hasattr(bridge, "close"):
+                    bridge.close()
+                elif hasattr(bridge, "loop") and bridge.loop.is_running():
+                    bridge.loop.call_soon_threadsafe(bridge.loop.stop)
+            except Exception:
+                pass
+        self._stdio_bridges.clear()
