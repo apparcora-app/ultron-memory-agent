@@ -64,6 +64,9 @@ output/
 reports/
 scratch/
 swarm_output/
+tests/fixtures/*.csv
+tests/fixtures/*.xlsx
+tests/fixtures/*.pdf
 *.db
 *.sqlite
 *.sqlite3

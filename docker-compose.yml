@@ -1,18 +1,115 @@
-version: "3.9"
+# ==============================================================================
+# Ultron Memory Agent — Docker Compose
+# ==============================================================================
+# Services:
+#   ultron-web   FastAPI Cybernetic Web HUD    → http://localhost:8000
+#   qdrant       Qdrant vector DB (optional)   → http://localhost:6333
+#
+# Quick start:
+#   docker-compose up --build -d
+#
+# CLI mode (no persistent web server):
+#   docker-compose run --rm ultron-cli
+# ==============================================================================
 
 services:
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: mem0_qdrant
+
+  # ── Ultron FastAPI Web HUD ─────────────────────────────────────────────────
+  ultron-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: apparcora/ultron-memory-agent:latest
+    container_name: ultron_web
+    restart: unless-stopped
     ports:
-      - "6333:6333"   # REST API + web dashboard
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - VECTOR_STORE_PROVIDER=${VECTOR_STORE_PROVIDER:-chroma}
+      - VECTOR_STORE_PATH=/app/data/chroma
+      # Override to use Qdrant container:
+      # - VECTOR_STORE_PROVIDER=qdrant
+      # - QDRANT_HOST=qdrant
+      # - QDRANT_PORT=6333
+    volumes:
+      - ultron_data:/app/data
+      - ultron_output:/app/output
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    networks:
+      - ultron_net
+
+  # ── Ultron Interactive CLI (run-and-exit profile) ──────────────────────────
+  ultron-cli:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: apparcora/ultron-memory-agent:latest
+    container_name: ultron_cli
+    env_file:
+      - .env
+    environment:
+      - VECTOR_STORE_PATH=/app/data/chroma
+    volumes:
+      - ultron_data:/app/data
+    stdin_open: true
+    tty: true
+    command: ["python", "main.py"]
+    profiles: [cli]
+    networks:
+      - ultron_net
+
+  # ── Qdrant Vector Database ─────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:v1.10.0
+    container_name: ultron_qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"   # REST API + Web UI
       - "6334:6334"   # gRPC
     volumes:
       - qdrant_data:/qdrant/storage
-    restart: unless-stopped
     environment:
-      QDRANT__LOG_LEVEL: INFO
+      QDRANT__LOG_LEVEL: WARN
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6333/readyz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    networks:
+      - ultron_net
 
+# ── Named Volumes ──────────────────────────────────────────────────────────────
 volumes:
+  ultron_data:
+    driver: local
+    labels:
+      com.ultron.component: "vector-store"
+  ultron_output:
+    driver: local
+    labels:
+      com.ultron.component: "output-artifacts"
   qdrant_data:
     driver: local
+    labels:
+      com.ultron.component: "qdrant-storage"
+
+# ── Network ────────────────────────────────────────────────────────────────────
+networks:
+  ultron_net:
+    driver: bridge
+    labels:
+      com.ultron.project: "ultron-memory-agent"

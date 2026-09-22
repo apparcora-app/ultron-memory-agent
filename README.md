@@ -1,236 +1,280 @@
-# 🧠 Ultron Memory Agent
+<div align="center">
 
-[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://python.org)
+# ⚡ Ultron Memory Agent
+
+**Enterprise-grade autonomous AI cognitive system with persistent long-term memory,  
+multi-model routing, multi-agent swarm orchestration, and governance guardrails.**
+
+[![CI](https://github.com/apparcora-app/ultron-memory-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/apparcora-app/ultron-memory-agent/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Vector Store](https://img.shields.io/badge/Vector%20Store-ChromaDB%20%7C%20Qdrant-green.svg)](https://www.trychroma.com/)
 [![Memory Engine](https://img.shields.io/badge/Memory-Mem0-purple.svg)](https://github.com/mem0ai/mem0)
 [![Orchestration](https://img.shields.io/badge/Orchestrator-LangGraph%20%7C%20CrewAI-orange.svg)](https://langchain-ai.github.io/langgraph/)
-[![Framework](https://img.shields.io/badge/Framework-FastAPI%20%7C%20Discord.py-red.svg)](https://fastapi.tiangolo.com/)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+[![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-blue)](CHANGELOG.md)
 
-> **Ultron Memory Agent** is an enterprise-grade autonomous AI cognitive system featuring persistent long-term memory, dynamic multi-model complexity routing, Tree-of-Thoughts (ToT) exploration, multi-agent swarm orchestration, and an emergency sovereign killswitch.
+</div>
 
 ---
 
-## 🏛️ System Architecture
+## Overview
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            INTERACTION INTERFACES                           │
-│     ┌──────────────────────┬──────────────────────┬───────────────────┐     │
-│     │   Rich Terminal CLI  │  Cybernetic Web HUD  │  Discord Gateway  │     │
-│     │      (main.py)       │    (FastAPI / SSE)   │  (discord_bot.py) │     │
-│     └──────────┬───────────┴──────────┬───────────┴─────────┬─────────┘     │
-└────────────────┼──────────────────────┼─────────────────────┼───────────────┘
-                 │                      │                     │
-┌────────────────▼──────────────────────▼─────────────────────▼───────────────┐
-│                    COGNITIVE CONTROL & REASONING CORE                       │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                     Intelligent Model Router                          │  │
-│  │   • Tier 1 Fast / Daily (Gemini 3.8 Flash / Haiku 4.5)                │  │
-│  │   • Tier 2 Deep Reasoning (Gemini Thinking / Claude 3.5 Sonnet)       │  │
-│  └──────────────────────────────────┬────────────────────────────────────┘  │
-│                                     │                                       │
-│  ┌──────────────────────────────────▼────────────────────────────────────┐  │
-│  │                    Multi-Agent Orchestration Mesh                     │  │
-│  │   • Hierarchical Planner & Goal DAG Manager                           │  │
-│  │   • Tree-of-Thoughts (ToT) Multi-Branch Evaluation Engine             │  │
-│  │   • Graph RAG & Episodic Trajectory Memory (ExpeL)                    │  │
-│  │   • LangGraph Cyclic State Machine & CrewAI Multi-Agent Swarms        │  │
-│  └──────────────────────────────────┬────────────────────────────────────┘  │
-└─────────────────────────────────────┼───────────────────────────────────────┘
-                                      │
-┌─────────────────────────────────────▼───────────────────────────────────────┐
-│                     TWO-PHASE MEMORY & PERSISTENCE                          │
-│                                                                             │
-│   Phase 1 (Pre-Inference): Semantic Retrieval & Reciprocal Rank Fusion (RRF)│
-│                            Relevant memories injected into Context Window   │
-│                                                                             │
-│   Phase 2 (Post-Inference): Fact Extraction & Conflict Resolution (Mem0)    │
-│                            ADD / UPDATE / DELETE applied to Vector Store    │
-│                                                                             │
-│            Vector Databases: Local ChromaDB  <───>  Qdrant Cluster          │
-└─────────────────────────────────────┬───────────────────────────────────────┘
-                                      │
-┌─────────────────────────────────────▼───────────────────────────────────────┐
-│                      GOVERNANCE, SAFETY & AUDIT GATES                       │
-│   • Execution Ledger Gate & Budget Guard (Hard Spend / Token Caps)          │
-│   • Sliding-Window Rate Limiter & In-Flight Critic Gate                     │
-│   • Sovereign Emergency Killswitch (Fast-Halt Process Lockdown)             │
-└─────────────────────────────────────────────────────────────────────────────┘
+Ultron Memory Agent is a **self-sovereign AI cognitive runtime** designed for high-stakes, long-horizon autonomous tasks. It combines a dual-phase persistent memory pipeline, dynamic complexity-based model routing, Tree-of-Thoughts multi-branch reasoning, and a multi-agent swarm mesh — all governed by hard budget guardrails and an emergency sovereign killswitch.
+
+It ships with three first-class interfaces: a **Rich terminal CLI**, a **FastAPI Cybernetic Web HUD** with real-time SSE streaming, and a **Discord bot gateway**.
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                       INTERACTION INTERFACES                        │
+│  ┌──────────────────┬──────────────────────┬───────────────────┐   │
+│  │  Rich Terminal   │  FastAPI Web HUD      │  Discord Gateway  │   │
+│  │    (main.py)     │  (app.py / SSE)       │ (discord_bot.py)  │   │
+│  └────────┬─────────┴──────────┬────────────┴────────┬──────────┘   │
+└───────────┼────────────────────┼─────────────────────┼─────────────┘
+            │                    │                     │
+┌───────────▼────────────────────▼─────────────────────▼─────────────┐
+│               COGNITIVE CONTROL & REASONING CORE                    │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  Intelligent Model Router (core/model_router.py)             │  │
+│  │   Tier 1 Fast:   Gemini Flash / Claude Haiku                 │  │
+│  │   Tier 2 Deep:   Gemini Thinking / Claude Sonnet             │  │
+│  └────────────────────────────┬─────────────────────────────────┘  │
+│  ┌────────────────────────────▼─────────────────────────────────┐  │
+│  │  Multi-Agent Orchestration (pipelines/)                      │  │
+│  │   • Hierarchical Goal DAG Planner                            │  │
+│  │   • Tree-of-Thoughts (ToT) Multi-Branch Evaluator            │  │
+│  │   • Graph RAG + ExpeL Episodic Trajectory Memory             │  │
+│  │   • LangGraph State Machine & CrewAI Swarm Mesh              │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────────────┐
+│               DUAL-PHASE MEMORY & PERSISTENCE                       │
+│  Phase 1 (Pre-Inference):  Semantic RRF retrieval → context inject  │
+│  Phase 2 (Post-Inference): Mem0 fact extraction → ADD/UPDATE/DELETE │
+│                                                                     │
+│          Local ChromaDB  ←——————————→  Qdrant Cluster              │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────────────┐
+│               GOVERNANCE, SAFETY & AUDIT GATES                      │
+│  • Budget Guard: hard daily spend (USD) + token caps                │
+│  • Sliding-Window Rate Limiter (120 req/min)                        │
+│  • Anti-Fabrication Gate + Scope Integrity Check                    │
+│  • Sovereign Emergency Killswitch (instant process lockdown)        │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## ⚡ Technical Deep-Dives
+## Key Features
 
-### 1. Dual-Phase Memory Pipeline (Mem0 + Hybrid RRF)
-* **Pre-Inference Retrieval**: Queries dense semantic vector embeddings across the local vector database using Reciprocal Rank Fusion (RRF) to retrieve the top-\(K\) relevant historical memories and user preferences before formulating a prompt.
-* **Post-Inference Mutation**: Automatically runs asynchronous background fact extraction to discover novel statements, detect contradictions, and issue deterministic `ADD`, `UPDATE`, or `DELETE` commands to maintain memory consistency across long horizons.
-
-### 2. Dynamic Cost & Latency Model Routing
-* Evaluates input complexity before allocating compute:
-  * **Low-Complexity Tasks**: General queries, simple formatting, and high-frequency tool calls route to ultra-fast, low-cost models (**Gemini 3.8 Flash**).
-  * **High-Complexity Tasks**: Architectural synthesis, multi-source reconciliation, and deep recursive reasoning escalate to high-reasoning models (**Claude 3.5 Sonnet / Gemini Thinking**).
-
-### 3. Tree-of-Thoughts (ToT) & Graph RAG
-* **Tree-of-Thoughts Engine**: Spawns multiple reasoning branches, evaluates intermediate states via heuristic evaluation functions, and backtracks upon encountering suboptimal trajectories.
-* **Knowledge Graph RAG**: Maintains a structured entity-relation graph in SQLite alongside semantic vector indexes, allowing the agent to traverse relationships between people, projects, repositories, and historical decisions.
-
-### 4. Enterprise Governance & Sovereign Killswitch
-* **Budget Guardrails**: Enforces hard daily spend limits (USD) and token thresholds with proactive budget consumption warnings.
-* **Sliding-Window Rate Limiting**: Protects execution endpoints from burst overload (120 req/min).
-* **Emergency Killswitch**: Provides instant, system-wide process termination and lockfile generation via `scripts/kill.bat` or `scripts/killswitch.ps1`.
+| Feature | Description |
+|---|---|
+| **Dual-Phase Memory Pipeline** | Pre-inference semantic retrieval via Reciprocal Rank Fusion (RRF) + post-inference Mem0 mutation (ADD/UPDATE/DELETE) |
+| **Dynamic Model Router** | Complexity-based routing between fast (Gemini Flash/Haiku) and deep-reasoning (Sonnet/Gemini Thinking) tiers |
+| **Tree-of-Thoughts Engine** | Multi-branch reasoning with heuristic evaluation and backtracking |
+| **Graph RAG** | Entity-relation graph in SQLite + semantic vector indexes for relationship traversal |
+| **Multi-Agent Swarm** | SOLO mode (single-agent deep reasoning) and SWARM mode (fan-out parallel CrewAI mesh) |
+| **Anti-Fabrication Gate** | Grounding validation that blocks hallucinated tool outputs before memory commit |
+| **Governance Guardrails** | Hard daily spend limits, sliding-window rate limiter, execution ledger |
+| **Sovereign Killswitch** | One-touch emergency process lockdown via `scripts/kill.bat` or `scripts/killswitch.ps1` |
+| **Domain Modules** | US GAAP accounting, bookkeeping, payroll, corporate + individual tax workflows |
+| **MCP Integration** | Model Context Protocol client for external tool ecosystem connectivity |
 
 ---
 
-## 📂 Repository Layout
+## Repository Structure
 
-```text
+```
 ultron-memory-agent/
-├── tests/                        # Automated unit & integration test suite
-│   ├── __init__.py
-│   ├── conftest.py               # Shared test fixtures & ROOT_DIR bootstrapping
-│   ├── test_async_subprocess.py  # Asynchronous subprocess isolation test
-│   ├── test_compaction.py        # Large tool output compaction verification
-│   ├── test_isolation.py         # File ingestion isolation test
-│   ├── test_model_routing.py     # Dynamic model triage test
-│   ├── test_semantic_search.py   # Semantic vector search & RRF test
-│   ├── test_tool_cache.py        # Tool output caching & bypass test
-│   ├── test_tool_routing.py      # Dynamic tool routing & triage test
-│   ├── verify_crewai_swarm.py    # CrewAI multi-agent swarm test
-│   ├── verify_langchain_pipeline.py # LangChain tool-calling & memory test
-│   ├── verify_langgraph_handoff.py  # LangGraph 2-step state machine test
-│   └── verify_ledger_integration.py # Activity ledger & SSE verification
+│
+├── core/                         # Agent runtime, model router, tool definitions
+├── memory/                       # Dual-phase memory pipeline & vector persistence
+├── reasoning/                    # ToT engine, Graph RAG, hierarchical planner, ExpeL
+├── pipelines/                    # LangGraph, CrewAI, multi-agent mesh, swarm orchestrator
+├── interfaces/                   # (internal) CLI, FastAPI, Discord entrypoints
+├── infrastructure/               # MCP client, sandbox, file processor, email, PDF
+│
+├── governance/                   # Budget tracker, execution ledger gate
+├── guardrails/                   # Critic gate, anti-fabrication, artifact verification
+├── security/                     # Sovereign killswitch, lockdown
+├── resilience/                   # Retry logic, circuit breakers
+├── concurrency/                  # Async task management
+├── telemetry/                    # Metrics, tracing, event bus
+│
+├── accounting_modules/           # US GAAP, bookkeeping, payroll, ledger service
+├── tax_modules/                  # Corporate & individual tax workflows
+│   └── variants/                 # Archived experimental workflow variants
+├── agentic-qbo-reconciler/       # QuickBooks Online reconciliation pipeline
+├── anti_fabrication_gate/        # Standalone grounding validation subsystem
+│
+├── skills/                       # Agent skill registry & mutation engine
+├── evals/                        # Evaluation benchmarks & golden test sets
+├── rules/                        # Operator-defined behavioral rules
+├── subsystems/                   # Auxiliary cognitive subsystems
+├── utils/                        # Shared utilities
+│
+├── tests/                        # Automated test suite
+│   ├── fixtures/                 # Sample financial data for testing
+│   └── conftest.py
 ├── scripts/                      # Operational launchers & management utilities
-│   ├── audit_all_systems.py      # Master 5-pillar architectural audit suite
-│   ├── eval_benchmark.py         # Golden evaluation performance benchmark
-│   ├── kill.bat                  # Emergency one-touch process killswitch (CMD)
-│   ├── killswitch.ps1            # Emergency lockdown script (PowerShell)
-│   ├── start_all.bat             # Concurrent launcher (Web HUD + Discord)
-│   ├── start_discord.bat         # Standalone Discord bot bridge
-│   └── start_web.bat             # Standalone FastAPI Web HUD
-├── reference_data/               # Authoritative static datasets
-│   ├── official_us_accounting_skills.json
-│   └── sec_company_tickers.json
-├── static/                       # Cybernetic Web HUD frontend assets (HTML/CSS/JS)
-├── accounting_modules/           # US GAAP, bookkeeping, and payroll logic
-├── tax_modules/                  # Corporate and individual tax modules
-├── config.py                     # Centralized settings, dataclasses & env loader
-├── agent.py                      # MemoryAgent core implementation
-├── main.py                       # Rich terminal interactive CLI
-├── app.py                        # FastAPI Cybernetic Web Mainframe
-├── discord_bot.py                # Discord mobile & desktop bridge
-├── pyproject.toml                # PEP 517/621 build config & tool settings
-├── requirements.txt              # Production dependency specifications
-├── LICENSE                       # MIT License
+│   ├── verify/                   # Phase verification scripts
+│   ├── audit_all_systems.py      # Master 5-pillar architectural audit
+│   ├── kill.bat                  # Emergency killswitch (CMD)
+│   └── killswitch.ps1            # Emergency killswitch (PowerShell)
+├── reference_data/               # Authoritative static datasets (US GAAP, SEC tickers)
+├── static/                       # Cybernetic Web HUD frontend (HTML/CSS/JS)
+├── config/                       # Runtime configuration files
+│
+├── agent.py                      # ← entry shim (imports core/agent.py)
+├── app.py                        # ← entry shim (imports interfaces/app.py)
+├── main.py                       # ← entry shim (imports interfaces/main.py)
+│
+├── Dockerfile                    # Multi-stage Docker image
+├── docker-compose.yml            # Compose: Ultron Web HUD + Qdrant
+├── Makefile                      # Dev, lint, test, Docker targets
+├── pyproject.toml                # PEP 517/621 build config, ruff/mypy/pytest settings
+├── requirements.txt              # Production dependency manifest
+├── CONTRIBUTING.md               # Developer guide & contribution workflow
+├── SECURITY.md                   # Vulnerability reporting policy
+├── CHANGELOG.md                  # Version history
+├── CODEOWNERS                    # Auto-assign PR reviewers
 ├── .env.example                  # Sanitized environment template
 ├── .gitignore                    # Zero-trust secret quarantine rules
-└── README.md                     # System documentation
+└── LICENSE                       # MIT License
 ```
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-### 1. Prerequisites
-* Python 3.10, 3.11, or 3.12
-* Windows, Linux, or macOS
-
-### 2. Environment Setup
 ```bash
-# Clone the repository
+# 1. Clone
 git clone https://github.com/apparcora-app/ultron-memory-agent.git
 cd ultron-memory-agent
 
-# Create and activate virtual environment
+# 2. Environment
 python -m venv .venv
+source .venv/bin/activate          # Linux/macOS
+# .venv\Scripts\activate           # Windows
 
-# Windows (Command Prompt / PowerShell)
-.venv\Scripts\activate
-
-# Linux / macOS
-source .venv/bin/activate
-
-# Install production dependencies
 pip install -r requirements.txt
-```
 
-### 3. Configuration
-Copy the configuration template and populate your API credentials:
-```bash
+# 3. Configure
 cp .env.example .env
+# Edit .env → add your GEMINI_API_KEY (or ANTHROPIC_API_KEY / OPENROUTER_API_KEY)
+
+# 4. Run
+make run-cli    # Interactive Rich terminal CLI
+make run-web    # FastAPI Web HUD → http://localhost:8000
 ```
 
-Configure your preferred LLM provider in `.env`:
-```ini
-LLM_PROVIDER=gemini
-GEMINI_API_KEY=your_gemini_api_key_here
-VECTOR_STORE_PROVIDER=chroma
-VECTOR_STORE_PATH=./data/chroma
+**Docker (zero-setup):**
+```bash
+cp .env.example .env   # add your API key
+docker-compose up --build -d
+# → http://localhost:8000
 ```
 
-### 4. Running the Agent
+---
 
-#### Interactive Rich CLI
+## Running the Interfaces
+
+### Interactive Rich CLI
 ```bash
 python main.py
+# or
+make run-cli
 ```
-*CLI Slash Commands:*
-* `/memories` — Inspect all memories stored in the vector store
-* `/forget <id>` — Prune a specific memory entry
-* `/clear` — Reset active session while retaining long-term memories
-* `/quit` — Exit session
 
-#### Cybernetic Web HUD (FastAPI)
+CLI slash commands:
+| Command | Description |
+|---|---|
+| `/memories` | Inspect all memories in the vector store |
+| `/forget <id>` | Prune a specific memory entry |
+| `/clear` | Reset session, retain long-term memories |
+| `/quit` | Exit |
+
+### FastAPI Cybernetic Web HUD
 ```bash
-# Direct launch
-python app.py
-
-# Or via operational launcher
-scripts/start_web.bat
+python app.py        # or: make run-web
+# Navigate to http://localhost:8000
 ```
-Navigate to `http://localhost:8000` to interact with the visual dashboard and live SSE event stream.
 
-#### Discord Bot Gateway
+### Discord Bot Gateway
 ```bash
 python discord_bot.py
 ```
 
-#### Launch All Services Concurrently
+### Launch All Services
 ```cmd
 scripts\start_all.bat
 ```
 
 ---
 
-## 🧪 Testing & Verification
-
-Run the test suite using pytest or run test scripts directly:
+## Development
 
 ```bash
-# Run tests with pytest
+make dev          # install prod + dev deps
+make lint         # ruff check
+make format       # ruff format (auto-fix)
+make typecheck    # mypy (advisory)
+make test         # pytest tests/ -v
+make test-cov     # tests + coverage report
+make audit        # 5-pillar architectural audit
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full developer guide, branch naming conventions, and commit message format.
+
+---
+
+## Testing
+
+```bash
+# Full test suite
 pytest tests/ -v
 
-# Run targeted subsystem verifications
+# Targeted subsystem verifications
 python tests/test_model_routing.py
-python tests/test_compaction.py
-python tests/test_tool_routing.py
+python tests/test_semantic_search.py
 python tests/verify_langchain_pipeline.py
 python tests/verify_ledger_integration.py
 
-# Run the master 5-pillar architectural audit
+# Master audit
 python scripts/audit_all_systems.py
 ```
 
 ---
 
-## 🛡️ Zero-Trust Security & Secrets Isolation
-* **Zero Hardcoded Secrets**: All credentials, tokens, and keys are strictly quarantined from version control and loaded dynamically at runtime via `.env`.
-* **Local Vector Persistence**: All embeddings and memories default to local disk storage (`./data/chroma`), ensuring confidential memory records are never exfiltrated to external clouds.
-* **Instant Emergency Lockdown**: Any system anomaly or runaway loop can be halted instantly using `scripts/kill.bat` or `scripts/killswitch.ps1`.
+## Security
+
+- **Zero Hardcoded Secrets** — All credentials loaded at runtime from `.env` only
+- **Local Memory Isolation** — Embeddings default to local disk (`./data/chroma`) — never exfiltrated
+- **Anti-Fabrication Gate** — Grounding validation blocks hallucinated outputs before memory commit
+- **Emergency Killswitch** — Instant process lockdown: `scripts\kill.bat` or `scripts\killswitch.ps1`
+
+Report vulnerabilities privately — see [SECURITY.md](SECURITY.md).
 
 ---
 
-## 📄 License
-This project is licensed under the terms of the [MIT License](LICENSE).
+## License
+
+MIT License — see [LICENSE](LICENSE).
+
 Author: **Hanzla Rehman** ([@apparcora-app](https://github.com/apparcora-app))
+
+---
+
+<div align="center">
+
+[![Star this repo](https://img.shields.io/github/stars/apparcora-app/ultron-memory-agent?style=social)](https://github.com/apparcora-app/ultron-memory-agent/stargazers)
+[![Follow](https://img.shields.io/github/followers/apparcora-app?style=social)](https://github.com/apparcora-app)
+
+</div>

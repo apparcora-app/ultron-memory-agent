@@ -1,0 +1,18 @@
+# This file assigns default code owners for all files in this repository.
+# All pull requests will automatically request a review from the owner(s) below.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global default owner
+* @apparcora-app
+
+# Core agent runtime
+/core/ @apparcora-app
+/memory/ @apparcora-app
+
+# Governance & security — require explicit owner review
+/governance/ @apparcora-app
+/guardrails/ @apparcora-app
+/security/ @apparcora-app
+
+# CI/CD configuration
+/.github/ @apparcora-app
