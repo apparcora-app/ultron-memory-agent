@@ -1254,32 +1254,182 @@ body.light-theme .command-model-pill select {
 }
 .legend-sep { color: var(--border-glass); }
 
-/* Attachment Tray */
+/* Attachment Tray & Clipboard Paste Engine */
+.floating-command-card.clipboard-glow-active {
+  border-color: var(--cyan-neon, #00f0ff) !important;
+  box-shadow: 0 0 24px rgba(0, 240, 255, 0.4), 0 12px 40px rgba(0, 0, 0, 0.3) !important;
+  transform: translateY(-2px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .attachment-tray {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 8px;
+  padding-bottom: 4px;
 }
+
 .tray-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: var(--bg-stage);
-  border: 1px solid var(--border-glass);
-  border-radius: 6px;
-  padding: 4px 8px;
+  gap: 8px;
+  background: rgba(18, 24, 38, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 8px;
+  padding: 4px 10px 4px 6px;
   font-size: 11px;
   color: var(--text-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: fadeInScale 0.2s ease;
 }
+
+.tray-item.is-image-chip {
+  padding: 4px 8px 4px 4px;
+  border-color: rgba(0, 240, 255, 0.35);
+  background: rgba(10, 25, 45, 0.9);
+}
+
+.tray-thumb-wrap {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.tray-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tray-thumb-zoom {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  color: #00f0ff;
+  font-size: 11px;
+}
+
+.tray-thumb-wrap:hover .tray-thumb-zoom {
+  opacity: 1;
+}
+
+.tray-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 140px;
+}
+
+.tray-filename {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+}
+
+.tray-filesize {
+  font-size: 9.5px;
+  color: var(--text-muted);
+}
+
 .remove-file-btn {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-muted);
   cursor: pointer;
   font-size: 10px;
+  transition: all 0.15s ease;
+  margin-left: 2px;
 }
-.remove-file-btn:hover { color: var(--crimson-neon); }
+
+.remove-file-btn:hover {
+  background: rgba(255, 42, 109, 0.2);
+  border-color: var(--crimson-neon);
+  color: var(--crimson-neon);
+}
+
+/* Msg attachments & image cards in chat bubbles */
+.msg-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.attachment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  color: #00f0ff;
+}
+
+.user-attached-image-card {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  max-width: 240px;
+}
+
+.user-attached-image-card:hover {
+  border-color: #00f0ff;
+  transform: scale(1.02);
+}
+
+.user-msg-image-thumb {
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+.user-msg-image-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px 2px;
+  font-family: var(--font-mono, monospace);
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
 
 /* ── LIVE AGENT WORKING & SWARM RADAR CARDS ────────────────────────────────── */
 .thinking-card, .swarm-working-card {

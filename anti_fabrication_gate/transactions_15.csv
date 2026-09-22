@@ -1,0 +1,16 @@
+id,date,vendor,amount,category,status
+1,2026-01-03,Staples,23.45,Office Supplies,reconciled
+2,2026-01-05,Amazon,112.99,Tech,reconciled
+3,2026-01-07,Office Depot,45.20,Office Supplies,reconciled
+4,2026-01-09,Costco,234.10,Groceries,reconciled
+5,2026-01-11,BestBuy,89.00,Tech,reconciled
+6,2026-01-14,Walmart,57.33,Groceries,reconciled
+7,2026-01-16,Target,33.75,Household,reconciled
+8,2026-01-18,Home Depot,142.60,Maintenance,reconciled
+9,2026-01-21,Staples,18.90,Office Supplies,reconciled
+10,2026-01-23,Amazon,76.40,Tech,reconciled
+11,2026-01-25,Office Depot,31.15,Office Supplies,pending
+12,2026-01-28,Costco,198.70,Groceries,pending
+13,2026-01-30,BestBuy,55.00,Tech,pending
+14,2026-02-01,Walmart,44.88,Groceries,pending
+15,2026-02-03,Target,27.60,Household,pending

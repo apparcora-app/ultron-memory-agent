@@ -10,6 +10,12 @@ from __future__ import annotations
 
 import os
 os.environ['ANONYMIZED_TELEMETRY'] = 'False'
+os.environ['CHROMA_TELEMETRY'] = 'False'
+try:
+    import chromadb.telemetry.product.posthog as _chroma_ph
+    _chroma_ph.Posthog.capture = lambda *args, **kwargs: None
+except Exception:
+    pass
 import asyncio
 import os
 import sys
@@ -263,6 +269,7 @@ async def chat_endpoint(
         session_id = session_id if isinstance(session_id, str) else ""
         message = message if isinstance(message, str) else ""
         module_id = module_id if isinstance(module_id, str) else "ultron_prime"
+        operation_mode = operation_mode.upper() if isinstance(operation_mode, str) else "SWARM"
         effective_model = model_override if model_override != "auto" else model_mode
         should_opt = str(optimize_prompt).lower() in ("true", "1", "yes")
 
@@ -275,6 +282,7 @@ async def chat_endpoint(
             "model_override": model_override,
             "model_mode": model_mode,
             "optimize_prompt": should_opt,
+            "operation_mode": operation_mode,
         })
 
         agent = get_or_create_agent(user_id)
@@ -305,9 +313,21 @@ async def chat_endpoint(
                         physical_path = os.path.join(upload_dir, safe_filename)
                         with open(physical_path, "wb") as f_out:
                             f_out.write(content)
+                        # Also save in workspace root so relative paths (e.g. pd.read_excel("filename.xlsx")) work immediately
+                        root_path = os.path.join(os.path.dirname(__file__), safe_filename)
+                        try:
+                            with open(root_path, "wb") as f_root:
+                                f_root.write(content)
+                        except Exception:
+                            pass
                         # ------------------------------------------
                         pf = FileProcessor.process_file(uploaded_file.filename, content)
-                        pf.text_content = f"[SYSTEM INSTRUCTION: The user attached this file. It has been saved to your local hard drive at EXACTLY: {physical_path} . You MUST use this exact path if you write Python scripts to analyze it.]\n\n" + pf.text_content
+                        if pf.is_image:
+                            pf.text_content = f"[SYSTEM INSTRUCTION: The user attached image '{uploaded_file.filename}'. It has been saved locally at '{safe_filename}' and '{physical_path}'. You have also received this image in your Vision matrix for direct visual inspection.]\n\n" + (pf.text_content or "")
+                        elif any(uploaded_file.filename.lower().endswith(ext) for ext in [".xlsx", ".xls", ".csv"]):
+                            pf.text_content = f"[SYSTEM INSTRUCTION: The user attached spreadsheet '{uploaded_file.filename}'. It has been saved to your local workspace at '{safe_filename}' and at '{physical_path}'. When executing Python scripts or tools, load it via: pd.read_excel('{safe_filename}') or pd.read_excel(r'{physical_path}')]\n\n" + (pf.text_content or "")
+                        else:
+                            pf.text_content = f"[SYSTEM INSTRUCTION: The user attached '{uploaded_file.filename}'. It has been saved to your local workspace at '{safe_filename}' and at '{physical_path}'.]\n\n" + (pf.text_content or "")
                         processed_files.append(pf)
 
         chat_result = await agent.chat_async(
@@ -316,6 +336,7 @@ async def chat_endpoint(
             module_id=module_id,
             model_override=None if effective_model == "auto" else effective_model,
             optimize_prompt=should_opt,
+            operation_mode=operation_mode,
         )
 
         reply = chat_result.get("reply", "") if isinstance(chat_result, dict) else str(chat_result)
@@ -364,6 +385,7 @@ async def chat_endpoint(
             "skills_used": skills_used,
             "swarm_actions": chat_result.get("swarm_actions", []) if isinstance(chat_result, dict) else [],
             "is_swarm": chat_result.get("is_swarm", False) if isinstance(chat_result, dict) else False,
+            "operation_mode": operation_mode,
             "prompt_optimization": prompt_opt,
             "module_id": module_id,
             "files_analyzed": files_meta,

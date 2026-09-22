@@ -348,6 +348,7 @@ class ChatRequestPayload(StrictBaseModel):
     model_override: str = "auto"
     model_mode: str = "auto"
     optimize_prompt: bool = True
+    operation_mode: str = "SWARM"
 
 
 class SessionCreatePayload(StrictBaseModel):

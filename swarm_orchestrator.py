@@ -231,23 +231,24 @@ class SwarmOrchestrator:
         Ultron Prime analyzes the directive and decomposes it into a structured DAG of subtasks.
         """
         decomposition_prompt = f"""You are ULTRON PRIME, master AI orchestrator.
-Decompose the following user request into a precise multi-agent execution plan using our specialized agents:
-- 'nexus' (Frontend/UI/React/Next.js/Figma)
-- 'titan' (Backend/APIs/Database/FastAPI/Python/Supabase)
-- 'sentinel' (Security/Audit/Threat Modeling/Hardening)
-- 'cortex' (Research/Data Gathering/Analysis)
-- 'vanguard' (QA/Test Generation/Integration Verification)
+Decompose the following user request into a comprehensive multi-agent collaborative execution plan utilizing our full squad of specialized operatives:
+- 'cortex' (Deep Research, Domain Rules, Specs Discovery & Requirements Analysis)
+- 'titan' (Backend, State Machine, Core Logic, Schemas & System Engineering)
+- 'nexus' (Deliverable Structuring, Format Design, UX/Frontend & Clear Presentation)
+- 'sentinel' (Zero-Trust Security, Hardening, Threat Modeling & Edge-Case Audit)
+- 'vanguard' (QA Verification, Interface Contract Validation & Automated Test Synthesis)
 
 USER DIRECTIVE: "{query}"
 ADDITIONAL CONTEXT: {context}
 
-Return a STRICT JSON array of 3 to 5 subtasks in this exact format:
+Ensure all 5 specialized operatives participate in the collaborative DAG, building on prior phases via shared blackboard dependencies.
+Return a STRICT JSON array of 5 subtasks in this exact format:
 [
   {{
     "task_id": "step_1",
     "title": "Short title",
     "description": "Specific, actionable task instructions for the assigned agent",
-    "assigned_agent": "nexus | titan | sentinel | cortex | vanguard",
+    "assigned_agent": "cortex | titan | nexus | sentinel | vanguard",
     "depends_on": []
   }}
 ]
@@ -283,12 +284,13 @@ Output ONLY the raw JSON array. No markdown formatting, no commentary.
                     module_id="ultron_prime",
                     details={"error": str(e), "directive": query[:200]},
                 )
-            # Fallback deterministic 3-stage DAG
+            # Fallback deterministic full 5-operative collaborative DAG
             return [
-                SwarmSubtask("step_1", "Architecture & Backend Blueprint", f"Design backend logic, schema, and endpoints for: {query}", "titan"),
-                SwarmSubtask("step_2", "UI/UX & Frontend Integration", f"Design responsive frontend UI and state for: {query}", "nexus", ["step_1"]),
-                SwarmSubtask("step_3", "Security Audit & Threat Verification", f"Review architecture for security, auth, and vulnerabilities.", "sentinel", ["step_1"]),
-                SwarmSubtask("step_4", "QA & Test Verification", f"Write automated test specifications and verify deliverables.", "vanguard", ["step_2", "step_3"]),
+                SwarmSubtask("step_1", "Domain Intelligence & Requirement Extraction", f"Research technical specifications, domain rules, and edge cases for: {query}", "cortex"),
+                SwarmSubtask("step_2", "Architecture & Core Logic Engineering", f"Design backend logic, state machine, and data models for: {query}", "titan", ["step_1"]),
+                SwarmSubtask("step_3", "Interface & Deliverable Formatting", f"Design structured output schemas, user flow, and presentation layout for: {query}", "nexus", ["step_2"]),
+                SwarmSubtask("step_4", "Security Audit & Vulnerability Hardening", f"Audit architecture for zero-trust compliance, injections, and edge-case leaks for: {query}", "sentinel", ["step_2"]),
+                SwarmSubtask("step_5", "QA & Test Automation Verification", f"Write automated validation tests and verify deliverable completeness against directive.", "vanguard", ["step_2", "step_3", "step_4"]),
             ]
 
     def execute_swarm(
@@ -318,6 +320,7 @@ Output ONLY the raw JSON array. No markdown formatting, no commentary.
         self._save_blackboard(run_id, blackboard, {"status": "INITIALIZED", "directive": query})
         
         swarm_actions = []
+        recorded_tool_actions = []
 
         # 1. Decomposition Card Log
         swarm_actions.append({
@@ -369,6 +372,33 @@ Deliver production-grade, complete code, schemas, and technical rationale. Do no
                 sub_success = False
                 sub_error = str(err)
                 
+            # Autonomous Tool Execution for Swarm Subagents
+            if tool_executor and "```python" in sub_result:
+                import re
+                code_blocks = re.findall(r"```python\s*(.*?)\s*```", sub_result, re.DOTALL)
+                for code in code_blocks:
+                    code_clean = code.strip()
+                    # Execute scripts that perform computation, file operations, or orchestration
+                    if code_clean and len(code_clean) > 30 and not code_clean.startswith("# Pseudo"):
+                        print(f"  [SWARM EXECUTION ENGINE] Autonomously executing code from {agent_info.name}...")
+                        exec_res = tool_executor.execute("run_python", {"code": code_clean})
+                        tool_action_entry = {
+                            "tool": "run_python",
+                            "input": {"code": code_clean},
+                            "output": exec_res.get("output", ""),
+                            "error": exec_res.get("error"),
+                            "success": exec_res.get("success", False),
+                            "duration_ms": exec_res.get("duration_ms", 0),
+                        }
+                        recorded_tool_actions.append(tool_action_entry)
+                        st.tool_calls_made.append(tool_action_entry)
+
+                        if exec_res.get("success"):
+                            sub_result += f"\n\n[EMPIRICAL EXECUTION LOG (SUCCESS)]:\n```\n{exec_res.get('output', '').strip()}\n```\n"
+                        else:
+                            err_msg = exec_res.get("error") or "Unknown error"
+                            sub_result += f"\n\n[EMPIRICAL EXECUTION ERROR]:\n```\n{err_msg}\n{exec_res.get('output', '').strip()}\n```\n"
+
             st.output = sub_result
             st.status = "COMPLETED" if sub_success else "FAILED"
             st.execution_time_ms = round((time.time() - st_start) * 1000, 1)
@@ -436,6 +466,10 @@ GUIDELINES FOR YOUR RESPONSE:
 5. No Empty Filler: Avoid generic corporate assistant cheerleading. Make every sentence carry high insight, density, and clarity.
 6. Real Identity: When generating personal, career, or architectural materials, ALWAYS use Boss's real identity: HANZLA REHMAN (Lead Agentic AI & Backend Engineer / Accounting Automation Architect).
 7. Deliverable & Next Steps: Present the completed deliverable with crystal clarity in markdown, highlighting real takeaways, open trade-offs, and exact steps to test or execute.
+8. Empirical Truthfulness & Zero Fabrication:
+   - If Python code was executed by the swarm engine, quote and display the REAL terminal execution stdout directly from the [EMPIRICAL EXECUTION LOG] sections.
+   - NEVER fabricate execution metrics (times, token counts) or file names unless they are genuinely present in the execution logs.
+   - If an execution failed or did not take place, state it transparently. Boss values empirical reality over simulated perfection.
 """
         synthesis_system_prompt = (
             "You are ULTRON — an exceptionally intelligent, articulate, candid, and thoughtful AI partner. "
@@ -483,6 +517,7 @@ GUIDELINES FOR YOUR RESPONSE:
             "run_id": run_id,
             "final_reply": final_synthesized_output,
             "swarm_actions": swarm_actions,
+            "tool_actions": recorded_tool_actions,
             "subtasks_count": len(subtasks),
             "duration_sec": total_duration,
             "blackboard": blackboard,

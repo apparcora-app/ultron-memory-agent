@@ -33,7 +33,7 @@ test_cases = [
     {
         "name": "Python Tool",
         "prompt": "Use python to calculate 9999 * 9999 and give me the exact result.",
-        "eval_fn": lambda reply: "99980001" in reply
+        "eval_fn": lambda reply: "99980001" in reply.replace(",", "")
     },
     {
         "name": "Web Search Tool",

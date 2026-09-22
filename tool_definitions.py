@@ -663,14 +663,39 @@ class ToolExecutor:
         Non-blocking async tool execution wrapped in timeout middleware (asyncio.wait_for).
         """
         import asyncio
+        if timeout_sec == DEFAULT_TOOL_TIMEOUT_SEC:
+            if tool_name == "run_python":
+                timeout_sec = float(getattr(self.sandbox.config, "python_timeout", 120.0))
+            elif tool_name == "execute_command":
+                timeout_sec = float(getattr(self.sandbox.config, "command_timeout", 60.0))
+
         if tool_name in TOOL_INPUT_CONTRACTS:
             validated = validate_contract(TOOL_INPUT_CONTRACTS[tool_name], tool_input)
             tool_input = validated.model_dump()
 
         async def _run_tool():
-            if tool_name == "sleep_seconds":
-                return await self._handle_sleep_seconds_async(tool_input)
-            return await asyncio.to_thread(self.execute, tool_name, tool_input)
+            try:
+                if tool_name == "sleep_seconds":
+                    return await self._handle_sleep_seconds_async(tool_input)
+                if tool_name == "execute_command":
+                    return await self._handle_execute_command_async(tool_input, timeout_sec=timeout_sec)
+                if tool_name == "run_python":
+                    return await self._handle_run_python_async(tool_input, timeout_sec=timeout_sec)
+                return await asyncio.to_thread(self.execute, tool_name, tool_input)
+            except (SandboxViolation, ASTSecurityViolation) as e:
+                return {
+                    "success": False,
+                    "output": "",
+                    "error": str(e),
+                    "duration_ms": 0,
+                }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "output": "",
+                    "error": f"Tool execution error: {type(e).__name__}: {e}",
+                    "duration_ms": 0,
+                }
 
         res = await dispatch_with_timeout(_run_tool(), timeout_sec=timeout_sec, tool_name=tool_name)
 
@@ -1860,7 +1885,7 @@ class ToolExecutor:
             'error': None
         }
 
-    async def _handle_execute_command_async(self, inp: dict[str, Any]) -> dict[str, Any]:
+    async def _handle_execute_command_async(self, inp: dict[str, Any], timeout_sec: float = DEFAULT_TOOL_TIMEOUT_SEC) -> dict[str, Any]:
         import asyncio
         import platform
         import subprocess
@@ -1876,6 +1901,7 @@ class ToolExecutor:
             working_dir = self._project_root
 
         is_win = platform.system() == "Windows"
+        internal_timeout = min(float(self.sandbox.config.command_timeout), max(0.5, timeout_sec - 0.5) if timeout_sec > 1.0 else timeout_sec)
         
         try:
             process = await asyncio.create_subprocess_shell(
@@ -1888,7 +1914,7 @@ class ToolExecutor:
             try:
                 stdout_bytes, stderr_bytes = await asyncio.wait_for(
                     process.communicate(),
-                    timeout=self.sandbox.config.command_timeout
+                    timeout=internal_timeout
                 )
                 stdout_data = stdout_bytes.decode('utf-8', errors='replace')
                 stderr_data = stderr_bytes.decode('utf-8', errors='replace')
@@ -1904,7 +1930,7 @@ class ToolExecutor:
                 return {
                     "success": False,
                     "output": "",
-                    "error": f"Command timed out after {self.sandbox.config.command_timeout}s. Process forcefully terminated.",
+                    "error": f"Command timed out after {internal_timeout:.1f}s. Process forcefully terminated.",
                 }
 
             output = ""
@@ -1925,7 +1951,7 @@ class ToolExecutor:
         except Exception as e:
             return {"success": False, "output": "", "error": str(e)}
 
-    async def _handle_run_python_async(self, inp: dict[str, Any]) -> dict[str, Any]:
+    async def _handle_run_python_async(self, inp: dict[str, Any], timeout_sec: float = DEFAULT_TOOL_TIMEOUT_SEC) -> dict[str, Any]:
         import asyncio
         import tempfile
         import os
@@ -1934,7 +1960,15 @@ class ToolExecutor:
         
         code = inp.get("code", "").strip()
         
-        self.sandbox.validate_python_code(code)
+        try:
+            self.sandbox.validate_python_code(code)
+        except (SandboxViolation, ASTSecurityViolation) as e:
+            return {
+                "success": False,
+                "output": "",
+                "error": f"{e}\n💡 HINT: 'run_python' restricts direct OS/system access ('os', 'sys', 'subprocess'). To list, read, or write files, use the 'file_operation' tool. To run system/shell commands, use 'execute_command'.",
+                "duration_ms": 0,
+            }
 
         bootstrap = (
             "import sys\n"
@@ -1952,6 +1986,7 @@ class ToolExecutor:
                 temp_script_path = temp_script.name
 
             is_win = platform.system() == "Windows"
+            internal_timeout = min(float(self.sandbox.config.python_timeout), max(0.5, timeout_sec - 0.5) if timeout_sec > 1.0 else timeout_sec)
             process = await asyncio.create_subprocess_shell(
                 f"python \"{temp_script_path}\"",
                 stdout=asyncio.subprocess.PIPE,
@@ -1962,7 +1997,7 @@ class ToolExecutor:
             try:
                 stdout_bytes, stderr_bytes = await asyncio.wait_for(
                     process.communicate(),
-                    timeout=self.sandbox.config.command_timeout
+                    timeout=internal_timeout
                 )
                 stdout_data = stdout_bytes.decode('utf-8', errors='replace')
                 stderr_data = stderr_bytes.decode('utf-8', errors='replace')
@@ -1979,7 +2014,7 @@ class ToolExecutor:
                 return {
                     "success": False,
                     "output": "",
-                    "error": f"Python script timed out after {self.sandbox.config.command_timeout}s.",
+                    "error": f"Python script timed out after {internal_timeout:.1f}s.",
                 }
                 
             os.unlink(temp_script_path)

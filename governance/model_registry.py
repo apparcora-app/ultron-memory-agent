@@ -50,11 +50,10 @@ class ModelSpec(BaseModel):
 
 DEFAULT_ROTATION_POOLS: Dict[str, List[str]] = {
     "gemini": [
-        "gemini-2.5-flash",
         "gemini-2.0-flash",
         "gemini-1.5-flash",
         "gemini-1.5-pro",
-        "gemini-2.5-pro",
+        "gemini-3.1-pro-preview",
         # Forward compatibility aliases
         "gemini-3.8-flash",
         "gemini-3.7-flash",

@@ -87,6 +87,7 @@ fix*.py
 JOB_HUNTING_DOSSIER.md
 cv_audit_dump*.txt
 cv_style_dump*.txt
+profile_text.txt
 *.docx
 *.xlsx
 *.pdf
@@ -109,6 +110,8 @@ compound_return_*.md
 
 # ── Third-Party Submodules & Nested Repositories ──────────────────────────────
 browser-use/
+linkedin-skills/
+skills/linkedin-skills/
 
 # ── Agent IDE & Operating System Metadata ─────────────────────────────────────
 .agents/

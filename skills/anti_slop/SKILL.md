@@ -5,8 +5,8 @@ category: Quality
 icon: 🛡️
 tags: [quality, anti-slop, originality, code-review, accuracy, density, evaluation]
 always_on: true
-version: 1.6
-updated_at: 2026-09-06
+version: 3.0
+updated_at: 2026-09-22
 ---
 # 🛡️ Anti-Slop: No AI Garbage, Only Original Work
 
@@ -104,4 +104,122 @@ run_ats_evaluation(parsed_resume_text);
 ```
 run_res = apify_client.actor('curious_coder/linkedin-jobs-scraper').call(run_input=payload)
 items = apify_client.dataset(run_res['defaultDatasetId']).list_items().items
+```
+
+## 🧬 Evolution v1.7 — Memory-Based Personal Document Generation (2026-09-20)
+* **Trigger Analysis**: The model attempted to generate personal career documents from internal memory without verifying personal data availability, risking hallucinated or generic resume slop.
+- **Rule**: Never generate personal CVs or professional history purely from unverified internal memory.
+- **Rule**: Explicitly prompt the user for raw career history, achievements, and metrics before drafting any CV content.
+```
+I do not have your raw career history in secure long-term memory. Please provide your past roles, metrics, and key achievements to generate an anti-slop, high-density CV.
+```
+
+## 🧬 Evolution v1.8 — Unnecessary execution of read-only code (2026-09-20)
+* **Trigger Analysis**: The agent unnecessarily executed a Python tool call to fulfill a simple code-writing prompt, violating direct instructions and introducing overhead.
+- **Rule**: Strictly adhere to negative constraints (e.g., 'Do not execute it, just write the code').
+- **Rule**: Never invoke system tools for purely generative or theoretical tasks when explicitly told not to run them.
+```
+def reverse_string(s: str) -> str:
+    return s[::-1]
+```
+
+## 🧬 Evolution v1.9 — Conversational Filler on Direct Inquiries (2026-09-20)
+* **Trigger Analysis**: The model responded with conversational filler instead of immediately delivering high-density architectural solutions to an automation query.
+- **Rule**: Bypass all conversational preambles, pleasantries, and introductory filler on direct technical or architectural questions.
+- **Rule**: Deliver the direct technical mechanism immediately using maximum information density.
+```
+To automate invoice duplication from Excel, use Python (openpyxl + python-docx/reportlab) or a native VBA macro loop reading row data into templates.
+```
+
+## 🧬 Evolution v2.0 — External Skill Repository Installation Request (2026-09-21)
+* **Trigger Analysis**: The skill failed because the request involved installing an external GitHub repository skill rather than performing a content generation or coding task, exposing an incomplete capability boundary regarding repository-based skill integration.
+- **Rule**: Verify whether requested external skills can be natively ingested or if they require manual file-by-file inspection and parsing.
+- **Rule**: Inspect remote repository structures using available file-fetching tools before attempting to install or parse external instruction sets.
+```
+curl -s https://raw.githubusercontent.com/sergebulaev/linkedin-skills/main/README.md
+```
+
+## 🧬 Evolution v2.1 — Underspecified User Profiles Causing Vague Context (2026-09-21)
+* **Trigger Analysis**: The agent attempted to apply quality standards to a blank or minimally specified user profile ('this is my profile') without probing for real constraints, domain context, or actionable goals.
+- **Rule**: When a user provides an empty or ambiguous profile prompt, immediately halt generation and ask for specific technical context, constraints, and target stack details.
+- **Rule**: Never synthesize generic persona traits or default filler profiles to compensate for missing user input.
+```
+User: 'this is my profile'
+Agent: 'Your profile prompt is empty. Please provide your technical stack, primary domain, and specific workflow goals so I can establish a valid baseline.'
+```
+
+## 🧬 Evolution v2.2 — Unformatted Terminal Output Truncation (2026-09-21)
+* **Trigger Analysis**: Python data inspection scripts dumped overly wide tabular data directly to stdout without formatting, causing terminal scroll/truncation issues and low-information-density output.
+- **Rule**: When inspecting tabular data or spreadsheets, restrict initial prints to column names, shape, and concise summaries instead of raw row dumps.
+- **Rule**: Format data extraction scripts to output structured key-value pairs or clean markdown tables rather than unconstrained raw prints.
+```
+df.info(); print(df.head(3).to_markdown())
+```
+
+## 🧬 Evolution v2.3 — Incomplete Data Extraction Handling (2026-09-21)
+* **Trigger Analysis**: The extraction process returned a fragmented or incomplete list of target items without validating total completeness against the source section.
+- **Rule**: Verify the complete set of items extracted against the source section before reporting results.
+- **Rule**: Explicitly list all found items without truncation or omission when requested by the user.
+```
+Extract all matching entities verbatim and cross-verify count against the raw text block.
+```
+
+## 🧬 Evolution v2.4 — Binary File Inspection Misinterpretation (2026-09-21)
+* **Trigger Analysis**: The agent attempted to read a binary image file (LinkedIn banner PNG) directly as text/raw file stream, resulting in corrupted output logs and failure to properly process visual requirements.
+- **Rule**: Never dump raw binary file streams or image bytes directly into the text output or terminal logs.
+- **Rule**: Recognize file extensions (.png, .jpg, .jpeg) and utilize appropriate vision/inspection tools or confirm dimensions/format rather than reading raw bytes.
+```
+FILE_CHECK: Detect .png/.jpg ➔ Verify resolution/aspect ratio for LinkedIn banner specs (1584x396px) via metadata rather than dumping content.
+```
+
+## 🧬 Evolution v2.5 — Subjective Self-Evaluation Without Artifacts (2026-09-21)
+* **Trigger Analysis**: The model attempted to score a user's LinkedIn profile without having access to the profile's current text, resulting in an arbitrary and unverified low-quality assessment.
+- **Rule**: Never generate subjective scores or feedback on external artifacts (like profiles or resumes) without first inspecting the actual source text or data.
+- **Rule**: If the source material is missing, explicitly request the user to provide the current profile content before attempting an evaluation.
+```
+Please paste your current LinkedIn 'About' section or profile text so I can evaluate it against the anti-slop standard.
+```
+
+## 🧬 Evolution v2.6 — Sandbox Sandbox Import and Command Restrictions (2026-09-22)
+* **Trigger Analysis**: The execution failed because sandbox policies strictly block forbidden imports like 'os' and 'pathlib' in Python scripts, and standard Unix utilities like 'grep' are unavailable on Windows environments.
+- **Rule**: Never import restricted system modules like 'os', 'sys', 'subprocess', or 'pathlib' within sandbox Python tools; use provided file operations instead.
+- **Rule**: Verify environment compatibility before executing CLI commands (e.g., avoid Unix-only commands like 'grep' on Windows environments).
+```
+Use built-in file_operation tools and cross-platform Python code instead of relying on os/pathlib modules or Unix shell utilities.
+```
+
+## 🧬 Evolution v2.7 — Environment Variable and PowerShell Command Constraints (2026-09-22)
+* **Trigger Analysis**: Execution failed because Windows PowerShell built-in cmdlets ('Get-ChildItem') and direct environment variable syntax ('$env:...outside allowed commands') were used against strict tool execution whitelists and timeout limits.
+- **Rule**: Never use PowerShell-specific cmdlets like 'Get-ChildItem'; rely exclusively on standard whitelisted commands ('dir', 'python', 'pip').
+- **Rule**: Do not attempt to read or set environment variables via blocked shell syntax; configure environment parameters directly inside Python execution scripts.
+- **Rule**: Split long-running package installations (e.g., pip installs) into separate, independent execution steps to avoid command timeout limits.
+```
+python -c "import os; print(os.environ.get('ANTHROPIC_API_KEY'))"
+```
+
+## 🧬 Evolution v2.8 — Hanging LLM Network Calls in Synchronous Scripts (2026-09-22)
+* **Trigger Analysis**: Executing scripts containing unmocked or external LLM API calls without a timeout handler or connection mock causes python process execution to hang indefinitely and time out.
+- **Rule**: Wrap all external LLM API or network-dependent tool calls in try-except blocks with strict timeouts or use mock/stub responses for validation scripts.
+- **Rule**: Verify execution completion by testing individual components or using mock inputs before running heavy end-to-end scripts.
+```
+import signal
+# Ensure network calls fail gracefully rather than hanging the python process.
+```
+
+## 🧬 Evolution v2.9 — Unverified State-Machine Implementation Slop (2026-09-22)
+* **Trigger Analysis**: The agent produced incomplete, hallucinated code structures (hardcoded classifications and missing loopback graphs) and claimed success without running actual verification tests or matching the specified taxonomy.
+- **Rule**: Strictly match the exact taxonomy, routing requirements, and graph structure requested by the user without substituting arbitrary categories.
+- **Rule**: Never hardcode mock outputs or discard real LLM invocation responses; always parse and forward actual model predictions.
+- **Rule**: Mandate execution and terminal verification of the script before claiming completion to eliminate false success audits.
+```
+result = llm.invoke(prompt)
+classified_type = result['category']  # Never hardcode classifications
+```
+
+## 🧬 Evolution v3.0 — Command Timeout and False Completion (2026-09-22)
+* **Trigger Analysis**: The execution failed because a terminal command timed out and processes were forcefully terminated without verifying real output.
+- **Rule**: Always check command timeout thresholds before execution and use background processes or incremental output capture for long-running scripts.
+- **Rule**: Never bypass execution verification or substitute hardcoded logs when a command times out or fails.
+```
+subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 ```

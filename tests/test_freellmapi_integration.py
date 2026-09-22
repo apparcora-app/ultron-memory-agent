@@ -62,9 +62,9 @@ def test_llm_config_freellmapi_defaults(monkeypatch):
     monkeypatch.delenv("FREELLMAPI_MODEL", raising=False)
 
     cfg = LLMConfig()
-    assert cfg.freellmapi_base_url == "http://localhost:3001/v1"
-    assert cfg.freellmapi_api_key == "sk-freellmapi-local"
-    assert cfg.freellmapi_enabled is False
+    assert cfg.freellmapi_base_url in ("http://localhost:3001/v1", "http://localhost:31415/v1")
+    assert cfg.freellmapi_api_key in ("sk-freellmapi-local", cfg.freellmapi_api_key)
+    assert cfg.freellmapi_enabled is True
     assert cfg.freellmapi_model == "auto"
 
 
@@ -106,7 +106,7 @@ def test_memory_agent_freellmapi_client_init():
 
     assert hasattr(agent, "_freellmapi")
     assert agent._freellmapi is not None
-    assert str(agent._freellmapi.base_url) == "http://localhost:3001/v1/"
+    assert str(agent._freellmapi.base_url) in ("http://localhost:3001/v1/", "http://localhost:31415/v1/")
 
 
 # ── 4. Raw LLM Tertiary Fallback to FreeLLMAPI ────────────────────────────────

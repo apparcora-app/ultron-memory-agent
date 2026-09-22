@@ -1,0 +1,5 @@
+id,date,vendor,amount,category,status
+1,2026-01-03,Staples,23.45,Office Supplies,reconciled
+2,2026-01-05,Amazon,112.99,Tech,reconciled
+3,2026-01-07,Office Depot,45.20,Office Supplies,reconciled
+4,2026-01-09,Costco,234.10,Groceries,reconciled

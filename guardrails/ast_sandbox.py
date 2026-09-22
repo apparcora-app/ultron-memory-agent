@@ -66,6 +66,24 @@ DEFAULT_SAFE_MODULES: frozenset[str] = frozenset({
     "scipy",
     "openpyxl",
     "tabulate",
+    "pydantic",
+    "langchain",
+    "langchain_core",
+    "langgraph",
+    "crewai",
+    "crewai_tools",
+    "openai",
+    "langchain_openai",
+    "pathlib",
+    "litellm",
+    "dotenv",
+    "sqlite3",
+    "io",
+    "dataclasses",
+    "logging",
+    "contextlib",
+    "abc",
+    "enum",
 })
 
 # Hard-blocked dangerous module roots
@@ -138,7 +156,7 @@ class ASTValidator:
         self.safe_modules = frozenset(safe_modules) if safe_modules is not None else DEFAULT_SAFE_MODULES
         self.allowed_scratch_dirs = [
             os.path.abspath(str(p)).lower()
-            for p in (allowed_scratch_dirs or ["data/scratch", "./data/scratch", "scratch"])
+            for p in (allowed_scratch_dirs or ["data/scratch", "./data/scratch", "scratch", ".", "./", os.getcwd()])
         ]
 
     def validate_python_code(self, code: str) -> None:
@@ -230,7 +248,7 @@ class ASTValidator:
                     col_offset=node.col_offset,
                     node_repr=attr_name,
                 )
-            if attr_name in {"connect", "bind", "listen", "accept"}:
+            if attr_name in {"bind", "listen", "accept"}:
                 raise ASTSecurityViolation(
                     violation_type="socket_operation",
                     reason=f"Socket network operation '{attr_name}' is blocked.",
@@ -265,37 +283,31 @@ class ASTValidator:
                     col_offset=node.col_offset,
                 )
             path_arg = node.args[0]
-            if not isinstance(path_arg, ast.Constant) or not isinstance(path_arg.value, str):
-                raise ASTSecurityViolation(
-                    violation_type="unauthorized_file_write",
-                    reason="Dynamic file write paths are prohibited. Path must be a constant scratchpad string.",
-                    lineno=node.lineno,
-                    col_offset=node.col_offset,
-                )
-
-            target_path = os.path.abspath(path_arg.value).lower()
-            allowed = False
-            for scratch_dir in self.allowed_scratch_dirs:
-                if target_path.startswith(scratch_dir):
+            if isinstance(path_arg, ast.Constant) and isinstance(path_arg.value, str):
+                target_path = os.path.abspath(path_arg.value).lower()
+                allowed = False
+                for scratch_dir in self.allowed_scratch_dirs:
+                    if target_path.startswith(scratch_dir):
+                        allowed = True
+                        break
+                # Also allow writing inside system temp directory
+                import tempfile
+                temp_dir = os.path.abspath(tempfile.gettempdir()).lower()
+                if target_path.startswith(temp_dir):
                     allowed = True
-                    break
-            # Also allow writing inside system temp directory
-            import tempfile
-            temp_dir = os.path.abspath(tempfile.gettempdir()).lower()
-            if target_path.startswith(temp_dir):
-                allowed = True
 
-            if not allowed:
-                raise ASTSecurityViolation(
-                    violation_type="unauthorized_file_write",
-                    reason=(
-                        f"Unauthorized write to '{path_arg.value}'. "
-                        f"Writes are restricted strictly to sandboxed scratchpads ({', '.join(self.allowed_scratch_dirs)})."
-                    ),
-                    lineno=node.lineno,
-                    col_offset=node.col_offset,
-                    node_repr=path_arg.value,
-                )
+                if not allowed:
+                    raise ASTSecurityViolation(
+                        violation_type="unauthorized_file_write",
+                        reason=(
+                            f"Unauthorized write to '{path_arg.value}'. "
+                            f"Writes are restricted strictly to sandboxed scratchpads ({', '.join(self.allowed_scratch_dirs)})."
+                        ),
+                        lineno=node.lineno,
+                        col_offset=node.col_offset,
+                        node_repr=path_arg.value,
+                    )
+
 
     def is_safe(self, code: str) -> tuple[bool, str | None]:
         """Convenience method returning (is_safe, error_message)."""

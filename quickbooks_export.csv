@@ -1,0 +1,19 @@
+date,transaction_id,vendor,amount,category
+2026-09-01,TXN-QBO-1001,Stripe Payout,8420.0,Revenue
+2026-09-02,TXN-QBO-1002,Google Workspace,-72.0,Software Subscription
+2026-09-03,TXN-QBO-1003,Slack Technologies,-150.0,Communications
+2026-09-04,TXN-QBO-1042,AWS Cloud Infrastructure,-450.8,Cloud Hosting
+2026-09-06,TXN-QBO-1004,GitHub Enterprise,-210.0,Developer Tools
+2026-09-08,TXN-QBO-1005,Figma Professional,-90.0,Design Software
+2026-09-10,TXN-QBO-1006,Datadog Monitoring,-320.0,Infrastructure Monitoring
+2026-09-12,TXN-QBO-1089,Office Depot Supplies,-134.5,Office Supplies
+2026-09-14,TXN-QBO-1007,WeWork Office Rent,-2800.0,Rent & Facilities
+2026-09-15,TXN-QBO-1008,Vercel Pro Hosting,-40.0,Cloud Hosting
+2026-09-16,TXN-QBO-1009,Zoom Video,-35.0,Communications
+2026-09-18,TXN-QBO-1115,Acme Consulting Wire,-2500.0,Professional Services
+2026-09-18,TXN-QBO-1116,Acme Consulting Wire,-2500.0,Professional Services
+2026-09-20,TXN-QBO-1010,Twilio Communications,-115.0,API Services
+2026-09-22,TXN-QBO-1011,Atlassian Jira,-140.0,Developer Tools
+2026-09-25,TXN-QBO-1012,HubSpot Marketing,-800.0,Marketing
+2026-09-28,TXN-QBO-1013,Stripe Payout,6150.0,Revenue
+2026-09-30,TXN-QBO-1014,Silicon Valley Bank Fee,-25.0,Bank Charges

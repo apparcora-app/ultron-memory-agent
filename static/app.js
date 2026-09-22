@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeModuleId = "ultron_prime";
   let modulesData = {};
   let attachedFiles = [];
+  let fileThumbMap = new WeakMap();
   let currentUserId = "boss";
   let cachedSkillsList = [];
   let cachedMemoriesList = [];
@@ -125,15 +126,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const modeToggleBtn = document.getElementById("mode-toggle-btn");
   const modeToggleLabel = document.getElementById("mode-toggle-label");
   const modeToggleIcon = document.getElementById("mode-toggle-icon");
-  let isSwarmMode = true;
+  let isSwarmMode = localStorage.getItem("ultron_mode") !== "SOLO";
+
+  function updateModeUI() {
+    if (!modeToggleBtn) return;
+    modeToggleBtn.className = isSwarmMode ? "cyber-btn cyber-btn-purple active" : "cyber-btn cyber-btn-emerald active";
+    if (modeToggleLabel) modeToggleLabel.textContent = isSwarmMode ? "MODE: SWARM" : "MODE: SOLO";
+    if (modeToggleIcon) modeToggleIcon.className = isSwarmMode ? "fa-solid fa-network-wired" : "fa-solid fa-bolt";
+    modeToggleBtn.title = isSwarmMode ? "Toggle Operational Mode: SOLO (Fast-path 90% Token Saver) vs SWARM (6-Agent Enterprise Mesh)" : "Toggle Operational Mode: SWARM (6-Agent Enterprise Mesh) vs SOLO (Fast-path 90% Token Saver)";
+  }
 
   if (modeToggleBtn) {
+    updateModeUI();
     modeToggleBtn.addEventListener("click", () => {
       isSwarmMode = !isSwarmMode;
-      modeToggleBtn.className = isSwarmMode ? "cyber-btn cyber-btn-purple active" : "cyber-btn cyber-btn-emerald active";
-      if (modeToggleLabel) modeToggleLabel.textContent = isSwarmMode ? "MODE: SWARM" : "MODE: SOLO";
-      if (modeToggleIcon) modeToggleIcon.className = isSwarmMode ? "fa-solid fa-network-wired" : "fa-solid fa-bolt";
-      modeToggleBtn.title = isSwarmMode ? "Toggle Operational Mode: SOLO (Fast-path 90% Token Saver) vs SWARM (6-Agent Enterprise Mesh)" : "Toggle Operational Mode: SWARM (6-Agent Enterprise Mesh) vs SOLO (Fast-path 90% Token Saver)";
+      localStorage.setItem("ultron_mode", isSwarmMode ? "SWARM" : "SOLO");
+      updateModeUI();
     });
   }
 
@@ -368,7 +376,7 @@ document.addEventListener("DOMContentLoaded", () => {
     sendBtn.addEventListener("click", handleSend);
   }
 
-  // ── 4. Attachment Handling ────────────────────────────────────────────────
+  // ── 4. Attachment Handling & Clipboard Paste Engine ────────────────────────
   if (fileInput) {
     fileInput.addEventListener("change", (e) => {
       handleFilesAdded(Array.from(e.target.files));
@@ -379,14 +387,133 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("dragover", (e) => e.preventDefault());
   window.addEventListener("drop", (e) => {
     e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFilesAdded(Array.from(e.dataTransfer.files));
     }
   });
 
+  // ── Clipboard Paste Listener (Ctrl+V Image & File Support) ─────────────────
+  function setupClipboardPaste() {
+    function processClipboardEvent(e, isTargetInput) {
+      const clipboardData = e.clipboardData || window.clipboardData;
+      if (!clipboardData) return;
+
+      const extractedFiles = [];
+      const clipFiles = Array.from(clipboardData.files || []);
+
+      // Primary source: If clipboardData.files contains files (Chrome, Edge, Firefox populate this on paste)
+      if (clipFiles.length > 0) {
+        clipFiles.forEach(f => {
+          if (f.type && f.type.startsWith("image/")) {
+            // Rename generic default names like 'image.png' to a clean timestamped name
+            const isGeneric = !f.name || f.name === "image.png" || f.name === "blob";
+            if (isGeneric) {
+              const now = new Date();
+              const dateStr = now.getFullYear() +
+                String(now.getMonth() + 1).padStart(2, "0") +
+                String(now.getDate()).padStart(2, "0") + "_" +
+                String(now.getHours()).padStart(2, "0") +
+                String(now.getMinutes()).padStart(2, "0") +
+                String(now.getSeconds()).padStart(2, "0");
+              const ext = (f.type.split("/")[1] || "png").replace("jpeg", "jpg").split("+")[0];
+              const renamedFile = new File([f], `screenshot_${dateStr}.${ext}`, { type: f.type, lastModified: Date.now() });
+              extractedFiles.push(renamedFile);
+            } else {
+              extractedFiles.push(f);
+            }
+          } else {
+            extractedFiles.push(f);
+          }
+        });
+      } else if (clipboardData.items && clipboardData.items.length > 0) {
+        // Fallback source ONLY when clipboardData.files is empty (prevents double extraction)
+        for (let i = 0; i < clipboardData.items.length; i++) {
+          const item = clipboardData.items[i];
+          if (item.type && item.type.startsWith("image/")) {
+            const blob = item.getAsFile();
+            if (blob) {
+              const now = new Date();
+              const dateStr = now.getFullYear() +
+                String(now.getMonth() + 1).padStart(2, "0") +
+                String(now.getDate()).padStart(2, "0") + "_" +
+                String(now.getHours()).padStart(2, "0") +
+                String(now.getMinutes()).padStart(2, "0") +
+                String(now.getSeconds()).padStart(2, "0");
+              const subType = (item.type.split("/")[1] || "png").replace("jpeg", "jpg").split("+")[0];
+              const filename = blob.name && blob.name !== "image.png" ? blob.name : `screenshot_${dateStr}.${subType}`;
+              const file = new File([blob], filename, { type: item.type, lastModified: Date.now() });
+              extractedFiles.push(file);
+            }
+          }
+        }
+      }
+
+      if (extractedFiles.length > 0) {
+        // Stop bubbling so window listener never catches the same paste twice
+        e.stopPropagation();
+
+        // If image(s) or file(s) are pasted without plain text, prevent default textarea paste to avoid garbage/newlines
+        const text = clipboardData.getData("text");
+        if (!text || !text.trim()) {
+          e.preventDefault();
+        }
+
+        handleFilesAdded(extractedFiles);
+
+        // Flash visual cyber glow feedback on the floating command card
+        const dockCard = document.querySelector(".floating-command-card");
+        if (dockCard) {
+          dockCard.classList.add("clipboard-glow-active");
+          setTimeout(() => dockCard.classList.remove("clipboard-glow-active"), 900);
+        }
+
+        // Auto-focus chat textarea so user can type instructions immediately
+        if (chatInput) {
+          chatInput.focus();
+        }
+      }
+    }
+
+    // Attach directly to chat textarea
+    if (chatInput) {
+      chatInput.addEventListener("paste", (e) => {
+        processClipboardEvent(e, true);
+      });
+    }
+
+    // Global listener: Paste anywhere on the HUD to capture screenshots
+    window.addEventListener("paste", (e) => {
+      const activeEl = document.activeElement;
+      const isOtherInput = activeEl && activeEl !== chatInput && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
+      
+      const clipboardData = e.clipboardData || window.clipboardData;
+      const hasImage = clipboardData && (
+        Array.from(clipboardData.items || []).some(item => item.type && item.type.startsWith("image/")) ||
+        Array.from(clipboardData.files || []).some(f => f.type && f.type.startsWith("image/"))
+      );
+
+      // If typing in another text field (e.g. thread search), don't steal plain text paste
+      if (isOtherInput && !hasImage) {
+        return;
+      }
+
+      // If active element is not the chatInput but an image was pasted, intercept and attach to Ultron
+      if (activeEl !== chatInput && hasImage) {
+        processClipboardEvent(e, false);
+      }
+    });
+  }
+
+  setupClipboardPaste();
+
   function handleFilesAdded(newFiles) {
     newFiles.forEach(f => {
-      if (!attachedFiles.some(af => af.name === f.name && af.size === f.size)) {
+      // Robust deduplication: check both exact name+size AND identical size+image type to prevent duplicate blobs
+      const isDuplicate = attachedFiles.some(af => 
+        (af.name === f.name && af.size === f.size) ||
+        (f.type && f.type.startsWith("image/") && af.size === f.size && af.type === f.type)
+      );
+      if (!isDuplicate) {
         attachedFiles.push(f);
       }
     });
@@ -397,21 +524,62 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!attachmentTray) return;
     attachmentTray.innerHTML = "";
     attachedFiles.forEach((f, idx) => {
+      const isImg = (f.type && f.type.startsWith("image/")) || f.name.match(/\.(png|jpg|jpeg|webp|gif|bmp|svg)$/i);
+      
+      let thumbHtml = "";
+      if (isImg) {
+        let url = fileThumbMap.get(f);
+        if (!url) {
+          try {
+            url = URL.createObjectURL(f);
+            fileThumbMap.set(f, url);
+          } catch (_) {
+            url = "";
+          }
+        }
+        if (url) {
+          thumbHtml = `
+            <div class="tray-thumb-wrap" title="Click to expand image">
+              <img src="${url}" class="tray-thumb-img" alt="${f.name}" />
+              <span class="tray-thumb-zoom"><i class="fa-solid fa-magnifying-glass-plus"></i></span>
+            </div>
+          `;
+        }
+      }
+
       let icon = "fa-file";
       const name = f.name.toLowerCase();
       if (name.endsWith(".pdf")) icon = "fa-file-pdf text-crimson";
       else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv")) icon = "fa-file-excel text-green";
-      else if (name.match(/\.(png|jpg|jpeg|webp|gif)$/)) icon = "fa-file-image text-cyan";
+      else if (isImg) icon = "fa-file-image text-cyan";
 
       const item = document.createElement("div");
-      item.className = "tray-item";
+      item.className = `tray-item ${isImg ? "is-image-chip" : ""}`;
       item.innerHTML = `
-        <i class="fa-solid ${icon}"></i>
-        <span>${f.name} (${(f.size / 1024).toFixed(0)} KB)</span>
-        <button class="remove-file-btn" data-idx="${idx}"><i class="fa-solid fa-xmark"></i></button>
+        ${thumbHtml ? thumbHtml : `<i class="fa-solid ${icon}"></i>`}
+        <div class="tray-meta">
+          <span class="tray-filename" title="${f.name}">${f.name}</span>
+          <span class="tray-filesize">${(f.size / 1024).toFixed(0)} KB</span>
+        </div>
+        <button class="remove-file-btn" data-idx="${idx}" title="Remove attachment"><i class="fa-solid fa-xmark"></i></button>
       `;
 
+      if (thumbHtml) {
+        const thumbWrap = item.querySelector(".tray-thumb-wrap");
+        if (thumbWrap) {
+          thumbWrap.addEventListener("click", () => {
+            const url = fileThumbMap.get(f);
+            if (url) window.open(url, "_blank");
+          });
+        }
+      }
+
       item.querySelector(".remove-file-btn").addEventListener("click", () => {
+        const url = fileThumbMap.get(f);
+        if (url) {
+          try { URL.revokeObjectURL(url); } catch (_) {}
+          fileThumbMap.delete(f);
+        }
         attachedFiles.splice(idx, 1);
         renderAttachmentTray();
       });
@@ -712,7 +880,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     currentChatAbortController = new AbortController();
     setSendButtonState(true);
-    showDynamicAgentThinkingCard(text);
+    if (isSwarmMode) {
+      showDynamicAgentThinkingCard(text);
+    } else {
+      showSoloAgentThinkingCard(text);
+    }
 
     try {
       const formData = new FormData();
@@ -898,11 +1070,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let attachmentsHtml = "";
     if (files && files.length > 0) {
-      attachmentsHtml = `<div class="msg-attachments">` + files.map(f => `
-        <span class="attachment-badge">
-          <i class="fa-solid fa-paperclip"></i> ${f.name}
-        </span>
-      `).join("") + `</div>`;
+      attachmentsHtml = `<div class="msg-attachments">` + files.map(f => {
+        const isImg = (f.type && f.type.startsWith("image/")) || (f.name && f.name.match(/\.(png|jpg|jpeg|webp|gif|bmp|svg)$/i));
+        if (isImg && (f instanceof File || f instanceof Blob)) {
+          let url = fileThumbMap.get(f);
+          if (!url) {
+            try {
+              url = URL.createObjectURL(f);
+              fileThumbMap.set(f, url);
+            } catch (_) {}
+          }
+          if (url) {
+            return `
+              <div class="user-attached-image-card" onclick="window.open('${url}', '_blank')" title="Click to view full image in new tab">
+                <img src="${url}" class="user-msg-image-thumb" alt="${escapeHtml(f.name)}" />
+                <span class="user-msg-image-label"><i class="fa-solid fa-image"></i> ${escapeHtml(f.name)}</span>
+              </div>
+            `;
+          }
+        }
+        return `
+          <span class="attachment-badge">
+            <i class="fa-solid fa-paperclip"></i> ${escapeHtml(f.name || "Attachment")}
+          </span>
+        `;
+      }).join("") + `</div>`;
     }
 
     let modelBadgeHtml = "";
@@ -1138,6 +1330,9 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   function detectParticipatingRobots(query) {
+    if (isSwarmMode) {
+      return ["prime", "cortex", "titan", "nexus", "sentinel", "vanguard"];
+    }
     if (!query) return ["prime", "cortex"];
     const q = query.toLowerCase();
     const mentioned = [];
@@ -1155,7 +1350,81 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!mentioned.includes("prime")) mentioned.unshift("prime");
       return mentioned;
     }
-    return ["prime", "cortex", "titan"];
+    return ["prime", "nexus", "titan", "sentinel", "vanguard", "cortex"];
+  }
+
+  function showSoloAgentThinkingCard(query) {
+    hideThinkingCard();
+
+    const card = document.createElement("div");
+    card.id = "ultron-thinking-card";
+    card.className = "swarm-hangar-stage solo-hangar-stage";
+
+    const primeBot = ROBOT_DATA.prime;
+    const primeSvg = ROBOT_SVGS.prime;
+
+    card.innerHTML = `
+      <div class="hangar-header">
+        <div class="hangar-title">
+          <i class="fa-solid fa-bolt fa-fade" style="color: #10b981;"></i>
+          <span>SOLO AGENT ACTIVE // ULTRON PRIME (FAST-PATH)</span>
+        </div>
+        <div class="hangar-live-badge" style="border-color: #10b981; color: #10b981; background: rgba(16, 185, 129, 0.1);">
+          <i class="fa-solid fa-bolt"></i>
+          <span>SOLO MODE • 1 AGENT ACTIVE</span>
+        </div>
+      </div>
+      <div class="robots-arena-grid" style="grid-template-columns: 1fr; max-width: 420px; margin: 0 auto 16px;">
+        <div class="robot-bay-card active enter-from-left spotlight-focus" id="robot-bay-prime" style="--bot-color: #10b981; --bot-glow: rgba(16, 185, 129, 0.4);">
+          <div class="robot-status-bubble" id="robot-bubble-prime" style="border-color: #10b981; color: #a7f3d0;">
+            Executing directive in focused single-agent mode...
+          </div>
+          <div class="robot-stage-frame">
+            ${primeSvg}
+          </div>
+          <div class="robot-bay-footer">
+            <div class="robot-identity-name">${primeBot.icon} ${primeBot.name} (SOLO)</div>
+            <div class="robot-active-wave">
+              <div class="robot-wave-bar" style="background: #10b981;"></div>
+              <div class="robot-wave-bar" style="background: #10b981;"></div>
+              <div class="robot-wave-bar" style="background: #10b981;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hangar-footer">
+        <div class="hangar-telemetry-text">
+          <i class="fa-solid fa-microchip fa-spin" style="color: #10b981;"></i>
+          <span id="hangar-status-ticker">DIRECT SINGLE-AGENT EXECUTION // BYPASSING MULTI-AGENT SWARM OVERHEAD...</span>
+        </div>
+        <div class="hangar-progress-rail">
+          <div class="hangar-progress-laser" style="background: linear-gradient(90deg, #10b981, #06b6d4);"></div>
+        </div>
+      </div>
+    `;
+
+    chatStream.appendChild(card);
+    chatViewport.scrollTop = chatViewport.scrollHeight;
+
+    const SOLO_LOGS = [
+      "Analyzing directive in lean single-core mode...",
+      "Accessing persistent long-term memory...",
+      "Executing fast-path synthesis with zero swarm overhead...",
+      "Finalizing response for Boss..."
+    ];
+
+    let soloStep = 0;
+    activeRobotInterval = setInterval(() => {
+      soloStep++;
+      const bubbleEl = document.getElementById("robot-bubble-prime");
+      if (bubbleEl) {
+        bubbleEl.textContent = SOLO_LOGS[soloStep % SOLO_LOGS.length];
+      }
+      const tickerEl = document.getElementById("hangar-status-ticker");
+      if (tickerEl) {
+        tickerEl.textContent = "SOLO EXECUTION // " + SOLO_LOGS[soloStep % SOLO_LOGS.length].toUpperCase();
+      }
+    }, 800);
   }
 
   function showDynamicAgentThinkingCard(query) {

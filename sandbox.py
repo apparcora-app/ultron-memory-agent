@@ -75,10 +75,10 @@ class SandboxConfig:
     max_tool_iterations: int = MAX_RECURSION_LIMIT
 
     # Command execution timeout (seconds).
-    command_timeout: int = 30
+    command_timeout: int = 60
 
     # Python script execution timeout (seconds).
-    python_timeout: int = 60
+    python_timeout: int = 120
 
     # Max output length returned to Claude (chars) to avoid context bloat.
     max_output_length: int = 8000

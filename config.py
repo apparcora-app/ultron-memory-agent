@@ -22,6 +22,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Silence ChromaDB internal posthog telemetry mismatch
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+os.environ["CHROMA_TELEMETRY"] = "False"
+try:
+    import chromadb.telemetry.product.posthog as _chroma_ph
+    _chroma_ph.Posthog.capture = lambda *args, **kwargs: None
+except Exception:
+    pass
+
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -38,6 +47,47 @@ def _require(key: str) -> str:
 
 def _get(key: str, default: str) -> str:
     return os.getenv(key, default)
+
+
+def _detect_freellmapi_base_url() -> str:
+    env_val = os.getenv("FREELLMAPI_BASE_URL")
+    if env_val:
+        return env_val
+    try:
+        appdata = os.getenv("APPDATA")
+        if appdata:
+            cfg_path = Path(appdata) / "FreeLLMAPI" / "config.json"
+            if cfg_path.exists():
+                import json
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                    port = cfg.get("port", 31415)
+                    return f"http://localhost:{port}/v1"
+    except Exception:
+        pass
+    return "http://localhost:31415/v1"
+
+
+def _detect_freellmapi_api_key() -> str:
+    env_val = os.getenv("FREELLMAPI_API_KEY")
+    if env_val:
+        return env_val
+    try:
+        appdata = os.getenv("APPDATA")
+        if appdata:
+            db_path = Path(appdata) / "FreeLLMAPI" / "freeapi.db"
+            if db_path.exists():
+                import sqlite3
+                conn = sqlite3.connect(str(db_path))
+                c = conn.cursor()
+                c.execute("SELECT value FROM settings WHERE key='unified_api_key'")
+                row = c.fetchone()
+                conn.close()
+                if row and row[0]:
+                    return row[0]
+    except Exception:
+        pass
+    return "sk-freellmapi-local"
 
 
 # ── dataclasses ───────────────────────────────────────────────────────────────
@@ -100,10 +150,10 @@ class LLMConfig:
     anthropic_api_key: str = field(default_factory=lambda: _get("ANTHROPIC_API_KEY", ""))
     gemini_api_key: str = field(default_factory=lambda: _get("GEMINI_API_KEY", ""))
     openrouter_api_key: str = field(default_factory=lambda: _get("OPENROUTER_API_KEY", ""))
-    freellmapi_base_url: str = field(default_factory=lambda: _get("FREELLMAPI_BASE_URL", "http://localhost:3001/v1"))
-    freellmapi_api_key: str = field(default_factory=lambda: _get("FREELLMAPI_API_KEY", "sk-freellmapi-local"))
-    freellmapi_enabled: bool = field(default_factory=lambda: _get("FREELLMAPI_ENABLED", "false").lower() in ("true", "1", "yes"))
-    freellmapi_model: str = field(default_factory=lambda: _get("FREELLMAPI_MODEL", "auto"))
+    freellmapi_base_url: str = field(default_factory=_detect_freellmapi_base_url)
+    freellmapi_api_key: str = field(default_factory=_detect_freellmapi_api_key)
+    freellmapi_enabled: bool = field(default_factory=lambda: _get("FREELLMAPI_ENABLED", "true").lower() in ("true", "1", "yes"))
+    freellmapi_model: str = field(default_factory=lambda: _get("FREELLMAPI_MODEL", "gpt-oss-120b"))
 
     # ── Gemini Matrix ────────────────────────────────────────────────────────
     gemini_model: str = field(
@@ -243,12 +293,12 @@ class ToolConfig:
 
     # Command execution timeout (seconds).
     command_timeout: int = field(
-        default_factory=lambda: int(_get("TOOL_COMMAND_TIMEOUT", "30"))
+        default_factory=lambda: int(_get("TOOL_COMMAND_TIMEOUT", "60"))
     )
 
     # Python script execution timeout (seconds).
     python_timeout: int = field(
-        default_factory=lambda: int(_get("TOOL_PYTHON_TIMEOUT", "60"))
+        default_factory=lambda: int(_get("TOOL_PYTHON_TIMEOUT", "120"))
     )
 
     # Workspace root for file operations.

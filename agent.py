@@ -299,6 +299,11 @@ class MemoryAgent:
         qdrant_cfg: VectorStoreConfig | None = None,
         tool_cfg: ToolConfig | None = None,
         reflection_cfg: ReflectionConfig | None = None,
+        *,
+        memory_subsystem: Any | None = None,
+        planning_subsystem: Any | None = None,
+        execution_subsystem: Any | None = None,
+        governance_subsystem: Any | None = None,
     ) -> None:
         self.user_id = user_id
         self.llm_cfg = llm_cfg or LLMConfig()
@@ -306,6 +311,11 @@ class MemoryAgent:
         self._tool_cfg = tool_cfg or ToolConfig()
         self._reflection_cfg = reflection_cfg or ReflectionConfig()
         vector_cfg = vector_store_cfg or qdrant_cfg or VectorStoreConfig()
+
+        self.memory_subsystem = memory_subsystem
+        self.planning_subsystem = planning_subsystem
+        self.execution_subsystem = execution_subsystem
+        self.governance_subsystem = governance_subsystem
 
         # Multi-Engine Brain: Google Gemini 3.6 Flash (100% Exclusive)
         self.provider = "gemini"
@@ -330,155 +340,177 @@ class MemoryAgent:
             except Exception as e:
                 print(f"  [OPENROUTER INIT ERROR] {e}")
 
-        # Memory layer — ChromaDB on disk + Background fact extraction
-        self._memory = MemoryManager(
-            user_id=user_id,
-            vector_store_cfg=vector_cfg,
-            llm_cfg=self.llm_cfg,
-            agent_cfg=self._agent_cfg,
-        )
-        
-        self._router = ComplexityRouter(
-            haiku_model=self.llm_cfg.gemini_model_flash,
-            sonnet_model="openrouter/deepseek/deepseek-chat" if self._openrouter else self.llm_cfg.gemini_model_thinking,
-            threshold=5,
-            llm_cfg=self.llm_cfg,
-        )
+        # FreeLLMAPI Client bridge (Zero-Cost Aggregation Gateway)
+        self._freellmapi = None
+        if getattr(self.llm_cfg, "freellmapi_enabled", False) or getattr(self.llm_cfg, "freellmapi_base_url", None):
+            try:
+                base_url = getattr(self.llm_cfg, "freellmapi_base_url", "http://localhost:31415/v1") or "http://localhost:31415/v1"
+                api_key = getattr(self.llm_cfg, "freellmapi_api_key", "sk-freellmapi-local") or "sk-freellmapi-local"
+                self._freellmapi = OpenAI(base_url=base_url, api_key=api_key)
+            except Exception as e:
+                print(f"  [FREELLMAPI INIT ERROR] {e}")
 
-        # Skills Layer — Modular ClawHub-compatible capabilities
-        self._skills = SkillManager()
+        # Memory layer
+        if self.memory_subsystem is not None:
+            self._memory = self.memory_subsystem.memory_manager
+            self._skills = getattr(self.memory_subsystem, "skills", None) or SkillManager()
+            self._trajectories = getattr(self.memory_subsystem, "trajectories", None) or TrajectoryManager()
+            self._core_memory = getattr(self.memory_subsystem, "core_memory", None)
+            self._graph_rag = getattr(self.memory_subsystem, "graph_rag", None)
+        else:
+            self._memory = MemoryManager(
+                user_id=user_id,
+                vector_store_cfg=vector_cfg,
+                llm_cfg=self.llm_cfg,
+                agent_cfg=self._agent_cfg,
+            )
+            self._skills = SkillManager()
+            self._trajectories = TrajectoryManager()
+            try:
+                from core_memory import CoreMemory
+                self._core_memory = CoreMemory(user_id="boss")
+            except ImportError:
+                self._core_memory = None
+            try:
+                self._graph_rag = GraphRAGEngine(
+                    db_path=os.path.join(getattr(self.llm_cfg, "data_dir", "./data"), "knowledge_graph.sqlite3"),
+                    claude=self._claude,
+                    gemini=self._gemini,
+                    haiku_model=self.llm_cfg.chat_model_haiku,
+                    gemini_model=self.llm_cfg.gemini_model,
+                    provider=self.provider,
+                    telemetry=getattr(self.governance_subsystem, "telemetry", None) if self.governance_subsystem else None,
+                )
+            except Exception:
+                self._graph_rag = None
 
-        # Episodic Trajectory Bank — ExpeL-Style Winning Tool Trace Replay
-        self._trajectories = TrajectoryManager()
+        # Execution layer
+        if self.execution_subsystem is not None:
+            self._sandbox = getattr(self.execution_subsystem, "sandbox", None)
+            self._tool_executor = self.execution_subsystem.tool_executor
+            self._mcp = getattr(self.execution_subsystem, "mcp", None)
+            self._mesh = getattr(self.execution_subsystem, "mesh", None)
+            self.swarm = getattr(self.execution_subsystem, "swarm", None)
+        else:
+            self._sandbox = Sandbox(SandboxConfig(
+                max_tool_iterations=self._tool_cfg.max_iterations,
+                command_timeout=self._tool_cfg.command_timeout,
+                python_timeout=self._tool_cfg.python_timeout,
+                max_output_length=self._tool_cfg.max_output_length,
+            ))
+            self._tool_executor = ToolExecutor(sandbox=self._sandbox)
+            self._mcp = MCPManager()
+            self._mesh = AgentMeshRouter()
+            self.swarm = SwarmOrchestrator(
+                skill_manager=self._skills,
+                telemetry=getattr(self.governance_subsystem, "telemetry", None) if self.governance_subsystem else None
+            )
 
-        # Budget / cost tracker
-        self._budget = BudgetTracker(
-            daily_token_limit=self._agent_cfg.daily_token_limit,
-            daily_cost_limit_usd=self._agent_cfg.daily_cost_limit_usd,
-        )
+        # Governance layer
+        if self.governance_subsystem is not None:
+            self._telemetry = getattr(self.governance_subsystem, "telemetry", None)
+            self._budget = self.governance_subsystem.budget
+            self._spend_governor = getattr(self.governance_subsystem, "spend_governor", None)
+            self._ledger_gate = getattr(self.governance_subsystem, "ledger_gate", None)
+            self._artifact_gate = getattr(self.governance_subsystem, "artifact_gate", None)
+            self._critic = getattr(self.governance_subsystem, "critic", None)
+            self._reflector = getattr(self.governance_subsystem, "reflector", None)
+            self._dreamer = getattr(self.governance_subsystem, "dreamer", None)
+        else:
+            self._telemetry = TelemetryEngine()
+            self._budget = BudgetTracker(
+                daily_token_limit=self._agent_cfg.daily_token_limit,
+                daily_cost_limit_usd=self._agent_cfg.daily_cost_limit_usd,
+            )
+            try:
+                from governance.spend_governor import default_spend_governor
+                self._spend_governor = default_spend_governor
+            except ImportError:
+                self._spend_governor = None
+            self._ledger_gate = ExecutionLedgerGate()
+            try:
+                from artifact_verification_gate import ArtifactVerificationGate
+                self._artifact_gate = ArtifactVerificationGate()
+            except ImportError:
+                self._artifact_gate = None
+            self._critic = InFlightCritic(
+                claude=self._claude,
+                gemini=self._gemini,
+                gemini_model=self.llm_cfg.gemini_model,
+                haiku_model=self.llm_cfg.chat_model_haiku,
+                provider=self.provider,
+                enabled=self._reflection_cfg.enabled,
+            )
+            self._reflector = ReflectionEngine(
+                claude=self._claude,
+                gemini=self._gemini,
+                gemini_model=self.llm_cfg.gemini_model,
+                memory_manager=self._memory,
+                trajectory_manager=self._trajectories,
+                haiku_model=self.llm_cfg.chat_model_haiku,
+                provider=self.provider,
+                skills_dir=self._skills.skills_dir if self._skills else "./skills",
+                skill_manager=self._skills,
+                enabled=self._reflection_cfg.enabled,
+                cooldown_turns=self._reflection_cfg.cooldown_turns,
+                max_fail_score=self._reflection_cfg.max_fail_score,
+                min_skill_score=self._reflection_cfg.min_skill_score,
+                auto_skill_prefix=self._reflection_cfg.auto_skill_prefix,
+            )
+            self._dreamer = DreamingEngine(
+                claude=self._claude,
+                haiku_model=self.llm_cfg.chat_model_haiku,
+                gemini=self._gemini,
+                gemini_model=self.llm_cfg.gemini_model,
+                provider=self.provider,
+                telemetry=self._telemetry,
+                skill_manager=self._skills,
+                trajectory_manager=self._trajectories,
+                memory_manager=self._memory,
+            )
 
-        # Autonomous Tool Execution Engine
-        self._sandbox = Sandbox(SandboxConfig(
-            max_tool_iterations=self._tool_cfg.max_iterations,
-            command_timeout=self._tool_cfg.command_timeout,
-            python_timeout=self._tool_cfg.python_timeout,
-            max_output_length=self._tool_cfg.max_output_length,
-        ))
-        self._tool_executor = ToolExecutor(sandbox=self._sandbox)
-
-        # Autonomous Reflection & Self-Learning Engine (Zero-Cost on Gemini Flash / Haiku)
-        self._reflector = ReflectionEngine(
-            claude=self._claude,
-            gemini=self._gemini,
-            gemini_model=self.llm_cfg.gemini_model,
-            memory_manager=self._memory,
-            trajectory_manager=self._trajectories,
-            haiku_model=self.llm_cfg.chat_model_haiku,
-            provider=self.provider,
-            skills_dir=self._skills.skills_dir,
-            skill_manager=self._skills,
-            enabled=self._reflection_cfg.enabled,
-            cooldown_turns=self._reflection_cfg.cooldown_turns,
-            max_fail_score=self._reflection_cfg.max_fail_score,
-            min_skill_score=self._reflection_cfg.min_skill_score,
-            auto_skill_prefix=self._reflection_cfg.auto_skill_prefix,
-        )
-
-        # In-Flight Verification Critic Gate (Pre-Response Verification)
-        self._critic = InFlightCritic(
-            claude=self._claude,
-            gemini=self._gemini,
-            gemini_model=self.llm_cfg.gemini_model,
-            haiku_model=self.llm_cfg.chat_model_haiku,
-            provider=self.provider,
-            enabled=self._reflection_cfg.enabled,
-        )
-
-        # Layer 3 Protocol Engine — Model Context Protocol (MCP) Client
-        self._mcp = MCPManager()
-
-        # Layer 2 Agent Internet Layer — Swarm / Mesh Router & A2A Protocol Network
-        self._mesh = AgentMeshRouter()
-
-        # Layer 5 Cognition & Reasoning — Goal DAG Engine
-        self._goals = GoalDAGManager()
-
-        # Layer 8 Ops & Governance — Enterprise Telemetry & Prometheus Exporter
-        self._telemetry = TelemetryEngine()
-
-        # Hard Physical Execution Ledger Gate (Zero-Faking Enforcement)
-        self._ledger_gate = ExecutionLedgerGate()
-        
-        # Artifact Verification Gate (Zero-Trust Output Verification)
-        try:
-            from artifact_verification_gate import ArtifactVerificationGate
-            self._artifact_gate = ArtifactVerificationGate()
-        except ImportError:
-            self._artifact_gate = None
-            
-        # Core Memory (Always-Visible Working Memory)
-        try:
-            from core_memory import CoreMemory
-            self._core_memory = CoreMemory(user_id="boss")
-        except ImportError:
-            self._core_memory = None
-
-        # Autonomous Multi-Agent Swarm Orchestrator (6-Agent Squad)
-        self.swarm = SwarmOrchestrator(skill_manager=self._skills, telemetry=self._telemetry)
-
-        # Autonomous Prompt Optimization Pre-Processor Agent (Prompt Architect)
-        self._prompt_optimizer = PromptOptimizerAgent(call_llm_fn=self._call_raw_llm, telemetry=self._telemetry)
-
-        # Layer 10 Dreaming Engine — Autonomous Background Simulation & Replay
-        self._dreamer = DreamingEngine(
-            claude=self._claude,
-            haiku_model=self.llm_cfg.chat_model_haiku,
-            gemini=self._gemini,
-            gemini_model=self.llm_cfg.gemini_model,
-            provider=self.provider,
-            telemetry=self._telemetry,
-            skill_manager=self._skills,
-            trajectory_manager=self._trajectories,
-            memory_manager=self._memory,
-        )
-
-        # Cognitive Breakthrough 1: Tree-of-Thoughts & MCTS Reasoning Engine
-        self._tot_engine = TreeOfThoughtsEngine(
-            claude=self._claude,
-            gemini=self._gemini,
-            haiku_model=self.llm_cfg.chat_model_haiku,
-            sonnet_model=self.llm_cfg.chat_model,
-            gemini_model=self.llm_cfg.gemini_model,
-            provider=self.provider,
-            tool_executor=self._tool_executor,
-            trajectory_manager=self._trajectories,
-            telemetry=self._telemetry,
-        )
-
-        # Cognitive Breakthrough 2: Dynamic Graph-RAG & Causal Knowledge Graph
-        self._graph_rag = GraphRAGEngine(
-            db_path=os.path.join(getattr(self.llm_cfg, "data_dir", "./data"), "knowledge_graph.sqlite3"),
-            claude=self._claude,
-            gemini=self._gemini,
-            haiku_model=self.llm_cfg.chat_model_haiku,
-            gemini_model=self.llm_cfg.gemini_model,
-            provider=self.provider,
-            telemetry=self._telemetry,
-        )
-
-        # Cognitive Breakthrough 3: Hierarchical Goal Decomposition & Self-Evolving Planner
-        self._hierarchical_planner = HierarchicalPlanner(
-            db_path=os.path.join(getattr(self.llm_cfg, "data_dir", "./data"), "hierarchical_plans.sqlite3"),
-            claude=self._claude,
-            gemini=self._gemini,
-            sonnet_model=self.llm_cfg.chat_model,
-            haiku_model=self.llm_cfg.chat_model_haiku,
-            gemini_model=self.llm_cfg.gemini_model,
-            provider=self.provider,
-            tool_executor=self._tool_executor,
-            trajectory_manager=self._trajectories,
-            telemetry=self._telemetry,
-        )
+        # Planning layer
+        if self.planning_subsystem is not None:
+            self._router = self.planning_subsystem.router
+            self._goals = getattr(self.planning_subsystem, "goals", None)
+            self._hierarchical_planner = getattr(self.planning_subsystem, "hierarchical_planner", None)
+            self._tot_engine = getattr(self.planning_subsystem, "tot_engine", None)
+            self._prompt_optimizer = getattr(self.planning_subsystem, "prompt_optimizer", None)
+        else:
+            self._router = ComplexityRouter(
+                haiku_model=self.llm_cfg.gemini_model_flash,
+                sonnet_model="openrouter/deepseek/deepseek-chat" if self._openrouter else self.llm_cfg.gemini_model_thinking,
+                threshold=5,
+                llm_cfg=self.llm_cfg,
+            )
+            self._goals = GoalDAGManager()
+            self._hierarchical_planner = HierarchicalPlanner(
+                db_path=os.path.join(getattr(self.llm_cfg, "data_dir", "./data"), "hierarchical_plans.sqlite3"),
+                claude=self._claude,
+                gemini=self._gemini,
+                sonnet_model=self.llm_cfg.chat_model,
+                haiku_model=self.llm_cfg.chat_model_haiku,
+                gemini_model=self.llm_cfg.gemini_model,
+                provider=self.provider,
+                tool_executor=self._tool_executor,
+                trajectory_manager=self._trajectories,
+                telemetry=self._telemetry,
+            )
+            self._tot_engine = TreeOfThoughtsEngine(
+                claude=self._claude,
+                gemini=self._gemini,
+                haiku_model=self.llm_cfg.chat_model_haiku,
+                sonnet_model=self.llm_cfg.chat_model,
+                gemini_model=self.llm_cfg.gemini_model,
+                provider=self.provider,
+                tool_executor=self._tool_executor,
+                trajectory_manager=self._trajectories,
+                telemetry=self._telemetry,
+            )
+            self._prompt_optimizer = PromptOptimizerAgent(
+                call_llm_fn=self._call_raw_llm,
+                telemetry=self._telemetry
+            )
 
         # In-session state
         self._history: list[dict[str, Any]] = []
@@ -611,6 +643,7 @@ class MemoryAgent:
         files: list[ProcessedFile] | None = None,
         module_id: str = "ultron_prime",
         model_override: str | None = None,
+        operation_mode: str = "SWARM",
     ) -> tuple[str, str]:
         """
         Dynamically route requests based on model overrides or defaults.
@@ -620,16 +653,24 @@ class MemoryAgent:
                 return self.llm_cfg.gemini_model_thinking, "System 2 Reasoning Core"
             if model_override == "flash":
                 return self.llm_cfg.gemini_model_flash, "System 1 Execution Core"
+            if "freellmapi" in model_override.lower():
+                return model_override, f"FreeLLMAPI Zero-Cost Gateway ({model_override})"
             return model_override, f"Custom: {model_override}"
             
         # Manual trigger from chat
         input_lower = (user_input or "").lower()
+        if "/freellm" in input_lower or "use freellm" in input_lower:
+            return "freellmapi", "Manual FreeLLMAPI Override"
         if "/deepseek" in input_lower or "use deepseek" in input_lower:
             return "openrouter/deepseek/deepseek-chat" if self._openrouter else self.llm_cfg.gemini_model_thinking, "Manual DeepSeek Override"
         if "/nvidia" in input_lower or "use nvidia" in input_lower:
             return "nvidia/nemotron-3-ultra-550b-a55b:free", "Manual NVIDIA Override"
         if "/glm" in input_lower or "use glm" in input_lower:
             return "z-ai/glm-5.2:free", "Manual GLM Override"
+
+        # Solo Assistant Mode: Fast-path 90% token reduction
+        if (operation_mode or "").upper() == "SOLO":
+            return self.llm_cfg.gemini_model_flash, "Solo Assistant Core (Fast-Path Token Saver)"
             
         if hasattr(self, "_router") and self._router:
             decision = await self._router.route_async(user_input, len(self._history))
@@ -724,10 +765,11 @@ class MemoryAgent:
                 "gemini-3.7-flash",
                 "gemini-3.6-flash",
                 "gemini-3.5-flash",
-                "gemini-2.5-flash",
-                "gemini-2.5-pro",
+                "gemini-3.1-pro-preview",
+                "gemini-2.0-flash",
+                "gemini-1.5-flash",
             ]
-            if selected_model and selected_model not in candidate_pool:
+            if selected_model and selected_model not in candidate_pool and "gemini" in selected_model.lower():
                 candidate_pool.insert(0, selected_model)
             response = None
             last_err = None
@@ -958,8 +1000,9 @@ class MemoryAgent:
                 "gemini-3.7-flash",
                 "gemini-3.6-flash",
                 "gemini-3.5-flash",
-                "gemini-2.5-flash",
-                "gemini-2.5-pro",
+                "gemini-3.1-pro-preview",
+                "gemini-2.0-flash",
+                "gemini-1.5-flash",
             ]
             for candidate_model in candidate_pool:
                 retries = 3
@@ -992,6 +1035,27 @@ class MemoryAgent:
                         time.sleep(0.1)
                         break
 
+        # Tertiary fallback: FreeLLMAPI Zero-Cost Sovereign Hub
+        if self._freellmapi:
+            try:
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                messages.append({"role": "user", "content": prompt})
+
+                model_name = getattr(self.llm_cfg, "freellmapi_model", "auto") or "auto"
+                response = self._freellmapi.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    temperature=0.3,
+                )
+                if response and response.choices:
+                    content = response.choices[0].message.content
+                    if content:
+                        return content.strip()
+            except Exception as e:
+                print(f"  [RAW LLM FREELLMAPI ERROR] {e}")
+
         return "Task processed."
     def _chat_openrouter(
         self,
@@ -1003,20 +1067,34 @@ class MemoryAgent:
         tools_param: list[Any] | None = None,
         module_id: str = "ultron_prime",
     ) -> tuple[str, list[dict[str, Any]], int, int]:
-        if not self._openrouter:
-            return "**System Alert:** OpenRouter client not initialized.", [], 0, 0
+        is_freellm = "freellmapi" in selected_model.lower()
+        client = self._freellmapi if is_freellm else self._openrouter
+        if not client:
+            client_name = "FreeLLMAPI" if is_freellm else "OpenRouter"
+            return f"**System Alert:** {client_name} client not initialized.", [], 0, 0
         
         model_name = selected_model
-        if model_name.startswith("openrouter/"):
+        if is_freellm:
+            if "/" in selected_model:
+                parts = selected_model.split("/", 1)
+                model_name = parts[1]
+            else:
+                model_name = getattr(self.llm_cfg, "freellmapi_model", "auto") or "auto"
+        elif model_name.startswith("openrouter/"):
             model_name = model_name[11:]
         elif model_name.startswith("nvidia/") or model_name.startswith("z-ai/"):
             pass
             
         messages = []
         if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
+            if is_freellm and len(system_prompt) > 6000:
+                compact_sys = system_prompt[:5000] + "\n\n[Context compressed for local model window]"
+                messages.append({"role": "system", "content": compact_sys})
+            else:
+                messages.append({"role": "system", "content": system_prompt})
             
-        for msg in self._history:
+        history_items = self._history[-4:] if (is_freellm and len(self._history) > 4) else self._history
+        for msg in history_items:
             role = "assistant" if msg["role"] == "model" else "user"
             content = msg["content"]
             if isinstance(content, str):
@@ -1025,11 +1103,26 @@ class MemoryAgent:
                 text_parts = [p['text'] for p in content if isinstance(p, dict) and 'text' in p]
                 messages.append({"role": role, "content": " ".join(text_parts)})
                 
-        content = combined_text if combined_text else user_input
-        if files:
-            content += f"\n\n[Attached {len(files)} files]"
-            
-        messages.append({"role": "user", "content": content})
+        image_files = [f for f in files if f.is_image and f.image_base64] if files else []
+        if image_files:
+            user_content_list: list[dict[str, Any]] = []
+            text_str = combined_text if combined_text else user_input
+            if text_str:
+                user_content_list.append({"type": "text", "text": text_str})
+            for img in image_files:
+                media_type = img.image_media_type or "image/png"
+                user_content_list.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{media_type};base64,{img.image_base64}"
+                    }
+                })
+            messages.append({"role": "user", "content": user_content_list})
+        else:
+            content = combined_text if combined_text else user_input
+            if files:
+                content += f"\n\n[Attached {len(files)} files]"
+            messages.append({"role": "user", "content": content})
         
         or_tools = None
         if tools_param:
@@ -1051,7 +1144,8 @@ class MemoryAgent:
         iteration = 0
         assistant_reply = ""
         
-        print(f"  [OPENROUTER] Routing via {model_name}...")
+        provider_name = "FreeLLMAPI" if is_freellm else "OpenRouter"
+        print(f"  [{provider_name.upper()}] Routing via {model_name}...")
         
         while True:
             try:
@@ -1063,20 +1157,40 @@ class MemoryAgent:
                 break
 
             try:
-                resp = self._openrouter.chat.completions.create(
+                resp = client.chat.completions.create(
                     model=model_name,
                     messages=messages,
                     temperature=0.3,
                     tools=or_tools if or_tools else None,
                 )
             except Exception as e:
-                import traceback
-                traceback.print_exc()
-                err_msg = str(e)
-                print(f"  [OPENROUTER ERROR] {err_msg}")
-                if not assistant_reply:
-                    assistant_reply = f"**System Alert:** OpenRouter encountered an issue: {err_msg}"
-                break
+                if is_freellm and model_name != "gpt-oss-120b":
+                    try:
+                        print(f"  [FREELLMAPI AUTO-RETRY] Model '{model_name}' failed ({e}). Retrying with resilient 'gpt-oss-120b'...")
+                        model_name = "gpt-oss-120b"
+                        resp = client.chat.completions.create(
+                            model=model_name,
+                            messages=messages,
+                            temperature=0.3,
+                            tools=or_tools if or_tools else None,
+                        )
+                    except Exception as retry_e:
+                        e = retry_e
+                        err_msg = str(e)
+                        print(f"  [{provider_name.upper()} ERROR] {err_msg}")
+                        if iteration == 0:
+                            raise RuntimeError(f"{provider_name} unavailable: {err_msg}") from e
+                        if not assistant_reply:
+                            assistant_reply = f"**System Alert:** {provider_name} encountered an issue: {err_msg}"
+                        break
+                else:
+                    err_msg = str(e)
+                    print(f"  [{provider_name.upper()} ERROR] {err_msg}")
+                    if iteration == 0:
+                        raise RuntimeError(f"{provider_name} unavailable: {err_msg}") from e
+                    if not assistant_reply:
+                        assistant_reply = f"**System Alert:** {provider_name} encountered an issue: {err_msg}"
+                    break
             
             if hasattr(resp, "usage") and resp.usage:
                 total_input_tokens += resp.usage.prompt_tokens
@@ -1095,6 +1209,8 @@ class MemoryAgent:
                 # Strip it from the API payload so the provider doesn't reject it as 'Corrupted thought signature'
                 msg_dict["content"] = re.sub(r'<thought>.*?</thought>', '', msg_dict["content"], flags=re.DOTALL).strip()
                 
+            msg_dict.pop("reasoning", None)
+            msg_dict.pop("reasoning_details", None)
             messages.append(msg_dict)
 
             if getattr(message, "tool_calls", None):
@@ -1111,10 +1227,18 @@ class MemoryAgent:
                     except Exception:
                         pass
                     
-                    if tool_name.startswith("mcp_"):
-                        result = self._mcp.execute_tool(tool_name, tool_input)
-                    else:
-                        result = self._tool_executor.execute(tool_name, tool_input)
+                    try:
+                        if tool_name.startswith("mcp_"):
+                            result = self._mcp.execute_tool(tool_name, tool_input)
+                        else:
+                            result = self._tool_executor.execute(tool_name, tool_input)
+                    except Exception as tool_err:
+                        result = {
+                            "success": False,
+                            "output": "",
+                            "error": f"Tool execution failure: {tool_err}",
+                            "duration_ms": 0,
+                        }
                         
                     self._telemetry.log_event(
                         user_id=self.user_id,
@@ -1149,7 +1273,9 @@ class MemoryAgent:
                 iteration += 1
                 continue
                 
-            assistant_reply = message.content or ""
+            assistant_reply = (msg_dict.get("content") or message.content or "").strip()
+            if not assistant_reply and getattr(message, "reasoning", None):
+                assistant_reply = str(message.reasoning).strip()
             break
 
         return assistant_reply, tool_actions, total_input_tokens, total_output_tokens
@@ -1174,20 +1300,34 @@ class MemoryAgent:
           remains fully responsive for other coroutines.
         """
         import asyncio
-        if not self._openrouter:
-            return "**System Alert:** OpenRouter client not initialized.", [], 0, 0
+        is_freellm = "freellmapi" in selected_model.lower()
+        client = self._freellmapi if is_freellm else self._openrouter
+        if not client:
+            client_name = "FreeLLMAPI" if is_freellm else "OpenRouter"
+            return f"**System Alert:** {client_name} client not initialized.", [], 0, 0
 
         model_name = selected_model
-        if model_name.startswith("openrouter/"):
+        if is_freellm:
+            if "/" in selected_model:
+                parts = selected_model.split("/", 1)
+                model_name = parts[1]
+            else:
+                model_name = getattr(self.llm_cfg, "freellmapi_model", "auto") or "auto"
+        elif model_name.startswith("openrouter/"):
             model_name = model_name[11:]
         elif model_name.startswith("nvidia/") or model_name.startswith("z-ai/"):
             pass
 
         messages: list[dict[str, Any]] = []
         if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
+            if is_freellm and len(system_prompt) > 6000:
+                compact_sys = system_prompt[:5000] + "\n\n[Context compressed for local model window]"
+                messages.append({"role": "system", "content": compact_sys})
+            else:
+                messages.append({"role": "system", "content": system_prompt})
 
-        for msg in self._history:
+        history_items = self._history[-4:] if (is_freellm and len(self._history) > 4) else self._history
+        for msg in history_items:
             role = "assistant" if msg["role"] == "model" else "user"
             content = msg["content"]
             if isinstance(content, str):
@@ -1221,7 +1361,8 @@ class MemoryAgent:
         iteration = 0
         assistant_reply = ""
 
-        print(f"  [ASYNC MESH] Routing via {model_name}...")
+        provider_name = "FreeLLMAPI" if is_freellm else "OpenRouter"
+        print(f"  [ASYNC MESH] Routing via {provider_name} ({model_name})...")
 
         while True:
             # Iteration safety limit
@@ -1236,20 +1377,42 @@ class MemoryAgent:
             # ── Non-blocking API call via thread ─────────────────────────────
             try:
                 resp = await asyncio.to_thread(
-                    self._openrouter.chat.completions.create,
+                    client.chat.completions.create,
                     model=model_name,
                     messages=messages,
                     temperature=0.3,
                     tools=or_tools if or_tools else None,
                 )
             except Exception as e:
-                import traceback
-                traceback.print_exc()
-                err_msg = str(e)
-                print(f"  [ASYNC MESH ERROR] {err_msg}")
-                if not assistant_reply:
-                    assistant_reply = f"**System Alert:** OpenRouter encountered an issue: {err_msg}"
-                break
+                # If FreeLLMAPI failed on auto/cohere/rate-limited models, immediately retry with reliable gpt-oss-120b
+                if is_freellm and model_name != "gpt-oss-120b":
+                    try:
+                        print(f"  [FREELLMAPI AUTO-RETRY] Model '{model_name}' failed ({e}). Retrying with resilient 'gpt-oss-120b'...")
+                        model_name = "gpt-oss-120b"
+                        resp = await asyncio.to_thread(
+                            client.chat.completions.create,
+                            model=model_name,
+                            messages=messages,
+                            temperature=0.3,
+                            tools=or_tools if or_tools else None,
+                        )
+                    except Exception as retry_e:
+                        e = retry_e
+                        err_msg = str(e)
+                        print(f"  [{provider_name.upper()} ASYNC ERROR] {err_msg}")
+                        if iteration == 0:
+                            raise RuntimeError(f"{provider_name} unavailable: {err_msg}") from e
+                        if not assistant_reply:
+                            assistant_reply = f"**System Alert:** {provider_name} encountered an issue: {err_msg}"
+                        break
+                else:
+                    err_msg = str(e)
+                    print(f"  [{provider_name.upper()} ASYNC ERROR] {err_msg}")
+                    if iteration == 0:
+                        raise RuntimeError(f"{provider_name} unavailable: {err_msg}") from e
+                    if not assistant_reply:
+                        assistant_reply = f"**System Alert:** {provider_name} encountered an issue: {err_msg}"
+                    break
 
             if hasattr(resp, "usage") and resp.usage:
                 total_input_tokens += resp.usage.prompt_tokens
@@ -1265,6 +1428,8 @@ class MemoryAgent:
                 if t_match:
                     print(f"\n  [HIDDEN THOUGHT]\n  {t_match.group(1).strip().replace(chr(10), chr(10) + '  ')}\n")
                 msg_dict["content"] = re.sub(r"<thought>.*?</thought>", "", msg_dict["content"], flags=re.DOTALL).strip()
+            msg_dict.pop("reasoning", None)
+            msg_dict.pop("reasoning_details", None)
             messages.append(msg_dict)
 
             if getattr(message, "tool_calls", None):
@@ -1279,11 +1444,19 @@ class MemoryAgent:
                         print(f"  [ASYNC TOOL DISPATCH] {tool_name}: {tool_input}")
                     except Exception:
                         pass
-                    if tool_name.startswith("mcp_"):
-                        # MCP calls still run in thread (blocking)
-                        result = await asyncio.to_thread(self._mcp.execute_tool, tool_name, tool_input)
-                    else:
-                        result = await self._tool_executor.execute_async(tool_name, tool_input)
+                    try:
+                        if tool_name.startswith("mcp_"):
+                            # MCP calls still run in thread (blocking)
+                            result = await asyncio.to_thread(self._mcp.execute_tool, tool_name, tool_input)
+                        else:
+                            result = await self._tool_executor.execute_async(tool_name, tool_input)
+                    except Exception as tool_err:
+                        result = {
+                            "success": False,
+                            "output": "",
+                            "error": f"Tool execution failure: {tool_err}",
+                            "duration_ms": 0,
+                        }
                     return tc, result
 
                 # Gather ALL tool calls in this turn concurrently
@@ -1323,174 +1496,23 @@ class MemoryAgent:
                 iteration += 1
                 continue
 
-            assistant_reply = message.content or ""
+            assistant_reply = (msg_dict.get("content") or message.content or "").strip()
+            if not assistant_reply and getattr(message, "reasoning", None):
+                assistant_reply = str(message.reasoning).strip()
             break
 
         return assistant_reply, tool_actions, total_input_tokens, total_output_tokens
 
-
-    async def chat_async(
-        self,
-        user_input: str,
-        # Extract operation_mode from metadata if present
-        operation_mode = "SWARM"  # Default to swarm for enterprise capabilities
-        
-        # Check if user specified mode in input (e.g., "--mode solo" or "--mode swarm")
-        if user_input:
-            import re
-            mode_match = re.search(r"--mode\s+(solo|swarm)", user_input, re.IGNORECASE)
-            if mode_match:
-                operation_mode = mode_match.group(1).upper()
-                # Remove mode flag from input for processing
-                user_input = re.sub(r"--mode\s+(solo|swarm)\s*", "", user_input, flags=re.IGNORECASE).strip()
-                if not user_input:
-                    return ("", [], 0, 0)
-            elif "--solo" in user_input.lower() or "quick" in user_input.lower():
-                operation_mode = "SOLO"
-                # Remove flags from input
-                user_input = user_input.replace("--solo", "").replace("quick", "").strip()
-            elif "--swarm" in user_input.lower() or "deep" in user_input.lower():
-                operation_mode = "SWARM"
-                # Remove flags from input
-                user_input = user_input.replace("--swarm", "").replace("deep", "").strip()
-        
-        # Determine routing based on mode and complexity
-        if operation_mode == "SOLO":
-            return await self._chat_solo(
-                user_input=user_input,
-                system_prompt="",
-                files=files,
-                module_id=module_id,
-            )
-        else:
-            return await self._chat_swarm(
-                user_input=user_input,
-                system_prompt="",
-                files=files,
-                module_id=module_id,
-            )
-    async def _chat_solo(self, user_input: str, system_prompt: str, files: list[ProcessedFile] | None = None, combined_text: str = "", tools_param: list[Any] | None = None, module_id: str = "ultron_prime") -> tuple[str, list[dict[str, Any]], int, int]:
-        """SOLO MODE: Direct Gemini Flash path with 90% token reduction.
-        Bypasses multi-agent orchestration for lightweight queries.
-        """
-        # Use Gemini Flash for SOLO mode - more cost-effective for simple queries
-        # Add operation mode routing logic
-        operation_mode = "SWARM"  # Default to swarm for enterprise capabilities
-        
-        # Check if user specified mode in input (e.g., "--mode solo" or "--mode swarm")
-        if user_input:
-            import re
-            mode_match = re.search(r"--mode\s+(solo|swarm)", user_input, re.IGNORECASE)
-            if mode_match:
-                operation_mode = mode_match.group(1).upper()
-                # Remove mode flag from input for processing
-                user_input = re.sub(r"--mode\s+(solo|swarm)\s*", "", user_input, flags=re.IGNORECASE).strip()
-                if not user_input:
-                    return ("", [], 0, 0)
-            elif "--solo" in user_input.lower() or "quick" in user_input.lower():
-                operation_mode = "SOLO"
-                # Remove flags from input
-                user_input = user_input.replace("--solo", "").replace("quick", "").strip()
-            elif "--swarm" in user_input.lower() or "deep" in user_input.lower():
-                operation_mode = "SWARM"
-                # Remove flags from input
-                user_input = user_input.replace("--swarm", "").replace("deep", "").strip()
-        
-        # Determine routing based on mode and complexity
-        if operation_mode == "SOLO":
-            return await self._chat_solo(
-                user_input=user_input,
-                system_prompt="",
-                files=files,
-                module_id=module_id,
-            )
-        else:
-            return await self._chat_swarm(
-                user_input=user_input,
-                system_prompt="",
-                files=files,
-                module_id=module_id,
-            )
-        if not _HAS_GEMINI:
-            raise RuntimeError("Gemini not available for SOLO mode")
-        
-        # Simplified prompt for SOLO mode - reduce context length
-        if not system_prompt:
-            system_prompt = ULTRON_MODULES[module_id]["prompt"]
-        
-        # Call Gemini directly with reduced context
-        try:
-            response = await self._chat_gemini_async(
-                selected_model="gemini-2.5-flash",  # More cost-effective model
-                system_prompt=system_prompt,
-                user_input=user_input,
-                files=files,
-                combined_text=combined_text,
-                tools_param=tools_param,
-                module_id=module_id
-            )
-            # Apply token savings tracking
-            self._budget_tracker.record_usage(
-                "SOLO_MODE", 
-                response[2],  # input_tokens
-                response[3],  # output_tokens
-                "gemini-2.5-flash"
-            )
-            return response
-        except Exception as e:
-            self._trigger_gemini_cooldown()
-            raise RuntimeError(f"SOLO mode failed: {e}") from e
-
-    async def _chat_swarm(self, user_input: str, system_prompt: str, files: list[ProcessedFile] | None = None, combined_text: str = "", tools_param: list[Any] | None = None, module_id: str = "ultron_prime") -> tuple[str, list[dict[str, Any]], int, int]:
-        """SWARM MODE: Full 6-agent mesh activation for complex queries.
-        Maximum intelligence but higher token cost.
-        """
-        # Enhanced prompt for SWARM mode - include orchestration instructions
-        if not system_prompt:
-            system_prompt = ULTRON_MODULES[module_id]["prompt"] + "\n\n--- ORCHESTRATION DIRECTIVE ---\nYou are the SWARM ORCHESTRATOR. Decompose this complex directive across your 6-agent squad:\n1. Prompt Architect: Optimize and structure the query\n2. Domain Expert: Provide specialized knowledge\n3. Research Agent: Gather external context\n4. Analyst: Synthesize findings\n5. Validator: Verify accuracy\n6. Executive: Format final output\n\nExecute sequentially, with each agent passing refined context to the next."
-        
-        try:
-            # Initialize swarm orchestrator
-            swarm_result = await self.swarm.execute_swarm(
-                user_input=user_input,
-                system_prompt=system_prompt,
-                files=files,
-                combined_text=combined_text,
-                tools_param=tools_param,
-                module_id=module_id
-            )
-            
-            # Aggregate results from all agents
-            final_reply = swarm_result.final_response
-            tool_actions = []
-            total_input = 0
-            total_output = 0
-            
-            for agent_result in swarm_result.agent_results:
-                tool_actions.extend(agent_result.tool_actions)
-                total_input += agent_result.input_tokens
-                total_output += agent_result.output_tokens
-                
-            self._budget_tracker.record_usage(
-                "SWARM_MODE", 
-                total_input,
-                total_output,
-                "6-agent-mesh"
-            )
-            
-            return (final_reply, tool_actions, total_input, total_output)
-        except Exception as e:
-            raise RuntimeError(f"SWARM mode failed: {e}") from e
 
     async def _chat_gemini_async(
         self,
         selected_model: str,
         system_prompt: str,
         user_input: str,
-        files: list[\"ProcessedFile\"] | None = None,
-        combined_text: str = \"\",
+        files: list[ProcessedFile] | None = None,
+        combined_text: str = "",
         tools_param: list[Any] | None = None,
-        module_id: str = \"ultron_prime\",
+        module_id: str = "ultron_prime",
     ) -> tuple[str, list[dict[str, Any]], int, int]:
         """Phase 3: Async Gemini tool-call loop.
         - All tool calls within a single turn are dispatched concurrently via asyncio.gather().
@@ -1498,16 +1520,19 @@ class MemoryAgent:
         - sleep_seconds uses native asyncio.sleep() — ZERO LLM tokens burned during wait.
         """
         import asyncio
-        # Delegate setup to sync version initially, then run the async loop
-        # Re-use the contents/config building from the sync path via to_thread
         return await asyncio.to_thread(
             self._chat_gemini,
             selected_model, system_prompt, user_input, files, combined_text, tools_param, module_id,
         )
+
+    async def chat_async(
+        self,
+        user_input: str,
         files: list[ProcessedFile] | None = None,
         module_id: str = "ultron_prime",
         model_override: str | None = None,
         optimize_prompt: bool = True,
+        operation_mode: str = "SWARM",
     ) -> dict[str, Any]:
         """
         Phase 3: Primary async entry point for the agent execution pipeline.
@@ -1518,6 +1543,14 @@ class MemoryAgent:
         """
         user_input = user_input.strip()
         files = files or []
+
+        effective_mode = (operation_mode or "SWARM").upper()
+        if "--solo" in user_input.lower() or "--mode solo" in user_input.lower():
+            effective_mode = "SOLO"
+            user_input = re.sub(r"--mode\s+solo|--solo", "", user_input, flags=re.IGNORECASE).strip()
+        elif "--swarm" in user_input.lower() or "--mode swarm" in user_input.lower():
+            effective_mode = "SWARM"
+            user_input = re.sub(r"--mode\s+swarm|--swarm", "", user_input, flags=re.IGNORECASE).strip()
 
         # ── 0a. Fail-Safe Lockdown Active Check ──────────────────────────────
         if is_system_locked():
@@ -1585,6 +1618,7 @@ class MemoryAgent:
             files=files,
             module_id=module_id,
             model_override=model_override,
+            operation_mode=effective_mode,
         )
 
         # ── 3. Retrieve memories ──────────────────────────────────────────────
@@ -1637,7 +1671,7 @@ class MemoryAgent:
         # ── 3b. Autonomous Multi-Agent Swarm Check ────────────────────────────
         swarm_actions = []
         is_swarm = False
-        if not files and self.swarm.should_trigger_swarm(user_input):
+        if effective_mode != "SOLO" and not files and (effective_mode == "SWARM" or self.swarm.should_trigger_swarm(user_input)):
             try:
                 print(f"  [ULTRON SWARM ACTIVATED] Decomposing complex directive across 6-agent squad...")
                 swarm_context = f"{memory_text}\n\n── Domain Skills Injected ──\n{skill_context}" if skill_context else memory_text
@@ -1668,7 +1702,7 @@ class MemoryAgent:
                     "model_used": selected_model,
                     "model_display": "ULTRON SWARM (6 Agents)",
                     "route_reason": route_reason,
-                    "tool_actions": [],
+                    "tool_actions": swarm_res.get("tool_actions", []),
                     "swarm_actions": swarm_actions,
                     "is_swarm": True,
                     "skills_used": combined_swarm_skills,
@@ -1727,6 +1761,11 @@ class MemoryAgent:
                 "   CALL `control_desktop_gui` (action='focus_window', 'send_keys', 'close_window', or 'click_element'). When asked to close an app, call `control_desktop_gui` with action='close_window' immediately.\n"
                 "5. NEVER give a passive confirmation or dump script code when an action is requested. Always call the tools autonomously and report the verified real-time result.\n"
                 "6. When Boss uploads a file (Excel, CSV, data) or asks to analyze/reconcile data: YOU MUST call `run_python` with pandas code to actually read and process the file, then present the real findings. NEVER output raw code blocks to the chat. EXECUTE it yourself.\n"
+                "7. When Boss asks to execute, build, or verify workflows (CrewAI, LangGraph, LangChain, etc.):\n"
+                "   All orchestration frameworks (`crewai`, `langchain`, `langgraph`, `openai`, `pandas`, `pydantic`) are ALREADY installed in the environment.\n"
+                "   DO NOT attempt `pip install`. Directly write and execute the complete Python script via `run_python`.\n"
+                "   For CrewAI with FreeLLMAPI, use: `from crewai import LLM; llm = LLM(model='openai/gpt-oss-120b', base_url='http://localhost:31415/v1', api_key='sk-no-key-required')`.\n"
+                "   Execute the script using `run_python`, read the actual execution output, and report the real terminal evidence to Boss. NEVER output an architectural breakdown or passive talk instead of executing the workflow.\n"
                 "────────────────────────────────────────────────────────────────\n"
             )
 
@@ -1765,20 +1804,32 @@ class MemoryAgent:
         ]
 
         # ── 5. Build user message (Multi-Modal) ────────────────────────────────
-        text_attachments = [f.text_content for f in files if not f.is_image and f.text_content]
+        text_attachments = [f for f in files if not f.is_image and f.text_content] if files else []
         full_text_parts = []
-        if text_attachments:
-            summarized_attachments = []
-            for text in text_attachments:
-                if len(text) > 1500:
-                    print(f"  [ISOLATED WORKER] Summarizing file attachment ({len(text)} chars) to save tokens...")
-                    summary_prompt = f"Task: {user_input or 'Analyze this file'}\n\nFile Content:\n{text}"
+        if files:
+            for f in files:
+                if f.is_image:
+                    continue
+                text = f.text_content or ""
+                # Preserve any local file path instruction explicitly
+                path_header = ""
+                if "[SYSTEM INSTRUCTION:" in text and "at EXACTLY:" in text:
+                    try:
+                        import re
+                        m = re.search(r"(\[SYSTEM INSTRUCTION:.*?\])", text, flags=re.DOTALL)
+                        if m:
+                            path_header = m.group(1) + "\n\n"
+                    except Exception:
+                        pass
+
+                if len(text) > 35000:
+                    print(f"  [ISOLATED WORKER] Summarizing large file attachment ({len(text)} chars) to save tokens...")
+                    summary_prompt = f"Task: {user_input or 'Analyze this file'}\n\nFile Content:\n{text[:60000]}"
                     sys_prompt = "You are an isolated data extraction worker. Return only the relevant facts, summaries, or requested data. Be concise. Do NOT include conversation history."
                     summary = self._call_raw_llm(prompt=summary_prompt, system_prompt=sys_prompt)
-                    summarized_attachments.append(f"[ISOLATED FILE SUMMARY]\n{summary}")
+                    full_text_parts.append(f"{path_header}[ATTACHMENT: {f.filename}]\n[ISOLATED FILE SUMMARY]\n{summary}")
                 else:
-                    summarized_attachments.append(text)
-            full_text_parts.append("\n\n".join(summarized_attachments))
+                    full_text_parts.append(text)
         if user_input:
             full_text_parts.append(user_input)
 
@@ -1826,8 +1877,13 @@ class MemoryAgent:
 
         # ── 6. Agentic Tool-Use Loop (Async Mesh) ─────────────────────────────
         try:
-            is_openrouter = "openrouter/" in selected_model or "nvidia/" in selected_model or "z-ai/" in selected_model
-            chat_func = self._chat_openrouter_async if is_openrouter else self._chat_gemini_async
+            is_openai_compat = (
+                "openrouter/" in selected_model
+                or "nvidia/" in selected_model
+                or "z-ai/" in selected_model
+                or "freellmapi" in selected_model.lower()
+            )
+            chat_func = self._chat_openrouter_async if is_openai_compat else self._chat_gemini_async
             
             if tools_param:
                 print("  [ORCHESTRATOR] Delegating multi-step execution to Worker Mesh to optimize tokens...")
@@ -1872,17 +1928,24 @@ class MemoryAgent:
                 synthesizer_user += "\nUsing the skills, memory, and data above, write the final, perfectly formatted response to the user. Do NOT ask to use tools, the tools have already been run."
                 
                 synth_sys = system_prompt.replace(tool_instruction, "") if tool_instruction else system_prompt
-                assistant_reply, _, s_in, s_out = await chat_func(
-                    selected_model=selected_model,
-                    system_prompt=synth_sys,
-                    user_input=synthesizer_user,
-                    files=files,
-                    combined_text=combined_text,
-                    tools_param=None,
-                    module_id=f"{module_id}_synth",
-                )
-                total_input_tokens += s_in
-                total_output_tokens += s_out
+                try:
+                    assistant_reply, _, s_in, s_out = await chat_func(
+                        selected_model=selected_model,
+                        system_prompt=synth_sys,
+                        user_input=synthesizer_user,
+                        files=None,
+                        combined_text=synthesizer_user,
+                        tools_param=None,
+                        module_id=f"{module_id}_synth",
+                    )
+                    total_input_tokens += s_in
+                    total_output_tokens += s_out
+                except Exception as synth_err:
+                    print(f"  [SYNTHESIZER PASS WARNING] Synthesizer pass encountered error ({synth_err}). Using worker output directly.")
+                    assistant_reply = worker_reply
+
+                if not assistant_reply and worker_reply:
+                    assistant_reply = worker_reply
                 
             else:
                 # No tools active, single pass directly (e.g. general chat)
@@ -1898,8 +1961,78 @@ class MemoryAgent:
                 total_input_tokens += s_in
                 total_output_tokens += s_out
         except Exception as gem_err:
-            print(f"  [LLM ERROR] {gem_err}")
-            assistant_reply = f"**System Alert:** The AI Core encountered an issue: `{gem_err}`. Please retry in a moment, Boss."
+            print(f"  [LLM ERROR] Primary model ({selected_model}) failed: {gem_err}. Triggering automatic failover...")
+            fallback_success = False
+            fallback_candidates = []
+            
+            # If FreeLLMAPI failed (e.g. localhost:3001 is offline), fail over to Gemini first, then OpenRouter
+            if "freellmapi" in selected_model.lower():
+                if self._gemini:
+                    fallback_candidates.append(getattr(self.llm_cfg, "gemini_model_flash", "gemini-2.0-flash") or "gemini-2.0-flash")
+                if getattr(self, "_openrouter", None):
+                    fallback_candidates.append("openrouter/deepseek/deepseek-chat")
+            else:
+                # If Gemini or other failed, try FreeLLMAPI if initialized, then OpenRouter
+                if getattr(self, "_freellmapi", None):
+                    fallback_candidates.append("freellmapi")
+                if getattr(self, "_openrouter", None):
+                    fallback_candidates.append("openrouter/deepseek/deepseek-chat")
+
+            offline_prefix = ""
+            err_str = str(gem_err).lower()
+            if "freellmapi" in selected_model.lower():
+                current_base = getattr(self.llm_cfg, "freellmapi_base_url", "http://localhost:31415/v1")
+                import socket
+                try:
+                    port = 31415
+                    if ":" in current_base:
+                        port = int(current_base.split(":")[-1].split("/")[0])
+                    with socket.create_connection(("localhost", port), timeout=0.5):
+                        is_port_offline = False
+                except Exception:
+                    is_port_offline = True
+
+                if is_port_offline:
+                    offline_prefix = f"> ⚠️ **FreeLLMAPI Notice:** Local server at `{current_base}` is currently offline. Your directive was automatically rerouted to cloud fallback.\n\n"
+                else:
+                    offline_prefix = f"> ⚠️ **FreeLLMAPI Notice:** Local server at `{current_base}` is online, but upstream model returned: `{str(gem_err)[:80]}`. Rerouted to cloud fallback.\n\n"
+
+            for fallback_model in fallback_candidates:
+                try:
+                    print(f"  [LLM FAILOVER] Retrying request via {fallback_model}...")
+                    if fallback_model.startswith("gemini"):
+                        assistant_reply, tool_actions, f_in, f_out = await self._chat_gemini_async(
+                            selected_model=fallback_model,
+                            system_prompt=system_prompt,
+                            user_input=user_input,
+                            files=files,
+                            combined_text=combined_text,
+                            tools_param=None,
+                            module_id=module_id,
+                        )
+                    else:
+                        assistant_reply, tool_actions, f_in, f_out = await self._chat_openrouter_async(
+                            selected_model=fallback_model,
+                            system_prompt=system_prompt,
+                            user_input=user_input,
+                            files=files,
+                            combined_text=combined_text,
+                            tools_param=None,
+                            module_id=module_id,
+                        )
+                    total_input_tokens += f_in
+                    total_output_tokens += f_out
+                    selected_model = fallback_model
+                    route_reason = f"Automated Failover ({gem_err})"
+                    if offline_prefix:
+                        assistant_reply = offline_prefix + assistant_reply
+                    fallback_success = True
+                    break
+                except Exception as fb_err:
+                    print(f"  [LLM FAILOVER ERROR] {fallback_model} failed: {fb_err}")
+
+            if not fallback_success:
+                assistant_reply = f"**System Alert:** The AI Core encountered an issue: `{gem_err}`. Please retry in a moment, Boss."
 
         # ── IMPLICIT CODE EXECUTION INTERCEPTOR (Post-Dispatch) ───────────────
         # If ANY model (Gemini or OpenRouter) output raw python code blocks
@@ -2007,21 +2140,27 @@ class MemoryAgent:
                     # Provide the draft reply and recent tool context so the model can actually fix it without needing tools
                     context_dump = "\n".join([f"{act['tool']}: {act.get('result', '')[:1000]}" for act in tool_actions])
                     refine_prompt = (
-                        f"PRE-RESPONSE VERIFICATION CRITIQUE:\n"
-                        f"Your draft response contained a factual/verification discrepancy: {critic_res.critique}\n"
-                        f"REQUIRED CORRECTION: {critic_res.correction_instruction}\n\n"
+                        f"CORRECTION DIRECTIVE:\n"
+                        f"Discrepancy identified: {critic_res.critique}\n"
+                        f"Correction needed: {critic_res.correction_instruction}\n\n"
                         f"--- CONTEXT AVAILABLE TO YOU ---\n"
                         f"Original Draft:\n{assistant_reply}\n\n"
                         f"Tool Context:\n{context_dump}\n\n"
                         f"Please produce the revised, verified, and complete final response for Boss based on the context above.\n"
-                        f"CRITICAL: Do NOT attempt to use any tools or output JSON actions. You must output the final markdown text directly."
+                        f"CRITICAL RULES FOR REVISION:\n"
+                        f"1. NEVER mention 'pre-response verification critique', 'internal critique', or system evaluation in your response. Speak directly and authoritatively to Boss.\n"
+                        f"2. Do NOT output code asking Boss to run it if the data is already available or if you can state the findings.\n"
+                        f"3. Do NOT attempt to use tools or output JSON actions. You must output the final polished markdown text directly."
                     )
                     corrected_reply = self._call_raw_llm(
                         prompt=refine_prompt,
                         system_prompt=system_prompt,
                     )
                     if corrected_reply and len(corrected_reply) > 50:
-                        assistant_reply = corrected_reply
+                        import re
+                        cleaned_reply = re.sub(r"(?i)as noted in the pre-response verification critique,?\s*", "", corrected_reply).strip()
+                        cleaned_reply = re.sub(r"(?i)based on the pre-response verification critique,?\s*", "", cleaned_reply).strip()
+                        assistant_reply = cleaned_reply
             except Exception as crit_err:
                 print(f"  [IN-FLIGHT CRITIC WARNING] Pre-response gate fallback: {crit_err}")
 
@@ -2034,7 +2173,8 @@ class MemoryAgent:
                 print(f"\n  [HIDDEN THOUGHT]\n  {thought_content.replace(chr(10), chr(10) + '  ')}\n")
             assistant_reply = re.sub(r'<thought>.*?</thought>', '', assistant_reply, flags=re.DOTALL).strip()
         # ── 7. Update session history ─────────────────────────────────────────
-        history_user_text = user_input or f"[Attached {len(files)} files]"
+        files_count = len(files) if files else 0
+        history_user_text = user_input or f"[Attached {files_count} files]"
         if text_attachments and user_input:
             history_user_text = f"{user_input} [With {len(text_attachments)} document(s)]"
         if tool_actions:
@@ -2120,6 +2260,9 @@ class MemoryAgent:
             "tool_actions": tool_actions,
             "skills_used": skills_used_payload,
             "prompt_optimization": prompt_opt_payload,
+            "operation_mode": effective_mode,
+            "is_swarm": False,
+            "swarm_actions": [],
         }
 
     def chat(
@@ -2129,6 +2272,7 @@ class MemoryAgent:
         module_id: str = "ultron_prime",
         model_override: str | None = None,
         optimize_prompt: bool = True,
+        operation_mode: str = "SWARM",
     ) -> dict[str, Any]:
         """
         Synchronous bridge: runs chat_async() on the event loop.
@@ -2142,11 +2286,11 @@ class MemoryAgent:
                 # (app.py uses await, so this case is handled there)
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-                    fut = ex.submit(asyncio.run, self.chat_async(user_input, files, module_id, model_override, optimize_prompt))
+                    fut = ex.submit(asyncio.run, self.chat_async(user_input, files, module_id, model_override, optimize_prompt, operation_mode))
                     return fut.result()
-            return loop.run_until_complete(self.chat_async(user_input, files, module_id, model_override, optimize_prompt))
+            return loop.run_until_complete(self.chat_async(user_input, files, module_id, model_override, optimize_prompt, operation_mode))
         except RuntimeError:
-            return asyncio.run(self.chat_async(user_input, files, module_id, model_override, optimize_prompt))
+            return asyncio.run(self.chat_async(user_input, files, module_id, model_override, optimize_prompt, operation_mode))
 
 
 
