@@ -41,7 +41,7 @@ def test_model_registry_default_pool():
     registry = ModelRegistry()
     gemini_pool = registry.get_candidate_pool("gemini")
     assert len(gemini_pool) >= 4
-    assert "gemini-3.8-flash" in gemini_pool
+    assert "gemini-3.6-flash" in gemini_pool
     assert "gemini-3.6-flash" in gemini_pool
 
 
@@ -49,7 +49,7 @@ def test_model_registry_preferred_model_priority():
     registry = ModelRegistry()
     pool = registry.get_candidate_pool("gemini", preferred_model="gemini-custom-enterprise")
     assert pool[0] == "gemini-custom-enterprise"
-    assert "gemini-3.8-flash" in pool
+    assert "gemini-3.6-flash" in pool
 
 
 def test_model_registry_circuit_breaker_exclusion():
@@ -188,3 +188,4 @@ def test_dlq_records_background_learning_failure(tmp_path):
     assert record.failed_service == "bg_learning_reflection"
     assert record.node_name == "reflection_engine"
     assert "Simulated reflection LLM context overflow" in record.error_message
+

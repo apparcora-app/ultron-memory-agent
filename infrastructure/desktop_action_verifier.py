@@ -19,12 +19,26 @@ class DesktopActionVerifier:
     def capture_window_state(self, window_title: str) -> Dict[str, Any]:
         ps_script = f"""
         Add-Type -AssemblyName UIAutomationClient
+        Add-Type -TypeDefinition @'
+        using System;
+        using System.Runtime.InteropServices;
+        public class Win32 {{
+            [DllImport("user32.dll")]
+            public static extern IntPtr GetForegroundWindow();
+        }}
+'@
         $root = [System.Windows.Automation.AutomationElement]::RootElement
         $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, "{window_title}")
         $window = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
         
         if ($null -eq $window) {{
             Write-Output 'WINDOW_NOT_FOUND'
+            exit
+        }}
+        $fg = [Win32]::GetForegroundWindow()
+        $is_focused = ($fg -eq $window.Current.NativeWindowHandle)
+        if (-not $is_focused) {{
+            Write-Output 'WINDOW_NOT_FOCUSED'
             exit
         }}
         
@@ -50,7 +64,7 @@ class DesktopActionVerifier:
                 timeout=10
             )
             out = result.stdout.strip()
-            if not out or out == 'WINDOW_NOT_FOUND':
+            if not out or out == 'WINDOW_NOT_FOUND' or out == 'WINDOW_NOT_FOCUSED':
                 return {"found": False, "controls": []}
             return json.loads(out)
         except Exception as e:
@@ -69,6 +83,8 @@ class DesktopActionVerifier:
     def verify_action(self, window_title: str, execute_fn: Callable, **kwargs) -> ActionVerification:
         pre_state = self.capture_window_state(window_title)
         
+        if not pre_state.get('found'):
+            return ActionVerification(False, pre_state, {}, False, 'Target window not found or unfocused before action')
         try:
             execute_fn(**kwargs)
             action_succeeded = True

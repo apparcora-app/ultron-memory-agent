@@ -40,7 +40,7 @@ except ImportError:
 from budget_tracker import BudgetTracker
 from config import AgentConfig, LLMConfig, ReflectionConfig, ToolConfig, VectorStoreConfig, MCPConfig, TelemetryConfig
 from file_processor import ProcessedFile
-from artifact_memory import LocalArtifactEngine as MemoryManager
+from memory_manager import MemoryManager
 from reflection_engine import ReflectionEngine, InFlightCritic
 from sandbox import Sandbox, SandboxConfig, SandboxViolation
 from skill_manager import SkillManager
@@ -228,8 +228,8 @@ def reformulate_query(
     if not raw_query or len(raw_query) < 5:
         return raw_query
 
-    # Skip reformulation if the query is already self-contained (long, specific)
-    if not _ANAPHORIC_PATTERNS.search(raw_query) and len(raw_query) > 30:
+    # Skip reformulation if the query contains no anaphoric patterns
+    if not _ANAPHORIC_PATTERNS.search(raw_query):
         return raw_query
 
     # Also skip if there's no history to resolve against
@@ -319,36 +319,11 @@ class MemoryAgent:
 
         # Multi-Engine Brain: Google Gemini 3.6 Flash (100% Exclusive)
         self.provider = "gemini"
-        self._gemini = None
         if _HAS_GEMINI and self.llm_cfg.gemini_api_key:
-            try:
-                self._gemini = genai.Client(api_key=self.llm_cfg.gemini_api_key)
-            except Exception as e:
-                print(f"  [GEMINI INIT ERROR] {e}")
+            pass
 
         self._claude = None
         self._chat_model = "gemini-3.6-flash"
-        
-        # OpenRouter / OpenAI compatibility bridge
-        self._openrouter = None
-        if hasattr(self.llm_cfg, "openrouter_api_key") and self.llm_cfg.openrouter_api_key:
-            try:
-                self._openrouter = OpenAI(
-                    base_url="https://openrouter.ai/api/v1",
-                    api_key=self.llm_cfg.openrouter_api_key,
-                )
-            except Exception as e:
-                print(f"  [OPENROUTER INIT ERROR] {e}")
-
-        # FreeLLMAPI Client bridge (Zero-Cost Aggregation Gateway)
-        self._freellmapi = None
-        if getattr(self.llm_cfg, "freellmapi_enabled", False) or getattr(self.llm_cfg, "freellmapi_base_url", None):
-            try:
-                base_url = getattr(self.llm_cfg, "freellmapi_base_url", "http://localhost:31415/v1") or "http://localhost:31415/v1"
-                api_key = getattr(self.llm_cfg, "freellmapi_api_key", "sk-freellmapi-local") or "sk-freellmapi-local"
-                self._freellmapi = OpenAI(base_url=base_url, api_key=api_key)
-            except Exception as e:
-                print(f"  [FREELLMAPI INIT ERROR] {e}")
 
         # Memory layer
         if self.memory_subsystem is not None:
@@ -358,7 +333,7 @@ class MemoryAgent:
             self._core_memory = getattr(self.memory_subsystem, "core_memory", None)
             self._graph_rag = getattr(self.memory_subsystem, "graph_rag", None)
         else:
-            self._memory = MemoryManager(
+            print('Calling MemoryManager...', flush=True); self._memory = MemoryManager(
                 user_id=user_id,
                 vector_store_cfg=vector_cfg,
                 llm_cfg=self.llm_cfg,
@@ -375,7 +350,6 @@ class MemoryAgent:
                 self._graph_rag = GraphRAGEngine(
                     db_path=os.path.join(getattr(self.llm_cfg, "data_dir", "./data"), "knowledge_graph.sqlite3"),
                     claude=self._claude,
-                    gemini=self._gemini,
                     haiku_model=self.llm_cfg.chat_model_haiku,
                     gemini_model=self.llm_cfg.gemini_model,
                     provider=self.provider,
@@ -435,7 +409,6 @@ class MemoryAgent:
                 self._artifact_gate = None
             self._critic = InFlightCritic(
                 claude=self._claude,
-                gemini=self._gemini,
                 gemini_model=self.llm_cfg.gemini_model,
                 haiku_model=self.llm_cfg.chat_model_haiku,
                 provider=self.provider,
@@ -443,7 +416,6 @@ class MemoryAgent:
             )
             self._reflector = ReflectionEngine(
                 claude=self._claude,
-                gemini=self._gemini,
                 gemini_model=self.llm_cfg.gemini_model,
                 memory_manager=self._memory,
                 trajectory_manager=self._trajectories,
@@ -460,7 +432,6 @@ class MemoryAgent:
             self._dreamer = DreamingEngine(
                 claude=self._claude,
                 haiku_model=self.llm_cfg.chat_model_haiku,
-                gemini=self._gemini,
                 gemini_model=self.llm_cfg.gemini_model,
                 provider=self.provider,
                 telemetry=self._telemetry,
@@ -479,7 +450,7 @@ class MemoryAgent:
         else:
             self._router = ComplexityRouter(
                 haiku_model=self.llm_cfg.gemini_model_flash,
-                sonnet_model="openrouter/deepseek/deepseek-chat" if self._openrouter else self.llm_cfg.gemini_model_thinking,
+                sonnet_model="openrouter/deepseek/deepseek-chat" if getattr(self, '_openrouter', None) else self.llm_cfg.gemini_model_thinking,
                 threshold=5,
                 llm_cfg=self.llm_cfg,
             )
@@ -487,7 +458,6 @@ class MemoryAgent:
             self._hierarchical_planner = HierarchicalPlanner(
                 db_path=os.path.join(getattr(self.llm_cfg, "data_dir", "./data"), "hierarchical_plans.sqlite3"),
                 claude=self._claude,
-                gemini=self._gemini,
                 sonnet_model=self.llm_cfg.chat_model,
                 haiku_model=self.llm_cfg.chat_model_haiku,
                 gemini_model=self.llm_cfg.gemini_model,
@@ -498,7 +468,6 @@ class MemoryAgent:
             )
             self._tot_engine = TreeOfThoughtsEngine(
                 claude=self._claude,
-                gemini=self._gemini,
                 haiku_model=self.llm_cfg.chat_model_haiku,
                 sonnet_model=self.llm_cfg.chat_model,
                 gemini_model=self.llm_cfg.gemini_model,
@@ -662,7 +631,7 @@ class MemoryAgent:
         if "/freellm" in input_lower or "use freellm" in input_lower:
             return "freellmapi", "Manual FreeLLMAPI Override"
         if "/deepseek" in input_lower or "use deepseek" in input_lower:
-            return "openrouter/deepseek/deepseek-chat" if self._openrouter else self.llm_cfg.gemini_model_thinking, "Manual DeepSeek Override"
+            return "openrouter/deepseek/deepseek-chat" if getattr(self, '_openrouter', None) else self.llm_cfg.gemini_model_thinking, "Manual DeepSeek Override"
         if "/nvidia" in input_lower or "use nvidia" in input_lower:
             return "nvidia/nemotron-3-ultra-550b-a55b:free", "Manual NVIDIA Override"
         if "/glm" in input_lower or "use glm" in input_lower:
@@ -691,7 +660,7 @@ class MemoryAgent:
         """
         Execute a chat turn using Google Gemini 2.0 Flash with native multi-turn function calling.
         """
-        if not self._gemini:
+        if not None:
             raise RuntimeError("Gemini client is not initialized. Please configure GEMINI_API_KEY in .env.")
 
         # 1. Convert tools to Gemini FunctionDeclarations
@@ -777,7 +746,7 @@ class MemoryAgent:
                 retries = 3
                 for attempt in range(retries):
                     try:
-                        response = self._gemini.models.generate_content(
+                        response = None.models.generate_content(
                             model=candidate_model,
                             contents=contents,
                             config=config,
@@ -957,106 +926,20 @@ class MemoryAgent:
             selected_model, system_prompt, user_input, files, combined_text, tools_param, module_id,
         )
 
-    def _call_raw_llm(self, prompt: str, system_prompt: str = "") -> str:
-        """
-        Resilient raw LLM execution helper with automatic multi-model rotation pool.
-        """
-        if self._openrouter:
-            retries = 3
-            for attempt in range(retries):
-                try:
-                    messages = []
-                    if system_prompt:
-                        messages.append({"role": "system", "content": system_prompt})
-                    messages.append({"role": "user", "content": prompt})
-                    
-                    model_name = self.llm_cfg.memory_model
-                    if model_name.startswith("openrouter/"):
-                        model_name = model_name[11:]
-                        
-                    response = self._openrouter.chat.completions.create(
-                        model=model_name,
-                        messages=messages,
-                        temperature=0.3
-                    )
-                    
-                    if response and response.choices:
-                        content = response.choices[0].message.content
-                        if content is None:
-                            print("  [SELF-CORRECTION FAILED] LLM returned empty response")
-                            return ""
-                        return content.strip()
-                except Exception as e:
-                    print(f"  [RAW LLM OPENROUTER ERROR] {e}")
-                    if "429" in str(e) or "rate limit" in str(e).lower():
-                        if attempt < retries - 1:
-                            time.sleep(5)
-                            continue
-                    break
+    def _call_raw_llm(self, prompt: str, system_prompt: str = "You are a helpful assistant.", max_tokens: int = 1000, model_override: str | None = None) -> str:
+        import asyncio
+        from core.llm_chain import chat_with_fallback
+        async def run_it():
+            content, _, _ = await chat_with_fallback(prompt, system_prompt, max_tokens, model_override=model_override)
+            return content
+        try:
+            loop = asyncio.get_running_loop()
+            import nest_asyncio
+            nest_asyncio.apply()
+            return loop.run_until_complete(run_it())
+        except RuntimeError:
+            return asyncio.run(run_it())
 
-        if self._gemini:
-            candidate_pool = [
-                "gemini-3.8-flash",
-                "gemini-3.7-flash",
-                "gemini-3.6-flash",
-                "gemini-3.5-flash",
-                "gemini-3.1-pro-preview",
-                "gemini-2.0-flash",
-                "gemini-1.5-flash",
-            ]
-            for candidate_model in candidate_pool:
-                retries = 3
-                for attempt in range(retries):
-                    try:
-                        resp = self._gemini.models.generate_content(
-                            model=candidate_model,
-                            contents=prompt,
-                            config=genai_types.GenerateContentConfig(
-                                system_instruction=system_prompt if system_prompt else None,
-                                temperature=0.3,
-                            ),
-                        )
-                        if resp and resp.text:
-                            return resp.text.strip()
-                    except Exception as e:
-                        err_str = str(e)
-                        if "404" in err_str:
-                            print(f"  [RAW LLM ROTATION] 404 on '{candidate_model}'. Permanently invalid. Skipping retries.")
-                            break
-                        if "429" in err_str and attempt < retries - 1:
-                            print(f"  [RAW LLM RATE LIMIT] 429 on {candidate_model}. Waiting 5 seconds before retry ({attempt+1}/{retries})...")
-                            time.sleep(5)
-                            continue
-                        if "503" in err_str and attempt < retries - 1:
-                            print(f"  [RAW LLM UNAVAILABLE] 503 on {candidate_model}. Quick retry ({attempt+1}/{retries})...")
-                            time.sleep(1)
-                            continue
-                        print(f"  [RAW LLM ROTATION] Model '{candidate_model}' failed ({err_str[:50]}), rotating...")
-                        time.sleep(0.1)
-                        break
-
-        # Tertiary fallback: FreeLLMAPI Zero-Cost Sovereign Hub
-        if self._freellmapi:
-            try:
-                messages = []
-                if system_prompt:
-                    messages.append({"role": "system", "content": system_prompt})
-                messages.append({"role": "user", "content": prompt})
-
-                model_name = getattr(self.llm_cfg, "freellmapi_model", "auto") or "auto"
-                response = self._freellmapi.chat.completions.create(
-                    model=model_name,
-                    messages=messages,
-                    temperature=0.3,
-                )
-                if response and response.choices:
-                    content = response.choices[0].message.content
-                    if content:
-                        return content.strip()
-            except Exception as e:
-                print(f"  [RAW LLM FREELLMAPI ERROR] {e}")
-
-        return "Task processed."
     def _chat_openrouter(
         self,
         selected_model: str,
@@ -1068,7 +951,7 @@ class MemoryAgent:
         module_id: str = "ultron_prime",
     ) -> tuple[str, list[dict[str, Any]], int, int]:
         is_freellm = "freellmapi" in selected_model.lower()
-        client = self._freellmapi if is_freellm else self._openrouter
+        client = None if is_freellm else None
         if not client:
             client_name = "FreeLLMAPI" if is_freellm else "OpenRouter"
             return f"**System Alert:** {client_name} client not initialized.", [], 0, 0
@@ -1161,6 +1044,7 @@ class MemoryAgent:
                     model=model_name,
                     messages=messages,
                     temperature=0.3,
+                    max_tokens=4096,
                     tools=or_tools if or_tools else None,
                 )
             except Exception as e:
@@ -1172,6 +1056,7 @@ class MemoryAgent:
                             model=model_name,
                             messages=messages,
                             temperature=0.3,
+                            max_tokens=4096,
                             tools=or_tools if or_tools else None,
                         )
                     except Exception as retry_e:
@@ -1280,250 +1165,15 @@ class MemoryAgent:
 
         return assistant_reply, tool_actions, total_input_tokens, total_output_tokens
 
-    async def _chat_openrouter_async(
-        self,
-        selected_model: str,
-        system_prompt: str,
-        user_input: str,
-        files: list[ProcessedFile] | None = None,
-        combined_text: str = "",
-        tools_param: list[Any] | None = None,
-        module_id: str = "ultron_prime",
-    ) -> tuple[str, list[dict[str, Any]], int, int]:
-        """
-        Phase 3: Asynchronous Event-Driven Execution Mesh for OpenRouter.
+    async def _chat_openrouter_async(self, selected_model: str, system_prompt: str, user_input: str, files: list | None = None, combined_text: str = "", tools_param: list | None = None, module_id: str = "ultron_prime", client_data: bool = False) -> tuple[str, list, int, int]:
+        from core.llm_chain import chat_with_fallback
+        content, tools, provider = await chat_with_fallback(prompt=combined_text or user_input, system_prompt=system_prompt, model_override=selected_model, tools=tools_param, client_data=client_data)
+        return content, tools, 0, 0
 
-        Key guarantees:
-        - Multiple tool calls in one LLM turn are dispatched CONCURRENTLY via asyncio.gather().
-        - sleep_seconds uses native asyncio.sleep() — agent is SUSPENDED with ZERO LLM token spend.
-        - All blocking OpenRouter API calls are wrapped in asyncio.to_thread() so the event loop
-          remains fully responsive for other coroutines.
-        """
-        import asyncio
-        is_freellm = "freellmapi" in selected_model.lower()
-        client = self._freellmapi if is_freellm else self._openrouter
-        if not client:
-            client_name = "FreeLLMAPI" if is_freellm else "OpenRouter"
-            return f"**System Alert:** {client_name} client not initialized.", [], 0, 0
-
-        model_name = selected_model
-        if is_freellm:
-            if "/" in selected_model:
-                parts = selected_model.split("/", 1)
-                model_name = parts[1]
-            else:
-                model_name = getattr(self.llm_cfg, "freellmapi_model", "auto") or "auto"
-        elif model_name.startswith("openrouter/"):
-            model_name = model_name[11:]
-        elif model_name.startswith("nvidia/") or model_name.startswith("z-ai/"):
-            pass
-
-        messages: list[dict[str, Any]] = []
-        if system_prompt:
-            if is_freellm and len(system_prompt) > 6000:
-                compact_sys = system_prompt[:5000] + "\n\n[Context compressed for local model window]"
-                messages.append({"role": "system", "content": compact_sys})
-            else:
-                messages.append({"role": "system", "content": system_prompt})
-
-        history_items = self._history[-4:] if (is_freellm and len(self._history) > 4) else self._history
-        for msg in history_items:
-            role = "assistant" if msg["role"] == "model" else "user"
-            content = msg["content"]
-            if isinstance(content, str):
-                messages.append({"role": role, "content": content})
-            elif isinstance(content, list):
-                text_parts = [p["text"] for p in content if isinstance(p, dict) and "text" in p]
-                messages.append({"role": role, "content": " ".join(text_parts)})
-
-        content = combined_text if combined_text else user_input
-        if files:
-            content += f"\n\n[Attached {len(files)} files]"
-        messages.append({"role": "user", "content": content})
-
-        or_tools = None
-        if tools_param:
-            or_tools = []
-            for t in tools_param:
-                if "input_schema" in t:
-                    or_tools.append({
-                        "type": "function",
-                        "function": {
-                            "name": t["name"],
-                            "description": t.get("description", ""),
-                            "parameters": t["input_schema"],
-                        },
-                    })
-
-        tool_actions: list[dict[str, Any]] = []
-        total_input_tokens = 0
-        total_output_tokens = 0
-        iteration = 0
-        assistant_reply = ""
-
-        provider_name = "FreeLLMAPI" if is_freellm else "OpenRouter"
-        print(f"  [ASYNC MESH] Routing via {provider_name} ({model_name})...")
-
-        while True:
-            # Iteration safety limit
-            try:
-                self._sandbox.check_iteration_limit(iteration)
-            except Exception as e:
-                tool_actions.append({"tool": "system", "input": {}, "output": str(e), "success": False, "duration_ms": 0})
-                if not assistant_reply:
-                    assistant_reply = f"**Task operations executed.** Completed {iteration} tool operations before iteration ceiling."
-                break
-
-            # ── Non-blocking API call via thread ─────────────────────────────
-            try:
-                resp = await asyncio.to_thread(
-                    client.chat.completions.create,
-                    model=model_name,
-                    messages=messages,
-                    temperature=0.3,
-                    tools=or_tools if or_tools else None,
-                )
-            except Exception as e:
-                # If FreeLLMAPI failed on auto/cohere/rate-limited models, immediately retry with reliable gpt-oss-120b
-                if is_freellm and model_name != "gpt-oss-120b":
-                    try:
-                        print(f"  [FREELLMAPI AUTO-RETRY] Model '{model_name}' failed ({e}). Retrying with resilient 'gpt-oss-120b'...")
-                        model_name = "gpt-oss-120b"
-                        resp = await asyncio.to_thread(
-                            client.chat.completions.create,
-                            model=model_name,
-                            messages=messages,
-                            temperature=0.3,
-                            tools=or_tools if or_tools else None,
-                        )
-                    except Exception as retry_e:
-                        e = retry_e
-                        err_msg = str(e)
-                        print(f"  [{provider_name.upper()} ASYNC ERROR] {err_msg}")
-                        if iteration == 0:
-                            raise RuntimeError(f"{provider_name} unavailable: {err_msg}") from e
-                        if not assistant_reply:
-                            assistant_reply = f"**System Alert:** {provider_name} encountered an issue: {err_msg}"
-                        break
-                else:
-                    err_msg = str(e)
-                    print(f"  [{provider_name.upper()} ASYNC ERROR] {err_msg}")
-                    if iteration == 0:
-                        raise RuntimeError(f"{provider_name} unavailable: {err_msg}") from e
-                    if not assistant_reply:
-                        assistant_reply = f"**System Alert:** {provider_name} encountered an issue: {err_msg}"
-                    break
-
-            if hasattr(resp, "usage") and resp.usage:
-                total_input_tokens += resp.usage.prompt_tokens
-                total_output_tokens += resp.usage.completion_tokens
-
-            message = resp.choices[0].message
-
-            # Serialize & strip thought tags
-            msg_dict = message.model_dump(exclude_none=True)
-            if msg_dict.get("content"):
-                import re
-                t_match = re.search(r"<thought>(.*?)</thought>", msg_dict["content"], flags=re.DOTALL)
-                if t_match:
-                    print(f"\n  [HIDDEN THOUGHT]\n  {t_match.group(1).strip().replace(chr(10), chr(10) + '  ')}\n")
-                msg_dict["content"] = re.sub(r"<thought>.*?</thought>", "", msg_dict["content"], flags=re.DOTALL).strip()
-            msg_dict.pop("reasoning", None)
-            msg_dict.pop("reasoning_details", None)
-            messages.append(msg_dict)
-
-            if getattr(message, "tool_calls", None):
-                # ── Phase 3 Core: Parallel concurrent tool dispatch ───────────
-                async def _dispatch(tc: Any) -> tuple[Any, dict[str, Any]]:
-                    tool_name = tc.function.name
-                    try:
-                        tool_input = json.loads(tc.function.arguments)
-                    except Exception:
-                        tool_input = {}
-                    try:
-                        print(f"  [ASYNC TOOL DISPATCH] {tool_name}: {tool_input}")
-                    except Exception:
-                        pass
-                    try:
-                        if tool_name.startswith("mcp_"):
-                            # MCP calls still run in thread (blocking)
-                            result = await asyncio.to_thread(self._mcp.execute_tool, tool_name, tool_input)
-                        else:
-                            result = await self._tool_executor.execute_async(tool_name, tool_input)
-                    except Exception as tool_err:
-                        result = {
-                            "success": False,
-                            "output": "",
-                            "error": f"Tool execution failure: {tool_err}",
-                            "duration_ms": 0,
-                        }
-                    return tc, result
-
-                # Gather ALL tool calls in this turn concurrently
-                results = await asyncio.gather(*[_dispatch(tc) for tc in message.tool_calls])
-
-                for tc, result in results:
-                    tool_name = tc.function.name
-                    try:
-                        tool_input = json.loads(tc.function.arguments)
-                    except Exception:
-                        tool_input = {}
-
-                    self._telemetry.log_event(
-                        user_id=self.user_id,
-                        event_type="TOOL_CALL",
-                        module_id=module_id,
-                        details={"tool": tool_name, "input": tool_input, "success": result.get("success", False)},
-                        duration_ms=result.get("duration_ms", 0),
-                    )
-                    res_payload = result.get("output", "")
-                    if result.get("error"):
-                        res_payload = f"ERROR: {result['error']}\n{res_payload}"
-                    tool_actions.append({
-                        "tool": tool_name,
-                        "input": tool_input,
-                        "output": result.get("output", ""),
-                        "error": result.get("error"),
-                        "success": result.get("success", False),
-                        "duration_ms": result.get("duration_ms", 0),
-                    })
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "content": str(res_payload) or "(no output)",
-                    })
-
-                iteration += 1
-                continue
-
-            assistant_reply = (msg_dict.get("content") or message.content or "").strip()
-            if not assistant_reply and getattr(message, "reasoning", None):
-                assistant_reply = str(message.reasoning).strip()
-            break
-
-        return assistant_reply, tool_actions, total_input_tokens, total_output_tokens
-
-
-    async def _chat_gemini_async(
-        self,
-        selected_model: str,
-        system_prompt: str,
-        user_input: str,
-        files: list[ProcessedFile] | None = None,
-        combined_text: str = "",
-        tools_param: list[Any] | None = None,
-        module_id: str = "ultron_prime",
-    ) -> tuple[str, list[dict[str, Any]], int, int]:
-        """Phase 3: Async Gemini tool-call loop.
-        - All tool calls within a single turn are dispatched concurrently via asyncio.gather().
-        - The blocking Gemini API is wrapped in asyncio.to_thread() to keep the event loop free.
-        - sleep_seconds uses native asyncio.sleep() — ZERO LLM tokens burned during wait.
-        """
-        import asyncio
-        return await asyncio.to_thread(
-            self._chat_gemini,
-            selected_model, system_prompt, user_input, files, combined_text, tools_param, module_id,
-        )
+    async def _chat_gemini_async(self, selected_model: str, system_prompt: str, user_input: str, files: list | None = None, combined_text: str = "", tools_param: list | None = None, module_id: str = "ultron_prime", client_data: bool = False) -> tuple[str, list, int, int]:
+        from core.llm_chain import chat_with_fallback
+        content, tools, provider = await chat_with_fallback(prompt=combined_text or user_input, system_prompt=system_prompt, model_override=selected_model, tools=tools_param, client_data=client_data)
+        return content, tools, 0, 0
 
     async def chat_async(
         self,
@@ -1533,6 +1183,7 @@ class MemoryAgent:
         model_override: str | None = None,
         optimize_prompt: bool = True,
         operation_mode: str = "SWARM",
+        client_data: bool = False,
     ) -> dict[str, Any]:
         """
         Phase 3: Primary async entry point for the agent execution pipeline.
@@ -1671,7 +1322,7 @@ class MemoryAgent:
         # ── 3b. Autonomous Multi-Agent Swarm Check ────────────────────────────
         swarm_actions = []
         is_swarm = False
-        if effective_mode != "SOLO" and not files and (effective_mode == "SWARM" or self.swarm.should_trigger_swarm(user_input)):
+        if effective_mode == "SWARM" and not files:
             try:
                 print(f"  [ULTRON SWARM ACTIVATED] Decomposing complex directive across 6-agent squad...")
                 swarm_context = f"{memory_text}\n\n── Domain Skills Injected ──\n{skill_context}" if skill_context else memory_text
@@ -1906,6 +1557,7 @@ class MemoryAgent:
                     combined_text=combined_text,
                     tools_param=tools_param,
                     module_id=module_id,
+                    client_data=client_data,
                 )
                 total_input_tokens += w_in
                 total_output_tokens += w_out
@@ -1937,6 +1589,7 @@ class MemoryAgent:
                         combined_text=synthesizer_user,
                         tools_param=None,
                         module_id=f"{module_id}_synth",
+                        client_data=client_data,
                     )
                     total_input_tokens += s_in
                     total_output_tokens += s_out
@@ -1957,6 +1610,7 @@ class MemoryAgent:
                     combined_text=combined_text,
                     tools_param=None,
                     module_id=module_id,
+                    client_data=client_data,
                 )
                 total_input_tokens += s_in
                 total_output_tokens += s_out
@@ -1967,7 +1621,7 @@ class MemoryAgent:
             
             # If FreeLLMAPI failed (e.g. localhost:3001 is offline), fail over to Gemini first, then OpenRouter
             if "freellmapi" in selected_model.lower():
-                if self._gemini:
+                if None:
                     fallback_candidates.append(getattr(self.llm_cfg, "gemini_model_flash", "gemini-2.0-flash") or "gemini-2.0-flash")
                 if getattr(self, "_openrouter", None):
                     fallback_candidates.append("openrouter/deepseek/deepseek-chat")

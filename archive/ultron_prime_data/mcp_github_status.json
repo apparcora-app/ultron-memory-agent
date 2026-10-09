@@ -1,0 +1,7 @@
+{
+  "node_installed": true,
+  "npx_installed": true,
+  "github_mcp_package": "@modelcontextprotocol/server-github",
+  "status": "ready_for_credentials",
+  "note": "Requires GITHUB_PERSONAL_ACCESS_TOKEN environment variable configured in your MCP client JSON (Claude Desktop, Cursor, or Ultron config)."
+}

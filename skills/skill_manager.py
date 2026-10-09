@@ -17,7 +17,7 @@ from typing import Any
 
 from skill_evolution import SkillEvolutionDB
 
-SKILLS_DIR = Path(__file__).parent / "skills"
+SKILLS_DIR = Path(__file__).parent if Path(__file__).parent.name == "skills" else Path(__file__).parent / "skills"
 SKILLS_DIR.mkdir(exist_ok=True)
 
 

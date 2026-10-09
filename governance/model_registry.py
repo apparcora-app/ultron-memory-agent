@@ -10,6 +10,7 @@ Provides:
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 import enum
 from typing import Any, Dict, List, Optional
@@ -48,6 +49,8 @@ class ModelSpec(BaseModel):
 
 # ── Canonical Candidate Rotation Pools ─────────────────────────────────────────
 
+DEFAULT_FREELLMAPI_MODEL = 'gpt-oss-120b'
+
 DEFAULT_ROTATION_POOLS: Dict[str, List[str]] = {
     "gemini": [
         "gemini-2.0-flash",
@@ -55,8 +58,8 @@ DEFAULT_ROTATION_POOLS: Dict[str, List[str]] = {
         "gemini-1.5-pro",
         "gemini-3.1-pro-preview",
         # Forward compatibility aliases
-        "gemini-3.8-flash",
-        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.6-flash",
         "gemini-3.6-flash",
         "gemini-3.5-flash",
     ],
@@ -138,3 +141,6 @@ class ModelRegistry:
 
 # Global default model registry instance
 default_model_registry = ModelRegistry()
+
+
+_log = get_logger('model_registry')

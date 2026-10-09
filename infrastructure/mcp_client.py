@@ -49,7 +49,8 @@ class MCPManager:
         self._resources: dict[str, MCPResource] = {}
         self._stdio_bridges = {}
         self._register_default_mcp_tools()
-        self._load_stdio_servers()
+        import threading
+        threading.Thread(target=self._load_stdio_servers, daemon=True, name="mcp_stdio_loader").start()
         default_resource_registry.register_cleanup_hook(self.close_all)
 
     def _load_stdio_servers(self) -> None:
@@ -73,8 +74,8 @@ class MCPManager:
             return
 
         # 1. GitHub MCP
-        gh_token = os.getenv("GITHUB_PERSONAL_ACCESS_TOKEN", "")
-        if gh_token:
+        gh_token = os.getenv("GITHUB_PERSONAL_ACCESS_TOKEN", "").strip().strip('"').strip("'")
+        if gh_token and not any(p in gh_token.lower() for p in ["your_", "placeholder", "xxx"]):
             try:
                 print("  [MCP] Starting GitHub MCP server...")
                 cmd = "npx.cmd" if os.name == "nt" else "npx"
@@ -95,11 +96,11 @@ class MCPManager:
             except Exception as e:
                 print(f"  [MCP ERROR] Failed to load GitHub MCP: {e}")
         else:
-            print("  [MCP] GITHUB_PERSONAL_ACCESS_TOKEN not set in env. Skipping GitHub MCP.")
+            print("  [MCP] GitHub MCP skipped (no valid personal access token configured).")
 
         # 2. Brave Search MCP
-        brave_key = os.getenv("BRAVE_API_KEY", "")
-        if brave_key:
+        brave_key = os.getenv("BRAVE_API_KEY", "").strip().strip('"').strip("'")
+        if brave_key and not any(p in brave_key.lower() for p in ["your_", "placeholder", "xxx"]):
             try:
                 print("  [MCP] Starting Brave Search MCP server...")
                 cmd = "npx.cmd" if os.name == "nt" else "npx"
@@ -120,7 +121,7 @@ class MCPManager:
             except Exception as e:
                 print(f"  [MCP ERROR] Failed to load Brave Search MCP: {e}")
         else:
-            print("  [MCP] BRAVE_API_KEY not set in env. Skipping Brave Search MCP.")
+            print("  [MCP] Brave Search MCP skipped (no valid API key configured).")
 
     def _register_default_mcp_tools(self) -> None:
         """Register default open-source MCP protocol tools."""

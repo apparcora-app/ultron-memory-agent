@@ -11,6 +11,7 @@ Provides:
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 import copy
 import time
@@ -151,11 +152,21 @@ class SpendGovernor:
         self.config = config or BudgetConfig()
         self._session_turns: Dict[str, List[TurnSpendRecord]] = {}
 
+    def _get_key(self, session_id: str) -> str:
+        try:
+            from core.auth import current_caller_id
+            caller = current_caller_id.get()
+            if caller:
+                return f'{caller}:{session_id}'
+        except ImportError:
+            pass
+        return session_id
+
     def get_session_records(self, session_id: str) -> List[TurnSpendRecord]:
-        return copy.deepcopy(self._session_turns.get(session_id, []))
+        return copy.deepcopy(self._session_turns.get(self._get_key(session_id), []))
 
     def get_session_totals(self, session_id: str) -> Dict[str, Any]:
-        records = self._session_turns.get(session_id, [])
+        records = self._session_turns.get(self._get_key(session_id), [])
         total_tokens = sum(r.total_tokens for r in records)
         total_cost = sum(r.cost_usd for r in records)
         return {
@@ -238,9 +249,9 @@ class SpendGovernor:
             timestamp=time.time(),
         )
 
-        if session_id not in self._session_turns:
-            self._session_turns[session_id] = []
-        self._session_turns[session_id].append(record)
+        if self._get_key(session_id) not in self._session_turns:
+            self._session_turns[self._get_key(session_id)] = []
+        self._session_turns[self._get_key(session_id)].append(record)
 
         # Enforce budget cap after recording
         self.assert_within_budget(session_id=session_id, model=model)
@@ -248,8 +259,8 @@ class SpendGovernor:
 
     def reset_session(self, session_id: str) -> None:
         """Resets tracked spend for a specific session."""
-        if session_id in self._session_turns:
-            del self._session_turns[session_id]
+        if self._get_key(session_id) in self._session_turns:
+            del self._session_turns[self._get_key(session_id)]
 
     def format_terminal_summary(
         self,
@@ -279,3 +290,5 @@ class SpendGovernor:
 
 # Global default governor instance
 default_spend_governor = SpendGovernor()
+
+_log = get_logger('spend_governor')

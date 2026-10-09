@@ -21,7 +21,10 @@ class MCPServerBridge:
         
         self._init_future = concurrent.futures.Future()
         asyncio.run_coroutine_threadsafe(self._init_server(), self.loop)
-        self._init_future.result(timeout=25.0) 
+        try:
+            self._init_future.result(timeout=2.0)
+        except Exception as e:
+            print(f"  [MCP BRIDGE INIT TIMEOUT] {self.command}: {e}") 
 
     def _run_loop(self):
         asyncio.set_event_loop(self.loop)

@@ -11,6 +11,7 @@ Token cost table (per 1M tokens, August 2026):
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 import json
 import os
@@ -245,3 +246,5 @@ class BudgetTracker:
         if self.daily_cost_limit_usd:
             lines.append(f"   Budget  : ${u.estimated_cost_usd:.4f} / ${self.daily_cost_limit_usd:.2f}")
         return "\n".join(lines)
+
+_log = get_logger('budget_tracker')

@@ -154,6 +154,7 @@ class LLMConfig:
     freellmapi_api_key: str = field(default_factory=_detect_freellmapi_api_key)
     freellmapi_enabled: bool = field(default_factory=lambda: _get("FREELLMAPI_ENABLED", "true").lower() in ("true", "1", "yes"))
     freellmapi_model: str = field(default_factory=lambda: _get("FREELLMAPI_MODEL", "gpt-oss-120b"))
+    providers: list[str] = field(default_factory=lambda: ["freellmapi"])
 
     # ── Gemini Matrix ────────────────────────────────────────────────────────
     gemini_model: str = field(
@@ -195,41 +196,22 @@ class LLMConfig:
 
     def as_mem0_llm_dict(self) -> dict:
         """Mem0 internal LLM config for background memory fact extraction."""
-        if self.provider == "gemini":
-            return {
-                "provider": "gemini",
-                "config": {
-                    "model": self.gemini_model,
-                    "api_key": self.gemini_api_key,
-                    "temperature": 0.1,
-                },
-            }
-        elif self.provider == "openrouter":
-            return {
-                "provider": "openai",
-                "config": {
-                    "model": self.memory_model,
-                    "api_key": self.openrouter_api_key,
-                    "openai_base_url": "https://openrouter.ai/api/v1",
-                    "temperature": 0.1,
-                },
-            }
         return {
-            "provider": "anthropic",
+            "provider": "openai",
             "config": {
-                "model": self.memory_model,
-                "api_key": self.anthropic_api_key,
-                "temperature": 0.1,    # deterministic for fact extraction
-                "max_tokens": 2000,
+                "model": "auto",
+                "api_key": self.freellmapi_api_key,
+                "openai_base_url": self.freellmapi_base_url,
+                "temperature": 0.1,
+                "max_tokens": 1024,
             },
         }
 
     def as_mem0_embedder_dict(self) -> dict:
-        """Local HuggingFace embedder — runs on your machine, zero cost."""
         return {
             "provider": "huggingface",
             "config": {
-                "model": self.embedding_model,
+                "model": "BAAI/bge-small-en-v1.5",
             },
         }
 
@@ -238,6 +220,22 @@ class LLMConfig:
 class AgentConfig:
     # ── memory retrieval ──────────────────────────────────────────────────────
     memory_top_k: int = field(default_factory=lambda: int(_get("MEMORY_TOP_K", "5")))
+    pii_retention_days: int = field(default_factory=lambda: int(_get("PII_RETENTION_DAYS", "30")))
+    sessions_retention_days: int = field(
+        default_factory=lambda: int(_get("SESSIONS_RETENTION_DAYS", "90"))
+    )
+    telemetry_retention_days: int = field(
+        default_factory=lambda: int(_get("TELEMETRY_RETENTION_DAYS", "90"))
+    )
+    audit_log_retention_days: int = field(
+        default_factory=lambda: int(_get("AUDIT_LOG_RETENTION_DAYS", "365"))
+    )
+    blackboard_retention_days: int = field(
+        default_factory=lambda: int(_get("BLACKBOARD_RETENTION_DAYS", "30"))
+    )
+    purge_mem0: bool = field(
+        default_factory=lambda: _get("PURGE_MEM0", "false").lower() in ("true", "1", "yes")
+    )
 
     # How many turns to wait before re-fetching memories from Qdrant.
     # In between, the session uses the cached memory list (saves vector search).

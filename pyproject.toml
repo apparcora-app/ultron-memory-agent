@@ -66,6 +66,9 @@ dependencies = [
     "curl-cffi>=0.7.0",
     "duckduckgo-search>=7.0.0",
     "mcp>=1.0.0",
+    "langfuse>=2.50.0",
+    "unstructured[all-docs]>=0.12.0",
+    "deepeval>=1.0.0",
     "discord.py>=2.3.0",
     "rich>=13.9.0",
     "psutil>=5.9.0",
@@ -96,9 +99,13 @@ ultron-web = "app:main"
 
 [tool.pytest.ini_options]
 testpaths    = ["tests"]
+norecursedirs = ["tests/manual"]
 python_files = ["test_*.py", "verify_*.py"]
 asyncio_mode = "auto"
-addopts      = "-v --tb=short"
+addopts      = "-v --tb=short -m \"not llm_live\""
+markers = [
+    "llm_live: tests requiring live LLM access (DeepEval / external APIs)",
+]
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::UserWarning",

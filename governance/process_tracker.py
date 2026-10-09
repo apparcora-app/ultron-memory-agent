@@ -9,6 +9,7 @@ Provides:
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 import asyncio
 import os
@@ -166,8 +167,10 @@ class ProcessTracker:
         try:
             if hasattr(proc, "terminate"):
                 proc.terminate()
+        except (ProcessLookupError, ChildProcessError):
+            pass  # Process is already dead or reaped
         except Exception:
-            pass
+            return False
 
         # Wait up to timeout_sec for graceful exit
         t_deadline = time.monotonic() + timeout_sec
@@ -189,8 +192,10 @@ class ProcessTracker:
                 )
             if hasattr(proc, "kill"):
                 proc.kill()
+        except (ProcessLookupError, ChildProcessError):
+            pass  # Process is already dead or reaped
         except Exception:
-            pass
+            return False
 
         self._reap(proc)
         self.unregister(pid)
@@ -222,3 +227,5 @@ class ProcessTracker:
 
 # Global default process tracker instance
 default_process_tracker = ProcessTracker()
+
+_log = get_logger('process_tracker')

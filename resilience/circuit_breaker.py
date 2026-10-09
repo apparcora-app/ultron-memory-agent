@@ -10,6 +10,7 @@ Provides:
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 import asyncio
 import enum
@@ -213,3 +214,5 @@ class CircuitBreakerRegistry:
 
 # Global default breaker registry
 default_breaker_registry = CircuitBreakerRegistry()
+
+_log = get_logger('circuit_breaker')

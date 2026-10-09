@@ -70,12 +70,41 @@ def _get_default_llm_caller() -> Callable[[str, str], str]:
     """
     cfg = LLMConfig()
 
-    # Try OpenRouter first if selected provider or key is present
-    if (cfg.provider == "openrouter" or "openrouter" in cfg.gemini_model) and cfg.openrouter_api_key:
+    # Try FreeLLMAPI if configured in providers
+    if "freellmapi" in getattr(cfg, "providers", []):
+        try:
+            import urllib.request
+            import json
+            base_url = cfg.freellmapi_base_url
+            api_key = cfg.freellmapi_api_key
+
+            def _call_freellmapi(prompt: str, system_prompt: str) -> str:
+                req_data = {
+                    "model": "auto",
+                    "messages": []
+                }
+                if system_prompt:
+                    req_data["messages"].append({"role": "system", "content": system_prompt})
+                req_data["messages"].append({"role": "user", "content": prompt})
+                req = urllib.request.Request(
+                    f"{base_url}/chat/completions",
+                    data=json.dumps(req_data).encode("utf-8"),
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    res = json.loads(resp.read().decode("utf-8"))
+                    return res["choices"][0]["message"]["content"]
+
+            return _call_freellmapi
+        except Exception:
+            pass
+
+    # Try OpenRouter if enabled in providers and key is present
+    if "openrouter" in getattr(cfg, "providers", []) and cfg.openrouter_api_key:
         try:
             from openai import OpenAI
             client = OpenAI(
-                base_url="https://openrouter.ai/api/v1",
+                base_url="http://127.0.0.1:31416/v1",
                 api_key=cfg.openrouter_api_key,
             )
 
@@ -97,13 +126,13 @@ def _get_default_llm_caller() -> Callable[[str, str], str]:
         except Exception:
             pass
 
-    # Try Gemini if key is present
-    if cfg.gemini_api_key:
+    # Try Gemini if enabled in providers and key is present
+    if "gemini" in getattr(cfg, "providers", []) and cfg.gemini_api_key:
         try:
             from google import genai
             from google.genai import types as genai_types
 
-            client = genai.Client(api_key=cfg.gemini_api_key)
+            client = genai.Client(api_key=cfg.gemini_api_key, http_options={'timeout': 30000})
 
             def _call_gemini(prompt: str, system_prompt: str) -> str:
                 candidates = [

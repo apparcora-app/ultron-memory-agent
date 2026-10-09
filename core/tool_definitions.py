@@ -567,6 +567,26 @@ class ToolExecutor:
             }
         """
         # ── Ingress Contract Validation (Fail-Fast) ───────────────────────────
+        import os
+        import json
+        from infrastructure.sandbox import require_approval
+        
+        IRREVS = {
+            'control_desktop_gui', 'control_desktop_gui_raw', 'send_email', 
+            'core_memory_update', 'core_memory_append', 'core_memory_replace',
+            'run_python', 'execute_command'
+        }
+        
+        needs_approval = (tool_name in IRREVS)
+        if tool_name == 'file_operation' and tool_input.get('operation') in ('write', 'append', 'delete'):
+            needs_approval = True
+        if tool_name == 'web_automation' and tool_input.get('action') in ('click', 'submit', 'type'):
+            needs_approval = True
+            
+        if needs_approval and os.environ.get('APPROVAL_MODE', 'on').lower() == 'on':
+            if not require_approval(tool_name, json.dumps(tool_input)):
+                return {'success': False, 'output': '', 'error': 'Execution blocked: User denied action or timed out.'}
+
         if tool_name in TOOL_INPUT_CONTRACTS:
             validated = validate_contract(TOOL_INPUT_CONTRACTS[tool_name], tool_input)
             tool_input = validated.model_dump()
@@ -668,6 +688,26 @@ class ToolExecutor:
                 timeout_sec = float(getattr(self.sandbox.config, "python_timeout", 120.0))
             elif tool_name == "execute_command":
                 timeout_sec = float(getattr(self.sandbox.config, "command_timeout", 60.0))
+
+        import os
+        import json
+        from infrastructure.sandbox import require_approval
+        
+        IRREVS = {
+            'control_desktop_gui', 'control_desktop_gui_raw', 'send_email', 
+            'core_memory_update', 'core_memory_append', 'core_memory_replace',
+            'run_python', 'execute_command'
+        }
+        
+        needs_approval = (tool_name in IRREVS)
+        if tool_name == 'file_operation' and tool_input.get('operation') in ('write', 'append', 'delete'):
+            needs_approval = True
+        if tool_name == 'web_automation' and tool_input.get('action') in ('click', 'submit', 'type'):
+            needs_approval = True
+            
+        if needs_approval and os.environ.get('APPROVAL_MODE', 'on').lower() == 'on':
+            if not require_approval(tool_name, json.dumps(tool_input)):
+                return {'success': False, 'output': '', 'error': 'Execution blocked: User denied action or timed out.'}
 
         if tool_name in TOOL_INPUT_CONTRACTS:
             validated = validate_contract(TOOL_INPUT_CONTRACTS[tool_name], tool_input)
@@ -998,7 +1038,7 @@ class ToolExecutor:
                 "except Exception:\n"
                 "    pass\n\n"
             )
-            full_code = bootstrap + code
+            full_code = bootstrap + self.sandbox.get_bootstrap_code() + code
 
             with tempfile.NamedTemporaryFile(
                 mode="w",
@@ -1978,7 +2018,7 @@ class ToolExecutor:
             "except Exception:\n"
             "    pass\n\n"
         )
-        full_code = bootstrap + code
+        full_code = bootstrap + self.sandbox.get_bootstrap_code() + code
 
         try:
             with tempfile.NamedTemporaryFile(mode="w", suffix=".py", encoding="utf-8", delete=False) as temp_script:

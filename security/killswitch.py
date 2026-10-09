@@ -21,25 +21,41 @@ from pathlib import Path
 from typing import Any
 
 # Ensure project root is available
-PROJECT_ROOT = Path(__file__).parent.resolve()
-DATA_DIR = PROJECT_ROOT / "data"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = Path(os.getenv("ULTRON_DATA_DIR", str(PROJECT_ROOT / "data")))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 LOCK_FILE = DATA_DIR / "LOCKDOWN.lock"
 ENV_FILE = PROJECT_ROOT / ".env"
 
-DEFAULT_SECRET_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"  # sha256 of 'admin' or custom secret
 
+def get_configured_secret() -> str | None:
+    """
+    Reads authorized unlock code from environment or .env file.
+    Hardcoded fallback secrets ('ULTRON-TERMINATE-ALPHA-99', 'ULTRON-OVERRIDE-BOSS-77')
+    are strictly rejected and never treated as valid keys.
+    """
+    # Check environment variables first
+    code = os.getenv("KILLSWITCH_OVERRIDE_CODE") or os.getenv("KILLSWITCH_SECRET_KEY")
+    if code and code.strip() in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-BOSS-77"):
+        code = None
 
-def get_configured_secret() -> str:
-    """Reads KILLSWITCH_SECRET_KEY from .env or returns default fallback."""
-    if ENV_FILE.exists():
+    if not code and ENV_FILE.exists():
         with open(ENV_FILE, "r", encoding="utf-8") as f:
             for line in f:
-                if line.strip().startswith("KILLSWITCH_SECRET_KEY="):
-                    val = line.strip().split("=", 1)[1].strip().strip('"').strip("'")
-                    if val:
-                        return val
-    return "ULTRON-TERMINATE-ALPHA-99"
+                line_str = line.strip()
+                if line_str.startswith("KILLSWITCH_OVERRIDE_CODE="):
+                    val = line_str.split("=", 1)[1].strip().strip('"').strip("'")
+                    if val and val not in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-BOSS-77"):
+                        code = val
+                        break
+                elif line_str.startswith("KILLSWITCH_SECRET_KEY=") and not code:
+                    val = line_str.split("=", 1)[1].strip().strip('"').strip("'")
+                    if val and val not in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-BOSS-77"):
+                        code = val
+
+    if code and code.strip() in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-BOSS-77"):
+        return None
+    return code.strip() if (code and code.strip()) else None
 
 
 def is_system_locked() -> bool:
@@ -80,7 +96,7 @@ def trigger_emergency_lockdown(source: str = "MANUAL_CLI", reason: str = "Host e
         json.dump(lock_data, f, indent=2)
 
     print("\n" + "=" * 70)
-    print(" 🚨 [ULTRON FAIL-SAFE ACTIVATED] SOVEREIGN LOCKDOWN ENGAGED")
+    print(" [!!] [ULTRON FAIL-SAFE ACTIVATED] SOVEREIGN LOCKDOWN ENGAGED")
     print(f" Source   : {source}")
     print(f" Reason   : {reason}")
     print(f" Lockfile : {LOCK_FILE}")
@@ -92,15 +108,21 @@ def trigger_emergency_lockdown(source: str = "MANUAL_CLI", reason: str = "Host e
 def release_lockdown(secret_key: str) -> bool:
     """Unlocks the system if the provided secret passphrase matches."""
     expected_secret = get_configured_secret()
-    if secret_key.strip() == expected_secret.strip() or secret_key.strip() == "ULTRON-OVERRIDE-BOSS-77":
+    if not expected_secret:
+        print("\n[ERROR] KILLSWITCH_SECRET_KEY is missing or empty in configuration. Refusing to unlock (fail-closed).")
+        return False
+    if not secret_key or not secret_key.strip():
+        print("\n[ERROR] Invalid unlock secret key. Lockdown remains strictly active.")
+        return False
+    if secret_key.strip() == expected_secret.strip():
         if LOCK_FILE.exists():
             LOCK_FILE.unlink()
         print("\n" + "=" * 70)
-        print(" 🟢 [ULTRON FAIL-SAFE] LOCKDOWN RELEASED — MAINFRAME RESTORED")
+        print(" [OK] [ULTRON FAIL-SAFE] LOCKDOWN RELEASED -- MAINFRAME RESTORED")
         print("=" * 70 + "\n")
         return True
     else:
-        print("\n[✗ ERROR] Invalid unlock secret key. Lockdown remains strictly active.")
+        print("\n[ERROR] Invalid unlock secret key. Lockdown remains strictly active.")
         return False
 
 
@@ -121,15 +143,19 @@ def terminate_all_ultron_processes(include_self: bool = True) -> int:
                 cmdline = " ".join(proc.info["cmdline"] or []).lower()
                 # Match Ultron processes
                 if any(k in cmdline for k in ["app.py", "discord_bot.py", "uvicorn", "agent.py", "mem0_agent"]):
-                    print(f"  • Terminating Ultron Process [PID {pid}]: {cmdline[:60]}...")
+                    print(f"  * Terminating Ultron Process [PID {pid}]: {cmdline[:60]}...")
                     try:
                         proc.send_signal(signal.SIGTERM)
                         time.sleep(0.1)
+                    except Exception:
+                        pass
+
+                    try:
                         if proc.is_running():
                             proc.kill()
                         killed += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        print(f"    [KILLSWITCH FAILED] Could not kill PID {pid}: {e}")
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
     except ImportError:
@@ -156,7 +182,7 @@ def main():
             details = get_lockdown_details()
             print(f"[!] System is LOCKED DOWN. Details: {details}")
         else:
-            print("[✓] System is NORMAL. All systems operational.")
+            print("[OK] System is NORMAL. All systems operational.")
         sys.exit(0)
 
     # Default action: Instant Emergency Kill & Lockdown

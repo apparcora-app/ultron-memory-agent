@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from artifact_memory import LocalArtifactEngine as MemoryManager
-from config import AgentConfig, LLMConfig, VectorStoreConfig
+from core.config import AgentConfig, LLMConfig, VectorStoreConfig
 from skill_manager import SkillManager
 from trajectory_manager import TrajectoryManager
 

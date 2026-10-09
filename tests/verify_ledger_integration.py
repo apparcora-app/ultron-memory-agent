@@ -40,7 +40,7 @@ async def verify_all():
     print(" [TITAN PROTOCOL] INITIATING ACTIVITY LEDGER VERIFICATION")
     print("=" * 60)
 
-    client = TestClient(app)
+    client = TestClient(app); client.headers.update({"X-API-Key": os.environ.get("TEST_API_KEY", "")})
 
     # 1. Test Single Event Ingestion via API
     print("\n[TEST 1] Testing POST /api/v1/ledger (Single Ingestion)...")

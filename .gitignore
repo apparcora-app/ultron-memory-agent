@@ -41,6 +41,7 @@ MANIFEST
 # ── Virtual Environments ──────────────────────────────────────────────────────
 .venv/
 venv/
+venv_fresh/
 ENV/
 env/
 .virtualenv/
@@ -58,6 +59,7 @@ htmlcov/
 data/
 data/chroma/
 data/sessions/
+mock_remote/
 data/scratch/
 qdrant_data/
 output/
@@ -83,8 +85,12 @@ test_cache.txt
 patch*.py
 fix*.py
 *.bak
+*.out
+*.bundle
 *.tmp
 *.orig
+chroma-backup*/
+data-backup*/
 
 # ── Personal, Career & Private Documents ──────────────────────────────────────
 JOB_HUNTING_DOSSIER.md

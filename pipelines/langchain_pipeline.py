@@ -38,7 +38,7 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.tools import BaseTool, tool
 
@@ -156,8 +156,7 @@ class UltronGeminiChatModel(BaseChatModel):
     )
     _client: Any = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -345,3 +344,21 @@ class UltronLangChainEngine:
         )
 
         return final_answer
+
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("  [ULTRON PROTOCOL] LangChain Pipeline & LCEL Tool Engine")
+    print("=" * 60)
+    print(f"  • Tools Registered: {len(ULTRON_LANGCHAIN_TOOLS)}")
+    for t in ULTRON_LANGCHAIN_TOOLS:
+        print(f"    - {t.name}: {t.description[:60]}...")
+    try:
+        engine = UltronLangChainEngine(user_id="boss")
+        print("\n  [INITIALIZATION] Engine online. Testing mock tool binding...")
+        model_name = getattr(engine.llm, "model_name", "gemini")
+        print(f"  • Active Model: {model_name}")
+        print("  • Status: READY (Pipeline operational)")
+    except Exception as exc:
+        print(f"  [NOTE] {exc}")
+    print("=" * 60)

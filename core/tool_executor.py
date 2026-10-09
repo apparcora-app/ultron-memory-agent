@@ -1,6 +1,7 @@
 """
 tool_executor.py — Convenience bridge exporting direct standalone tool helpers, Active Window Guard, and ToolExecutor.
 """
+from core.log_config import get_logger
 import os
 import sys
 
@@ -80,3 +81,5 @@ def desktop_create_and_show_note(content: str, filename: str = "ultron_note.txt"
 def fetch_web_page(url: str) -> dict:
     """Direct helper to fetch web pages with browser TLS impersonation."""
     return _default_executor.execute("fetch_web_page", {"url": url})
+
+_log = get_logger('tool_executor')

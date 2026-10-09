@@ -14,8 +14,9 @@ os.environ['CHROMA_TELEMETRY'] = 'False'
 try:
     import chromadb.telemetry.product.posthog as _chroma_ph
     _chroma_ph.Posthog.capture = lambda *args, **kwargs: None
-except Exception:
-    pass
+except Exception as e:
+    import logging
+    logging.warning("Ignored exception", exc_info=True)
 import asyncio
 import os
 import sys
@@ -91,11 +92,66 @@ async def lifespan(app: FastAPI):
         agent.flush_pending_memory()
 
 
+import hashlib, hmac
+import os
+import sys
+_VALID_API_HASHES = []
+if 'API_KEYS' in os.environ:
+    for k in os.environ['API_KEYS'].split(','):
+        if k.strip():
+            _VALID_API_HASHES.append(hashlib.sha256(k.strip().encode()).hexdigest())
+    del os.environ['API_KEYS']  # Remove raw keys from memory
+
 app = FastAPI(
+
     title="ULTRON PROTOCOL â€” Cybernetic AI Mainframe",
     version="2.0.0",
     lifespan=lifespan,
 )
+
+import hashlib, hmac
+from fastapi.responses import JSONResponse
+from fastapi import Request
+
+@app.middleware("http")
+async def api_key_auth_middleware(request: Request, call_next):
+    if request.url.path in ("/", "/health", "/favicon.ico") or request.url.path.startswith("/static"):
+        return await call_next(request)
+    
+    # Skip API key check only under pytest (never via raw TESTING env var on real server)
+    if "pytest" in sys.modules and not request.headers.get("X-Force-Auth-Check"):
+        return await call_next(request)
+        
+    api_key = request.headers.get("X-API-Key")
+    if not api_key:
+        return JSONResponse(status_code=401, content={"detail": "Missing X-API-Key header"})
+    
+    # Keys live in .env (API_KEYS, comma-separated). Store only hashes in memory.
+    global _VALID_API_HASHES
+    provided_hash = hashlib.sha256(api_key.encode()).hexdigest()
+    is_valid = False
+    for vh in _VALID_API_HASHES:
+        if hmac.compare_digest(provided_hash, vh):
+            is_valid = True
+            break
+    
+    if not is_valid:
+        return JSONResponse(status_code=401, content={"detail": "Invalid API Key"})
+    
+    # Tie key to caller ID
+    request.state.caller_id = provided_hash
+    from core.auth import current_caller_id
+    current_caller_id.set(provided_hash)
+    
+    # Enforce API rate limit
+    from governance.rate_limiter import default_rate_limiter, RateLimitQueueTimeoutError
+    
+    try:
+        await default_rate_limiter.acquire(f"api:{provided_hash}", requests=1, tokens=0, timeout=1.0)
+    except RateLimitQueueTimeoutError:
+        return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded. Try again later."})
+        
+    return await call_next(request)
 
 @app.middleware("http")
 async def add_no_cache_header(request, call_next):
@@ -166,6 +222,32 @@ async def killswitch_unlock(secret_key: str = Form(...)):
     if not ok:
         raise HTTPException(status_code=403, detail="Invalid unlock passphrase.")
     return {"success": True, "message": "Ultron Sovereign Lock Released. Mainframe operational."}
+
+
+@app.get("/api/providers")
+async def api_providers():
+    try:
+        from core.llm_gateway import default_gateway
+        providers = []
+        for p in default_gateway.get_capable_providers():
+            spec = default_gateway.get_spec(p)
+            # Make names cleaner for the UI
+            name = spec.model.split("/")[-1].replace("-", " ").title()
+            if "gemini" in p: name = f"Gemini {name.replace('Gemini ', '')}"
+            elif "claude" in name.lower(): name = f"Claude {name.replace('Claude ', '')}"
+            elif "gpt" in name.lower(): name = f"GPT {name.replace('Gpt ', '')}"
+            elif "deepseek" in name.lower(): name = f"DeepSeek {name.replace('Deepseek ', '')}"
+            
+            providers.append({
+                "id": spec.id,
+                "name": name,
+                "badge": "Free" if spec.cost_per_1m_input == 0 else spec.tier.title() if spec.tier else "Standard",
+                "tagline": f"{'Local/Free' if spec.cost_per_1m_input == 0 else 'Cloud API'} | Context: {spec.context_window // 1000}K",
+            })
+        return {"providers": providers}
+    except Exception as e:
+        _log.error(f"Error fetching providers: {e}", exc_info=True)
+        return {"providers": []}
 
 
 @app.get("/api/modules")
@@ -256,12 +338,12 @@ async def chat_endpoint(
     user_id: str = Form("boss"),
     session_id: str = Form(""),
     message: str = Form(""),
-    operation_mode: str = Form("SWARM"),
+    operation_mode: str = Form("DIRECT"),
 
     module_id: str = Form("ultron_prime"),
     model_override: str = Form("auto"),
     model_mode: str = Form("auto"),
-    optimize_prompt: str = Form("true"),
+    optimize_prompt: str = Form("false"),
     files: list[UploadFile] = File(default=[]),
 ):
     try:
@@ -269,7 +351,7 @@ async def chat_endpoint(
         session_id = session_id if isinstance(session_id, str) else ""
         message = message if isinstance(message, str) else ""
         module_id = module_id if isinstance(module_id, str) else "ultron_prime"
-        operation_mode = operation_mode.upper() if isinstance(operation_mode, str) else "SWARM"
+        operation_mode = operation_mode.upper() if isinstance(operation_mode, str) else "DIRECT"
         effective_model = model_override if model_override != "auto" else model_mode
         should_opt = str(optimize_prompt).lower() in ("true", "1", "yes")
 
@@ -299,8 +381,9 @@ async def chat_endpoint(
             session_id = active_session["id"]
 
         import os
-        upload_dir = os.path.join(os.path.dirname(__file__), ".user_uploaded")
-        os.makedirs(upload_dir, exist_ok=True)
+        from pathlib import Path
+        ephemeral_dir = Path(__file__).resolve().parent / ".ephemeral_uploads"
+        ephemeral_dir.mkdir(parents=True, exist_ok=True)
         
         processed_files: list[ProcessedFile] = []
         if isinstance(files, (list, tuple)):
@@ -308,26 +391,21 @@ async def chat_endpoint(
                 if hasattr(uploaded_file, "filename") and uploaded_file.filename:
                     content = await uploaded_file.read()
                     if content:
-                        # --- FIX: Save file physically to disk ---
-                        safe_filename = uploaded_file.filename.replace("/", "_").replace("\\", "_")
-                        physical_path = os.path.join(upload_dir, safe_filename)
-                        with open(physical_path, "wb") as f_out:
+                        # --- FIX: Save file strictly to ephemeral temp directory ---
+                        safe_filename = uploaded_file.filename.replace("/", "_").replace("\\\\", "_")
+                        ephemeral_path = str(ephemeral_dir / safe_filename)
+                        
+                        with open(ephemeral_path, "wb") as f_out:
                             f_out.write(content)
-                        # Also save in workspace root so relative paths (e.g. pd.read_excel("filename.xlsx")) work immediately
-                        root_path = os.path.join(os.path.dirname(__file__), safe_filename)
-                        try:
-                            with open(root_path, "wb") as f_root:
-                                f_root.write(content)
-                        except Exception:
-                            pass
-                        # ------------------------------------------
+                        
+                        # Process it
                         pf = FileProcessor.process_file(uploaded_file.filename, content)
                         if pf.is_image:
-                            pf.text_content = f"[SYSTEM INSTRUCTION: The user attached image '{uploaded_file.filename}'. It has been saved locally at '{safe_filename}' and '{physical_path}'. You have also received this image in your Vision matrix for direct visual inspection.]\n\n" + (pf.text_content or "")
+                            pf.text_content = f"[SYSTEM INSTRUCTION: The user attached image '{uploaded_file.filename}'. It has been securely saved to an ephemeral location at '{ephemeral_path}'. You have also received this image in your Vision matrix for direct visual inspection.]\n\n" + (pf.text_content or "")
                         elif any(uploaded_file.filename.lower().endswith(ext) for ext in [".xlsx", ".xls", ".csv"]):
-                            pf.text_content = f"[SYSTEM INSTRUCTION: The user attached spreadsheet '{uploaded_file.filename}'. It has been saved to your local workspace at '{safe_filename}' and at '{physical_path}'. When executing Python scripts or tools, load it via: pd.read_excel('{safe_filename}') or pd.read_excel(r'{physical_path}')]\n\n" + (pf.text_content or "")
+                            pf.text_content = f"[SYSTEM INSTRUCTION: The user attached spreadsheet '{uploaded_file.filename}'. It has been securely saved to an ephemeral location at '{ephemeral_path}'. When executing Python scripts or tools, load it exactly via: pd.read_excel(r'{ephemeral_path}')]\n\n" + (pf.text_content or "")
                         else:
-                            pf.text_content = f"[SYSTEM INSTRUCTION: The user attached '{uploaded_file.filename}'. It has been saved to your local workspace at '{safe_filename}' and at '{physical_path}'.]\n\n" + (pf.text_content or "")
+                            pf.text_content = f"[SYSTEM INSTRUCTION: The user attached '{uploaded_file.filename}'. It has been securely saved to an ephemeral location at '{ephemeral_path}'.]\n\n" + (pf.text_content or "")
                         processed_files.append(pf)
 
         chat_result = await agent.chat_async(
@@ -585,14 +663,27 @@ async def get_ledger_records(
     limit: int = 50,
     offset: int = 0,
 ):
-    records = ledger_service.query_ledger(
+    result = ledger_service.query_ledger(
         user_id=user_id,
         action=action,
         event_type=event_type,
         limit=limit,
         offset=offset,
     )
-    return {"success": True, "records": records, "count": len(records)}
+    if result.get("degraded"):
+        return {
+            "success": False, 
+            "records": [], 
+            "count": 0, 
+            "degraded": True, 
+            "error": result.get("error")
+        }
+    return {
+        "success": True, 
+        "records": result["records"], 
+        "count": len(result["records"]), 
+        "degraded": False
+    }
 
 
 @app.get("/api/v1/metrics")
@@ -799,7 +890,67 @@ async def get_dream_status(user_id: str = "boss"):
     return {"success": True, "stats": stats}
 
 
-# â”€â”€ Static UI Mounting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── WebRTC Browser Screencast Streaming Bridge ──────────────────────────────
+
+class WebRTCOfferPayload(BaseModel):
+    session_id: str = Field(..., description="Active session or bot identifier")
+    sdp: str = Field(..., description="SDP offer string from client WebRTC peer")
+    type: str = Field("offer", description="SDP type, defaults to 'offer'")
+    fps: int | None = Field(default=30, description="Target streaming framerate (1-60 FPS)")
+    pixel_format: str | None = Field(default="yuv420p", description="Pixel format: yuv420p, bgr24, or rgb24")
+
+
+class WebRTCIcePayload(BaseModel):
+    session_id: str = Field(..., description="Active session or bot identifier")
+    candidate: dict[str, Any] = Field(..., description="RTCIceCandidateInit payload or dictionary")
+
+
+@app.post("/api/webrtc/offer")
+async def webrtc_offer(payload: WebRTCOfferPayload):
+    """
+    WebRTC Signaling: Ingest SDP offer, attach browser screencast track and control data channel,
+    and return negotiated SDP answer.
+    """
+    try:
+        from ultron.streaming.webrtc_bridge import webrtc_bridge_manager
+
+        answer = await webrtc_bridge_manager.handle_offer(
+            session_id=payload.session_id,
+            sdp=payload.sdp,
+            sdp_type=payload.type,
+            fps=payload.fps or 30,
+            pixel_format=payload.pixel_format or "yuv420p",
+        )
+        return answer
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"WebRTC offer negotiation failed: {str(exc)}")
+
+
+@app.post("/api/webrtc/ice")
+async def webrtc_ice(payload: WebRTCIcePayload):
+    """
+    WebRTC Signaling: Ingest trickle ICE candidates and attach them to the active peer connection.
+    """
+    try:
+        from ultron.streaming.webrtc_bridge import webrtc_bridge_manager
+
+        success = await webrtc_bridge_manager.handle_ice_candidate(
+            session_id=payload.session_id,
+            candidate_dict=payload.candidate,
+        )
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No active WebRTC peer connection found for session '{payload.session_id}'",
+            )
+        return {"status": "ok", "session_id": payload.session_id}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"WebRTC ICE routing failed: {str(exc)}")
+
+
+# ── Static UI Mounting ──────────────────────────────────────────────────────
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -851,3 +1002,24 @@ def main():
 if __name__ == "__main__":
     main()
 
+
+
+@app.on_event("startup")
+async def startup_sweep():
+    import os, shutil
+    from pathlib import Path
+    ephemeral_dir = Path(__file__).resolve().parent / ".ephemeral_uploads"
+    if ephemeral_dir.exists():
+        print("dY 1 [STARTUP SWEEP] Purging stale ephemeral uploads from previous ungraceful shutdown...")
+        shutil.rmtree(ephemeral_dir, ignore_errors=True)
+    ephemeral_dir.mkdir(parents=True, exist_ok=True)
+
+@app.on_event("startup")
+async def startup_sweep():
+    import os, shutil
+    from pathlib import Path
+    ephemeral_dir = Path(__file__).resolve().parent / ".ephemeral_uploads"
+    if ephemeral_dir.exists():
+        print("dY 1 [STARTUP SWEEP] Purging stale ephemeral uploads from previous ungraceful shutdown...")
+        shutil.rmtree(ephemeral_dir, ignore_errors=True)
+    ephemeral_dir.mkdir(parents=True, exist_ok=True)

@@ -9,6 +9,7 @@ Provides:
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 import json
 import os
@@ -319,3 +320,5 @@ class DeadLetterQueue:
 
 # Global default DLQ instance
 default_dlq = DeadLetterQueue()
+
+_log = get_logger('dlq')

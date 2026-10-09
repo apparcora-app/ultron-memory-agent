@@ -369,7 +369,7 @@ class DreamingEngine:
 
         # Primary: Google Gemini
         if self._gemini:
-            candidate_pool = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-3.6-flash"]
+            candidate_pool = ["gemini-1.5-flash", "gemini-1.5-flash-8b"]
             for candidate_model in candidate_pool:
                 try:
                     resp = self._gemini.models.generate_content(
@@ -488,7 +488,7 @@ assert isinstance(out, dict)
             )
             fix_raw = ""
             if self._gemini:
-                candidate_pool = ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-3.6-flash"]
+                candidate_pool = ["gemini-1.5-flash", "gemini-1.5-flash-8b"]
                 for candidate_model in candidate_pool:
                     try:
                         resp = self._gemini.models.generate_content(

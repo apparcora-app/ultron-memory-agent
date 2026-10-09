@@ -9,6 +9,7 @@ Enforces zero-faking, strict truthfulness, and empirical verification:
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 import re
 import os
@@ -56,6 +57,7 @@ class ExecutionLedgerGate:
             r"(search\s+email|read\s+email|check\s+(?:my\s+)?inbox|send\s+email|draft\s+email)",
             re.IGNORECASE,
         )
+        self._re_code = re.compile(r"(calculate|execute|run.*python|python.*script)", re.IGNORECASE)
         self._re_file = re.compile(
             r"(write\s+(?:to\s+)?file|save\s+(?:to\s+)?file|create\s+file|delete\s+file)",
             re.IGNORECASE,
@@ -99,6 +101,14 @@ class ExecutionLedgerGate:
             intents.append(ActionIntent(
                 intent_type="FILE_OP",
                 description="File read/write operation",
+            ))
+
+        
+        # 5. Code Intent
+        if self._re_code.search(text):
+            intents.append(ActionIntent(
+                intent_type="CODE_EXECUTION",
+                description="Execute python code",
             ))
 
         return intents
@@ -145,7 +155,7 @@ class ExecutionLedgerGate:
                     report.audit_trail.append("✓ NOTEPAD_WRITE verified from tool execution trace.")
                 else:
                     # Auto-Remediate missing Notepad action
-                    print("  [EXECUTION LEDGER] Remediating missing NOTEPAD_WRITE intent...")
+                    _log.info("  [EXECUTION LEDGER] Remediating missing NOTEPAD_WRITE intent...")
                     note_content = draft_reply.strip() if draft_reply else "Hello from Ultron Prime."
                     rem_res = tool_executor.execute("desktop_create_and_show_note", {
                         "content": note_content,
@@ -178,7 +188,7 @@ class ExecutionLedgerGate:
                     report.audit_trail.append("✓ BROWSER_NAV verified from tool execution trace.")
                 else:
                     # Auto-Remediate missing Browser action
-                    print("  [EXECUTION LEDGER] Remediating missing BROWSER_NAV intent...")
+                    _log.info("  [EXECUTION LEDGER] Remediating missing BROWSER_NAV intent...")
                     rem_res = tool_executor.execute("open_browser", {
                         "url": intent.target_param or "https://www.google.com/search?q=new+york+weather+today",
                         "profile": "reach",
@@ -220,5 +230,19 @@ class ExecutionLedgerGate:
                     report.satisfied_intents += 1
                     report.audit_trail.append("✓ FILE_OP verified from tool execution trace.")
 
+        
+            elif intent.intent_type == "CODE_EXECUTION":
+                matched = any(name in ["run_python"] for name in successful_names)
+                if matched:
+                    intent.satisfied = True
+                    report.satisfied_intents += 1
+                    report.audit_trail.append("? CODE_EXECUTION verified from tool execution trace.")
+                else:
+                    report.failed_intents += 1
+                    report.audit_trail.append("? CODE_EXECUTION failed: Expected run_python to be executed, but no tool trace found.")
+                    report.remediation_instructions = "You claimed to run code but did not execute run_python."
+
         report.all_verified = (report.failed_intents == 0)
         return draft_reply, tool_actions, report
+
+_log = get_logger('execution_ledger_gate')

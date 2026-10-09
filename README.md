@@ -20,6 +20,8 @@ multi-model routing, multi-agent swarm orchestration, and governance guardrails.
 
 ## Overview
 
+> **Status: personal use only. Not approved for client data. No approved LLM provider is configured.**
+
 Ultron Memory Agent is a **self-sovereign AI cognitive runtime** designed for high-stakes, long-horizon autonomous tasks. It combines a dual-phase persistent memory pipeline, dynamic complexity-based model routing, Tree-of-Thoughts multi-branch reasoning, and a multi-agent swarm mesh — all governed by hard budget guardrails and an emergency sovereign killswitch.
 
 It ships with three first-class interfaces: a **Rich terminal CLI**, a **FastAPI Cybernetic Web HUD** with real-time SSE streaming, and a **Discord bot gateway**.

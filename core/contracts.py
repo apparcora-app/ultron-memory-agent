@@ -15,6 +15,7 @@ Enforces:
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 from typing import Any, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -369,3 +370,5 @@ class KillswitchTriggerPayload(StrictBaseModel):
 
 class KillswitchUnlockPayload(StrictBaseModel):
     secret_key: str
+
+_log = get_logger('contracts')

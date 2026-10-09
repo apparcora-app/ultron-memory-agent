@@ -9,6 +9,7 @@ Provides:
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 import asyncio
 import time
@@ -216,3 +217,5 @@ class ResourceRegistry:
 
 # Global default registry instance
 default_resource_registry = ResourceRegistry()
+
+_log = get_logger('resource_registry')

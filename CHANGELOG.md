@@ -9,6 +9,38 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Manual Test Isolation**: Created `tests/manual/` containing 34 manual, integration, and high-risk exploratory test scripts with automatic repo root path insertion, accompanied by a comprehensive `README.md`.
+- **Live-LLM Test Tagging**: Registered `@pytest.mark.llm_live` marker for live LLM evals (`tests/evals/test_agent_hallucination.py`), isolating them from standard CI runs via `addopts = "-v --tb=short -m 'not llm_live'"`.
+- **Automated Scratch Relocation**: Quarantined 128 scratch, output, and iteration files from the repository root into `../ultron-scratch` with full `MANIFEST.csv` and automated `restore.ps1`.
+
+### Changed
+- **Killswitch Fail-Closed Hardening**: Hardened `security/killswitch.py` to completely eliminate hardcoded fallback secrets (`ULTRON-TERMINATE-ALPHA-99`, `ULTRON-OVERRIDE-BOSS-77`) and fail closed if `KILLSWITCH_SECRET_KEY` / `KILLSWITCH_OVERRIDE_CODE` is missing or empty.
+- **Pytest Multi-Layer Exclusion**: Configured `norecursedirs = ["tests/manual"]` in `pyproject.toml` and `collect_ignore_glob = ["manual/*"]` in `tests/conftest.py` ensuring zero accidental collection of manual test scripts.
+- **Accepted Risks Documentation**: Updated `SECURITY.md` documenting accepted architectural risks for local D-drive backups, un-reaped crash processes, and personal-mode Mem0 retention.
+- **Fine-Grained Retention Lifecycle**: Updated `pii_cleanup.py` and `core/config.py` with granular retention settings: `SESSIONS_RETENTION_DAYS=90`, `TELEMETRY_RETENTION_DAYS=90`, `AUDIT_LOG_RETENTION_DAYS=365`, `BLACKBOARD_RETENTION_DAYS=30`, and `PURGE_MEM0=false`.
+- **Mem0 Retention Policy**: Set `PURGE_MEM0=false` by default to preserve personal memory while only personal data is stored; documented client onboarding requirement to enable Mem0 purging before client data ingestion.
+- **Enhanced PII Dry-Run Inspection**: `--dry-run` now logs active settings in use, counts, and the first 5 sample IDs/filenames per category that would be purged without mutating storage.
+
+- **Security**: Pinned dependencies into a reproducible \
+equirements.lock\ using \pip-compile\.
+- **Security**: Integrated \pip-audit\ into \scripts/audit_deps.sh\ to scan and enforce zero known vulnerabilities.
+- **Security**: Upgraded vulnerable versions of \iohttp\, \astapi\, \
+equests\, \urllib3\, and \uvicorn\.
+
+### Added
+- **Incident Response Plan**: Created \docs/INCIDENT_RESPONSE.md\ to provide strict, checklist-style procedures for PII exposure and harmful agent actions.
+- **Automated PII Retention Purge**: Added retention-based cleanup across 	elemetry.db, computer_audit.jsonl, data/sessions/, data/blackboard/, and Mem0/Chroma entries (configured via pii_retention_days). Includes a --dry-run mode.
+- **Task Scheduler PII Purge Automation**: Added scripts/schedule_pii_purge.ps1 to easily schedule the retention script.
+- **Automated Off-Machine Backup**: Added scripts/backup.py and scripts/restore.py to encrypt (AES-128 via Fernet) and upload core state (ChromaDB, config, databases, logs) to configurable cold storage (via 
+clone). Excludes .env. Enforces 7-daily + 4-weekly retention policy.
+- **Task Scheduler Backup Automation**: Added scripts/schedule_backup.ps1 for easy deployment of the backup lifecycle job.
+- **API Key Authentication**: X-API-Key header required on all endpoints (except /health). Keys are securely hashed in memory via hmac.compare_digest.
+- **Per-Key Governance**: 
+ate_limiter.py and spend_governor.py now attribute API quotas and financial budgets to the hashed caller ID, enabling multi-tenant rate isolation.
+- **Human-in-the-Loop (HITL) Approval Gate**: Required for irreversible actions (
+un_python, execute_command, file deletion/overwrites, outbound messages, DB memory writes). Blocks execution on timeout or explicit denial, ensuring safe autonomous runs.
+
 ---
 
 ## [1.3.0] — 2026-09-22

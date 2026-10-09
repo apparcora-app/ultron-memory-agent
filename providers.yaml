@@ -1,0 +1,154 @@
+# providers.yaml
+# Universal provider registry for Ultron Memory Agent.
+# Add any OpenAI-compatible or natively supported provider here.
+# Zero code changes needed to add a new provider.
+#
+# model string format:
+#   gemini/<model-id>         → Google Gemini SDK
+#   openai/<model-id>         → OpenAI-compatible (with optional api_base override)
+#   openrouter/<provider/model> → OpenRouter
+#
+# Required env vars are looked up at runtime; missing = provider skipped.
+
+providers:
+
+  # ── Primary: Google Gemini ────────────────────────────────────────────────
+  - id: gemini-flash
+    model: gemini/gemini-3.6-flash
+    api_key_env: GEMINI_API_KEY
+    tier: fast
+    supports_vision: true
+    supports_tools: true
+    context_window: 1048576
+    max_output_tokens: 32768
+    temperature: 0.2
+    cost_per_1m_input: 0.0
+    priority: 1
+
+  - id: gemini-flash-2
+    model: gemini/gemini-2.0-flash
+    api_key_env: GEMINI_API_KEY
+    tier: fast
+    supports_vision: true
+    supports_tools: true
+    context_window: 1048576
+    max_output_tokens: 32768
+    temperature: 0.2
+    cost_per_1m_input: 0.0
+    priority: 2
+
+  - id: gemini-pro
+    model: gemini/gemini-1.5-pro
+    api_key_env: GEMINI_API_KEY
+    tier: reasoning
+    supports_vision: true
+    supports_tools: true
+    context_window: 2097152
+    max_output_tokens: 8192
+    temperature: 0.2
+    cost_per_1m_input: 3.5
+    priority: 3
+
+  # ── Secondary: OpenRouter ─────────────────────────────────────────────────
+  - id: openrouter-deepseek
+    model: openrouter/deepseek/deepseek-chat
+    api_key_env: OPENROUTER_API_KEY
+    tier: standard
+    supports_vision: false
+    supports_tools: true
+    context_window: 128000
+    max_output_tokens: 4096
+    temperature: 0.3
+    cost_per_1m_input: 0.14
+    priority: 10
+
+  - id: openrouter-gpt4o-mini
+    model: openrouter/openai/gpt-4o-mini
+    api_key_env: OPENROUTER_API_KEY
+    tier: fast
+    supports_vision: true
+    supports_tools: true
+    context_window: 128000
+    max_output_tokens: 4096
+    temperature: 0.3
+    cost_per_1m_input: 0.15
+    priority: 11
+
+  - id: openrouter-haiku
+    model: openrouter/anthropic/claude-3.5-haiku
+    api_key_env: OPENROUTER_API_KEY
+    tier: fast
+    supports_vision: true
+    supports_tools: true
+    context_window: 200000
+    max_output_tokens: 4096
+    temperature: 0.3
+    cost_per_1m_input: 0.8
+    priority: 12
+
+  # ── Tertiary: FreeLLMAPI (Zero-Cost Sovereign Hub) ────────────────────────
+  - id: freellmapi-default
+    model: openai/gpt-oss-120b
+    api_base_env: FREELLMAPI_BASE_URL
+    api_base_default: http://localhost:31415/v1
+    api_key_env: FREELLMAPI_API_KEY
+    api_key_default: sk-freellmapi-local
+    tier: fast
+    supports_vision: false
+    supports_tools: true
+    context_window: 128000
+    max_output_tokens: 4096
+    temperature: 0.3
+    cost_per_1m_input: 0.0
+    priority: 20
+    local: true
+
+  - id: freellmapi-groq-llama
+    model: openai/groq/llama-3.3-70b-versatile
+    api_base_env: FREELLMAPI_BASE_URL
+    api_base_default: http://localhost:31415/v1
+    api_key_env: FREELLMAPI_API_KEY
+    api_key_default: sk-freellmapi-local
+    tier: fast
+    supports_vision: false
+    supports_tools: true
+    context_window: 128000
+    max_output_tokens: 4096
+    temperature: 0.3
+    cost_per_1m_input: 0.0
+    priority: 21
+    local: true
+
+  # ── Drop-in future providers (uncomment + set env var to activate) ─────────
+  # - id: groq-llama
+  #   model: openai/llama-3.3-70b-versatile
+  #   api_base_default: https://api.groq.com/openai/v1
+  #   api_key_env: GROQ_API_KEY
+  #   tier: fast
+  #   supports_vision: false
+  #   supports_tools: true
+  #   context_window: 128000
+  #   cost_per_1m_input: 0.0
+  #   priority: 30
+
+  # - id: together-mixtral
+  #   model: openai/mistralai/Mixtral-8x7B-Instruct-v0.1
+  #   api_base_default: https://api.together.xyz/v1
+  #   api_key_env: TOGETHER_API_KEY
+  #   tier: standard
+  #   supports_vision: false
+  #   supports_tools: false
+  #   context_window: 32768
+  #   cost_per_1m_input: 0.6
+  #   priority: 31
+
+  # - id: local-ollama
+  #   model: openai/llama3
+  #   api_base_default: http://localhost:11434/v1
+  #   api_key_default: ollama
+  #   tier: local
+  #   supports_vision: false
+  #   supports_tools: false
+  #   context_window: 8192
+  #   cost_per_1m_input: 0.0
+  #   priority: 99

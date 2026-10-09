@@ -5,8 +5,8 @@ category: Quality
 icon: 🛡️
 tags: [quality, anti-slop, originality, code-review, accuracy, density, evaluation]
 always_on: true
-version: 3.0
-updated_at: 2026-09-22
+version: 3.1
+updated_at: 2026-09-27
 ---
 # 🛡️ Anti-Slop: No AI Garbage, Only Original Work
 
@@ -222,4 +222,25 @@ classified_type = result['category']  # Never hardcode classifications
 - **Rule**: Never bypass execution verification or substitute hardcoded logs when a command times out or fails.
 ```
 subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+```
+
+## 🧬 Evolution v3.1 — Mixed Format Input Parsing Failures (2026-09-27)
+* **Trigger Analysis**: The skill's input ingestion pipeline crashed when encountering payloads wrapped in natural language prose, markdown backticks, or single-quoted Python dictionary representations instead of strict standard JSON.
+- **Rule**: Implement a multi-layered parsing chain: first attempt standard json.loads(), then regex-extract the innermost JSON/dictionary block, and fallback to ast.literal_eval() to safely handle Pythonic single-quoted structures.
+- **Rule**: Strip markdown formatting (such as code block wrappers) and trim surrounding conversational text or prose before attempting to parse raw input data.
+```
+import json, re, ast
+
+def parse_mixed_input(raw_input):
+    # Extract structural block between outermost braces
+    match = re.search(r'(\{.*\})', raw_input, re.DOTALL)
+    candidate = match.group(1) if match else raw_input.strip()
+    
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        try:
+            return ast.literal_eval(candidate)
+        except Exception as e:
+            raise ValueError(f"Failed to parse structure: {e}")
 ```

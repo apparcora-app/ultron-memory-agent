@@ -9,6 +9,7 @@ Provides:
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 import os
 import sqlite3
@@ -122,3 +123,5 @@ class DatabaseManager:
 
 # Global default database manager
 default_db_manager = DatabaseManager()
+
+_log = get_logger('db_manager')

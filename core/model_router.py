@@ -1,4 +1,5 @@
 ﻿import re
+from core.log_config import get_logger
 from dataclasses import dataclass
 
 @dataclass
@@ -57,30 +58,15 @@ If the request is complex, requires analysis, coding, long-form writing, plannin
 Reply with ONLY the word "SIMPLE" or "COMPLEX".'''
         
         try:
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
-                payload = {
-                    "model": actual_model,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.0,
-                    "max_tokens": 10
-                }
-                headers = {
-                    "Authorization": f"Bearer {self.llm_cfg.openrouter_api_key}",
-                    "Content-Type": "application/json"
-                }
-                async with session.post("https://openrouter.ai/api/v1/chat/completions", json=payload, headers=headers) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        content = data["choices"][0]["message"]["content"].strip().upper()
-                        if "COMPLEX" in content:
-                            return RoutingDecision(model=self.sonnet_model, score=10, reason="LLM Triage: COMPLEX")
-                        else:
-                            return RoutingDecision(model=self.haiku_model, score=0, reason="LLM Triage: SIMPLE")
-                    else:
-                        err_text = await resp.text()
-                        print(f"  [ROUTER ERROR] API Error {resp.status}: {err_text}")
+            from core.llm_chain import chat_with_fallback
+            content, _, _ = await chat_with_fallback(prompt, "", max_tokens=10, model_override=fast_model)
+            if "COMPLEX" in content.upper():
+                return RoutingDecision(model=self.sonnet_model, score=10, reason="LLM Triage: COMPLEX")
+            else:
+                return RoutingDecision(model=self.haiku_model, score=0, reason="LLM Triage: SIMPLE")
         except Exception as e:
-            print(f"  [ROUTER ERROR] Failed to triage model: {e}")
+            _log.error(f"  [ROUTER ERROR] Failed to triage model: {e}")
             
         return RoutingDecision(model=self.sonnet_model, score=5, reason="fallback due to error")
+
+_log = get_logger('model_router')

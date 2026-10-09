@@ -18,6 +18,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+import sys
+try:
+    sys.path.append(str(Path(__file__).resolve().parent.parent))
+    from pii_redaction import safe_redact_obj
+except ImportError:
+    safe_redact_obj = lambda x: x
+
 from concurrency import (
     atomic_write_json,
     safe_read_json,
@@ -146,8 +153,11 @@ class ChatSessionManager:
         current_v = data.get("version", 1)
         data["version"] = current_v + 1
         data["updated_at"] = datetime.utcnow().isoformat() + "Z"
+        
+        redacted_data = safe_redact_obj(data)
+        
         try:
-            atomic_write_json(path, data)
+            atomic_write_json(path, redacted_data)
             return True
         except Exception as e:
             print(f"  [SESSION] Error saving {path}: {e}")

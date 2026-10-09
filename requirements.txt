@@ -15,12 +15,12 @@ crewai>=0.80.0
 pydantic>=2.7.0
 
 # Web, Networking & API Gateways
-fastapi>=0.109.0
-uvicorn>=0.27.0
+fastapi>=0.111.0
+uvicorn>=0.28.0
 python-multipart>=0.0.6
 websockets>=12.0
-requests>=2.32.0
-aiohttp>=3.9.0
+requests>=2.32.2
+aiohttp>=3.10.11
 curl-cffi>=0.7.0
 duckduckgo-search>=7.0.0
 mcp>=1.0.0

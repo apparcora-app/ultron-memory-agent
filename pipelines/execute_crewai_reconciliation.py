@@ -1,3 +1,4 @@
+from governance.model_registry import DEFAULT_FREELLMAPI_MODEL
 import sys
 import os
 import time
@@ -158,11 +159,11 @@ def on_llm_complete(source, event):
 crewai_event_bus.register_handler(LLMCallStartedEvent, on_llm_start)
 crewai_event_bus.register_handler(LLMCallCompletedEvent, on_llm_complete)
 
-freellmapi_key = os.getenv("FREELLMAPI_API_KEY", "sk-dummy-free-router-key-00000000000000000000000000000000000000000")
+freellmapi_key = os.getenv("FREELLMAPI_API_KEY", "")
 freellmapi_base = os.getenv("FREELLMAPI_BASE_URL", "http://localhost:31415/v1")
 
 llm = LLM(
-    model="openai/gpt-oss-120b",
+    model=f"openai/{DEFAULT_FREELLMAPI_MODEL}",
     base_url=freellmapi_base,
     api_key=freellmapi_key,
     temperature=0.0
@@ -308,7 +309,7 @@ baseline_raw_output = ""
 for attempt in range(6):
     try:
         baseline_resp = baseline_client.chat.completions.create(
-            model="gpt-oss-120b",
+            model=DEFAULT_FREELLMAPI_MODEL,
             messages=[{"role": "user", "content": baseline_prompt}],
             temperature=0.0
         )

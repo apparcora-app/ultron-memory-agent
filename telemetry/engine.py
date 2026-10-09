@@ -15,6 +15,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import sys
+try:
+    sys.path.append(str(Path(__file__).resolve().parent.parent))
+    from pii_redaction import safe_redact_obj
+except ImportError:
+    safe_redact_obj = lambda x: x
+
 
 @dataclass
 class AuditEvent:
@@ -100,9 +107,12 @@ class TelemetryEngine:
         event_id = f"evt_{uuid.uuid4().hex[:10]}"
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
+        
+        redacted_details = safe_redact_obj(details)
+        
         cursor.execute(
             "INSERT INTO audit_logs VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (event_id, user_id, event_type, module_id, json.dumps(details), duration_ms, time.time()),
+            (event_id, user_id, event_type, module_id, json.dumps(redacted_details), duration_ms, time.time()),
         )
         conn.commit()
         conn.close()

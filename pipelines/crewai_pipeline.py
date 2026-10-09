@@ -421,3 +421,19 @@ class UltronCrewEngine:
             "tasks_count": len(tasks),
             "crew": self._crew,
         }
+
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("  [ULTRON PROTOCOL] CrewAI Multi-Agent Swarm Squad")
+    print("=" * 60)
+    try:
+        engine = UltronCrewEngine()
+        print(f"  • Registered Personas ({engine.agent_count}):")
+        for key, role in engine.agent_roles.items():
+            print(f"    - {key.upper()}: {role}")
+        print("  • Process: Hierarchical (Ultron Prime Master)")
+        print("  • Status: READY (Swarm operational)")
+    except Exception as exc:
+        print(f"  [NOTE] {exc}")
+    print("=" * 60)

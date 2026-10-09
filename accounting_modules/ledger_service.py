@@ -210,7 +210,7 @@ class LedgerService:
         event_type: str | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[dict[str, Any]]:
+    ) -> dict[str, Any]:
         """Query historical activity records from SQLite database."""
         try:
             with sqlite3.connect(str(self.db_path)) as conn:
@@ -261,10 +261,10 @@ class LedgerService:
                         "duration_ms": row["duration_ms"],
                     })
 
-                return records
+                return {"records": records, "degraded": False, "error": None}
         except Exception as e:
             print(f"  [LEDGER QUERY ERROR] {e}")
-            return []
+            return {"records": [], "degraded": True, "error": str(e)}
 
     def get_metrics(self) -> dict[str, Any]:
         """Calculates system throughput, total persisted records, and agent stats."""

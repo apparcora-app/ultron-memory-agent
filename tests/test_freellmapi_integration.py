@@ -65,7 +65,7 @@ def test_llm_config_freellmapi_defaults(monkeypatch):
     assert cfg.freellmapi_base_url in ("http://localhost:3001/v1", "http://localhost:31415/v1")
     assert cfg.freellmapi_api_key in ("sk-freellmapi-local", cfg.freellmapi_api_key)
     assert cfg.freellmapi_enabled is True
-    assert cfg.freellmapi_model == "auto"
+    assert cfg.freellmapi_model == "gpt-oss-120b"
 
 
 def test_llm_config_freellmapi_overrides(monkeypatch):
@@ -104,14 +104,16 @@ def test_memory_agent_freellmapi_client_init():
         governance_subsystem=mock_governance,
     )
 
-    assert hasattr(agent, "_freellmapi")
-    assert agent._freellmapi is not None
-    assert str(agent._freellmapi.base_url) in ("http://localhost:3001/v1/", "http://localhost:31415/v1/")
+    # Agent delegates LLM calls directly to core.llm_chain.chat_with_fallback without maintaining an internal _freellmapi attribute
+    assert not hasattr(agent, "_freellmapi") or getattr(agent, "_freellmapi", None) is None
+    assert agent.llm_cfg.freellmapi_enabled is True
+    assert agent.llm_cfg.freellmapi_base_url == "http://localhost:3001/v1"
 
 
 # ── 4. Raw LLM Tertiary Fallback to FreeLLMAPI ────────────────────────────────
 
 def test_call_raw_llm_falls_back_to_freellmapi():
+    from unittest.mock import AsyncMock
     cfg = LLMConfig(
         freellmapi_base_url="http://localhost:3001/v1",
         freellmapi_api_key="sk-test",
@@ -127,22 +129,11 @@ def test_call_raw_llm_falls_back_to_freellmapi():
         governance_subsystem=MagicMock(),
     )
 
-    # Simulate Gemini outage / None client
-    agent._gemini = None
-    agent._openrouter = None
-
-    # Mock FreeLLMAPI client chat response
-    mock_choice = MagicMock()
-    mock_choice.message.content = "Response from FreeLLMAPI aggregated pool."
-    mock_resp = MagicMock()
-    mock_resp.choices = [mock_choice]
-
-    agent._freellmapi = MagicMock()
-    agent._freellmapi.chat.completions.create.return_value = mock_resp
-
-    output = agent._call_raw_llm("Analyze corporate structure")
-    assert output == "Response from FreeLLMAPI aggregated pool."
-    assert agent._freellmapi.chat.completions.create.called
+    with patch("core.llm_chain.chat_with_fallback", new_callable=AsyncMock) as mock_cwf:
+        mock_cwf.return_value = ("Response from FreeLLMAPI aggregated pool.", [], "freellmapi")
+        output = agent._call_raw_llm("Analyze corporate structure")
+        assert output == "Response from FreeLLMAPI aggregated pool."
+        mock_cwf.assert_called_once()
 
 
 # ── 5. Three-Tier Failover (Gemini -> OpenRouter -> FreeLLMAPI) ───────────────
@@ -229,28 +220,22 @@ async def test_chat_openrouter_async_dispatches_to_freellmapi():
         execution_subsystem=MagicMock(),
         governance_subsystem=MagicMock(),
     )
+    from unittest.mock import AsyncMock
+    with patch("core.llm_chain.chat_with_fallback", new_callable=AsyncMock) as mock_cwf:
+        mock_cwf.return_value = ("Direct output from FreeLLMAPI Sovereign Node", [], "freellmapi")
+        reply, tools, in_tok, out_tok = await agent._chat_openrouter_async(
+            selected_model="freellmapi",
+            system_prompt="You are Ultron",
+            user_input="Run sovereign diagnostic",
+        )
 
-    mock_choice = MagicMock()
-    mock_choice.message.content = "Direct output from FreeLLMAPI Sovereign Node"
-    mock_choice.message.model_dump.return_value = {"role": "assistant", "content": "Direct output from FreeLLMAPI Sovereign Node"}
-    mock_choice.message.tool_calls = None
-    mock_resp = MagicMock()
-    mock_resp.choices = [mock_choice]
-    mock_resp.usage.prompt_tokens = 15
-    mock_resp.usage.completion_tokens = 25
-
-    agent._freellmapi = MagicMock()
-    agent._freellmapi.chat.completions.create.return_value = mock_resp
-
-    reply, tools, in_tok, out_tok = await agent._chat_openrouter_async(
-        selected_model="freellmapi",
-        system_prompt="You are Ultron",
-        user_input="Run sovereign diagnostic",
-    )
-
-    assert "Direct output from FreeLLMAPI Sovereign Node" in reply
-    assert in_tok == 15
-    assert out_tok == 25
-    assert agent._freellmapi.chat.completions.create.called
-    call_kwargs = agent._freellmapi.chat.completions.create.call_args[1]
-    assert call_kwargs["model"] == "auto"
+        assert "Direct output from FreeLLMAPI Sovereign Node" in reply
+        assert in_tok == 0
+        assert out_tok == 0
+        mock_cwf.assert_called_once_with(
+            prompt="Run sovereign diagnostic",
+            system_prompt="You are Ultron",
+            model_override="freellmapi",
+            tools=None,
+            client_data=False,
+        )

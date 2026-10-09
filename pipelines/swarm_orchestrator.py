@@ -17,6 +17,14 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from pathlib import Path
+
+import sys
+try:
+    sys.path.append(str(Path(__file__).resolve().parent.parent))
+    from pii_redaction import safe_redact_obj
+except ImportError:
+    safe_redact_obj = lambda x: x
+
 from skill_manager import SkillManager
 from telemetry import TelemetryEngine
 
@@ -212,10 +220,12 @@ class SwarmOrchestrator:
             "blackboard": blackboard,
         }
         
+        redacted_payload = safe_redact_obj(payload)
+        
         run_file = bb_dir / f"blackboard_{run_id}.json"
         latest_file = bb_dir / "latest.json"
         
-        data_str = json.dumps(payload, indent=2)
+        data_str = json.dumps(redacted_payload, indent=2)
         run_file.write_text(data_str, encoding="utf-8")
         latest_file.write_text(data_str, encoding="utf-8")
         return str(run_file)

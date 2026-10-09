@@ -9,6 +9,7 @@ Provides:
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 import asyncio
 import time
@@ -153,9 +154,18 @@ class AsyncRateLimiter:
             self._buckets[provider] = TokenBucket(limits)
 
     def _get_bucket(self, provider: str) -> TokenBucket:
-        if provider not in self._buckets:
+        bucket_key = provider
+        try:
+            from core.auth import current_caller_id
+            caller = current_caller_id.get()
+            if caller:
+                bucket_key = f'{caller}:{provider}'
+        except ImportError:
+            pass
+        if bucket_key not in self._buckets:
             limits = self._provider_limits.get(provider, self._default_limits)
-            self._buckets[provider] = TokenBucket(limits)
+            self._buckets[bucket_key] = TokenBucket(limits)
+        return self._buckets[bucket_key]
         return self._buckets[provider]
 
     async def acquire(
@@ -196,3 +206,5 @@ class AsyncRateLimiter:
 
 # Global default rate limiter instance
 default_rate_limiter = AsyncRateLimiter()
+
+_log = get_logger('rate_limiter')

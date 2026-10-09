@@ -15,6 +15,14 @@ import time
 from datetime import datetime
 from typing import Any
 
+import sys
+from pathlib import Path
+try:
+    sys.path.append(str(Path(__file__).resolve().parent.parent))
+    from pii_redaction import safe_redact_obj
+except ImportError:
+    safe_redact_obj = lambda x: x
+
 from mem0 import Memory
 
 from config import AgentConfig, VectorStoreConfig, LLMConfig, build_mem0_config
@@ -84,22 +92,34 @@ class MemoryManager:
         try:
             self.mem: Memory | None = Memory.from_config(config_dict=mem0_config)
         except Exception as e:
-            print(f"  [MEMORY INIT ERROR] Vector store init error: {e}")
+            print(f"  [MEMORY INIT ERROR] Vector store init error: {e}", file=sys.stderr)
             self.mem = None
+            raise
 
 
     # ── public API ────────────────────────────────────────────────────────────
 
-    def search(self, query: str, recency_bias: float = 0.3) -> list[dict[str, Any]]:
+    def search(
+        self,
+        query: str,
+        recency_bias: float = 0.3,
+        top_k: int | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Retrieve the top-K memories most semantically relevant to *query*.
 
         Returns a list of dicts with at least {"id": ..., "memory": ...}.
         """
         if not self.mem:
-            return []
+            raise RuntimeError("Mem0 Memory instance is not initialized")
+        effective_k = limit or top_k or self.top_k
         try:
-            results = self.mem.search(query=query, user_id=self.user_id, limit=self.top_k * 2)
+            results = self.mem.search(
+                query=query,
+                filters={"user_id": self.user_id},
+                top_k=effective_k * 2,
+            )
             # Mem0 ≥0.1.x wraps results in {"results": [...]}
             if isinstance(results, dict):
                 results = results.get("results", [])
@@ -120,11 +140,17 @@ class MemoryManager:
                 res["score"] = (1 - recency_bias) * original_score + recency_bias * decay
                 
             results.sort(key=lambda x: x.get("score", 0.0), reverse=True)
-            return results[:self.top_k]
-        except Exception:
-            return []
+            return results[:effective_k]
+        except Exception as e:
+            print(f"[MEMORY SEARCH ERROR] Error searching memories for user '{self.user_id}': {e}", file=sys.stderr)
+            raise
 
-    def add(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+    def add(
+        self,
+        messages: Any,
+        infer: bool = True,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Ingest a conversation turn and update the memory store.
 
@@ -137,32 +163,62 @@ class MemoryManager:
         Returns the raw Mem0 response dict (useful for debugging).
         """
         if not self.mem:
-            return {"results": []}
+            raise RuntimeError("Mem0 Memory instance is not initialized")
+        
+        redacted_messages = safe_redact_obj(messages)
         try:
-            return self.mem.add(messages=messages, user_id=self.user_id)
-        except Exception:
-            return {"results": []}
+            kwargs: dict[str, Any] = {
+                "messages": redacted_messages,
+                "user_id": self.user_id,
+                "infer": infer,
+            }
+            if metadata is not None:
+                kwargs["metadata"] = metadata
+            res = self.mem.add(**kwargs)
+            if infer and messages and (not res or not res.get("results")):
+                raise RuntimeError("Mem0 fact extraction yielded 0 results from non-empty input. LLM auth/quota failure likely.")
+            return res
+        except Exception as e:
+            print(f"[MEMORY ADD ERROR] Error adding memory for user '{self.user_id}': {e}", file=sys.stderr)
+            raise
 
-    def get_all(self) -> list[dict[str, Any]]:
+    def get_all(self, top_k: int = 100) -> list[dict[str, Any]]:
         """Return every stored memory for this user (for inspection / debugging)."""
         if not self.mem:
-            return []
+            raise RuntimeError("Mem0 Memory instance is not initialized")
         try:
-            results = self.mem.get_all(user_id=self.user_id)
+            results = self.mem.get_all(filters={"user_id": self.user_id}, top_k=top_k)
             if isinstance(results, dict):
                 return results.get("results", [])
             return results or []
-        except Exception:
-            return []
+        except Exception as e:
+            print(f"[MEMORY GET_ALL ERROR] Error fetching memories for user '{self.user_id}': {e}", file=sys.stderr)
+            raise
 
     def delete(self, memory_id: str) -> None:
         """Manually delete a specific memory by its ID."""
         if not self.mem:
-            return
+            raise RuntimeError("Mem0 Memory instance is not initialized")
         try:
             self.mem.delete(memory_id=memory_id)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[MEMORY DELETE ERROR] Error deleting memory '{memory_id}' for user '{self.user_id}': {e}", file=sys.stderr)
+            raise
+
+    def delete_all(self) -> None:
+        """Delete all memories for this user."""
+        if not self.mem:
+            raise RuntimeError("Mem0 Memory instance is not initialized")
+        try:
+            self.mem.delete_all(user_id=self.user_id)
+        except Exception as e:
+            print(f"[MEMORY DELETE_ALL ERROR] Error deleting all memories for user '{self.user_id}': {e}", file=sys.stderr)
+            raise
+
+    def get_profile(self) -> str:
+        """Get the current profile text from memory."""
+        memories = self.get_all()
+        return self.format_for_prompt(memories)
 
     # ── Layer 6: Emotional Context Tracking ─────────────────────────────────
 

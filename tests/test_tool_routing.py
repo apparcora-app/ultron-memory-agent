@@ -8,9 +8,9 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 import asyncio
-from config import LLMConfig
+from core.config import LLMConfig
 from mcp_client import MCPManager
-from tool_router import DynamicToolRouter
+from core.tool_router import DynamicToolRouter
 
 
 async def _run_test():
@@ -24,6 +24,8 @@ async def _run_test():
     print("\n" + "=" * 50)
     print("--- TEST 1: WEB SEARCH INTENT ---")
     print(f"User Input: {intent_1}")
+    from core.tool_definitions import ULTRON_TOOLS
+    print(f"DEBUG IN TEST: len(ULTRON_TOOLS)={len(ULTRON_TOOLS)}")
     tools_1 = await router.route_tools(intent_1, mcp)
     print(f"\nFinal Tool Count: {len(tools_1)}")
     print(f"Included Tool Names: {[t['name'] for t in tools_1]}")

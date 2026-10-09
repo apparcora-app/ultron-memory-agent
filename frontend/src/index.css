@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-zinc-950 text-zinc-100 font-sans antialiased overflow-hidden m-0 p-0;
+    background-color: #090a0f;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.04) 0%, transparent 60%),
+      radial-gradient(circle at 100% 100%, rgba(0, 255, 163, 0.02) 0%, transparent 50%);
+  }
+
+  /* Custom cybernetic scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #090a0f;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
+  }
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  @apply bg-zinc-900/60 backdrop-blur-md border border-zinc-800/80 shadow-2xl shadow-black/40;
+}
+
+.glass-panel-hover {
+  @apply transition-all duration-200 hover:border-zinc-700/80 hover:bg-zinc-900/80;
+}
+
+/* Cybernetic grid background */
+.cyber-grid {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(39, 39, 42, 0.25) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(39, 39, 42, 0.25) 1px, transparent 1px);
+}

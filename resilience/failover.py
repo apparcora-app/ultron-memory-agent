@@ -12,6 +12,7 @@ Provides:
 """
 
 from __future__ import annotations
+from core.log_config import get_logger
 
 import asyncio
 import random
@@ -215,8 +216,10 @@ class TieredModelFailover:
                         "reasons": reasons,
                     },
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.error(f"[AUDIT FAILURE] Failed to record PROVIDER_FAILOVER telemetry: {e}")
+                raise RuntimeError(f"Audit trail integrity violation: {e}")
 
 
 def create_default_failover_chain(
@@ -268,3 +271,5 @@ def create_default_failover_chain(
         retry_policy=retry_policy,
         telemetry_engine=telemetry,
     )
+
+_log = get_logger('failover')

@@ -68,6 +68,20 @@ def main():
     print(f"  Nexus Interface Output:    {result.get('nexus_output')[:100]}...")
     print("-" * 68 + "\n")
 
+    # FIX 1: Explicitly check the output for errors instead of just relying on telemetry
+    titan_out = str(result.get('titan_output', ''))
+    nexus_out = str(result.get('nexus_output', ''))
+    
+    assert titan_out, "Titan output is empty"
+    assert nexus_out, "Nexus output is empty"
+    # Structural check on the API response status rather than brittle string matching
+    titan_status = result.get('titan_status')
+    nexus_status = result.get('nexus_status')
+    errors = result.get('errors', [])
+    assert titan_status == 'COMPLETED', f"Titan node failed structurally with status: {titan_status}. Output: {titan_out}"
+    assert nexus_status == 'COMPLETED', f"Nexus node failed structurally with status: {nexus_status}. Output: {nexus_out}"
+    assert not errors, f"Pipeline accumulated errors: {errors}"
+    
     # 4. Verify Telemetry Post-Execution
     conn = sqlite3.connect(str(db_path))
     cursor = conn.cursor()
