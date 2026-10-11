@@ -69,6 +69,9 @@ def get_or_create_agent(user_id: str) -> MemoryAgent:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from core.config import check_startup_env
+    check_startup_env()
+
     # Pre-warm primary agent in background thread so ChromaDB and embeddings are instant
     def warmup_agent():
         try:

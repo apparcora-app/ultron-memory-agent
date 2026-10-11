@@ -302,12 +302,11 @@ export const KimiChatWorkspace: React.FC = () => {
   };
 
   return (
-    <div className="flex w-screen h-screen overflow-hidden bg-[#0a0c10] text-zinc-100 font-sans select-none relative">
-      {/* Ambient Radial Glowing Aurora in Top-Right (Syntrix Aesthetic) */}
-      <div className="absolute top-0 right-0 w-[600px] h-[500px] bg-gradient-to-b from-teal-500/10 via-cyan-500/5 to-transparent blur-3xl pointer-events-none z-0" />
-      <div className="absolute bottom-0 left-1/3 w-[500px] h-[400px] bg-gradient-to-t from-cyan-500/5 to-transparent blur-3xl pointer-events-none z-0" />
+    <div className="flex w-screen h-screen overflow-hidden bg-[#f8f9fa] text-[#0f172a] font-sans select-none relative">
+      {/* Ambient sky-blue glow — top-right (Stitch spec) */}
+      <div className="absolute top-0 right-0 w-[550px] h-[450px] bg-gradient-to-b from-[#0ea5e9]/10 via-transparent to-transparent blur-3xl pointer-events-none z-0" />
 
-      {/* ── Left Sidebar (Syntrix Style) ── */}
+      {/* ── Left Sidebar (Dark Matte #0f0f11 — Stitch spec) ── */}
       <Sidebar
         sessions={sessions}
         currentSessionId={currentSessionId}
@@ -319,16 +318,16 @@ export const KimiChatWorkspace: React.FC = () => {
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
 
-      {/* ── Main Content Area (Rounded Dark Viewport with Ambient Edge) ── */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden p-2 sm:p-3 relative z-10">
+      {/* ── Main Content Area — padded, rounded, white card ── */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden p-2 sm:p-3 relative z-10 bg-[#f8f9fa]">
         <div
           ref={containerRef}
-          className="flex-1 flex h-full overflow-hidden rounded-2xl sm:rounded-3xl bg-[#12151b]/95 border border-[#1f242d] shadow-2xl relative"
+          className="flex-1 flex h-full overflow-hidden rounded-2xl sm:rounded-3xl bg-white border border-[#e2e8f0] shadow-xl relative"
         >
-          {/* ── Chat Column ── */}
+          {/* ── Chat Column (Pure White) ── */}
           <div
             style={{ width: isCanvasOpen ? `${splitRatio}%` : "100%" }}
-            className="flex flex-col h-full bg-[#12151b] overflow-hidden transition-all duration-75 relative"
+            className="flex flex-col h-full bg-white overflow-hidden transition-all duration-75 relative"
           >
             {/* Top Navigation Bar */}
             <TopBar
@@ -342,9 +341,9 @@ export const KimiChatWorkspace: React.FC = () => {
             />
 
             {/* ── Center Content: Welcome Hero OR Chat Stream ── */}
-            <div className="flex-1 overflow-y-auto px-4 py-2 relative">
+            <div className="flex-1 overflow-y-auto px-4 py-2 relative bg-white">
               {messages.length === 0 ? (
-                /* Welcome Hero Screen (Exact Syntrix View) */
+                /* Welcome Hero Screen */
                 <WelcomeHero
                   inputVal={inputVal}
                   onChangeInput={setInputVal}
@@ -364,7 +363,7 @@ export const KimiChatWorkspace: React.FC = () => {
                 />
               ) : (
                 /* Active Conversation Feed */
-                <div className="max-w-4xl mx-auto py-6">
+                <div className="max-w-3xl mx-auto py-6">
                   {messages.map((msg) => (
                     <ChatMessageItem
                       key={msg.id}
@@ -373,14 +372,14 @@ export const KimiChatWorkspace: React.FC = () => {
                     />
                   ))}
 
-                  {/* Thinking / Processing Pulse */}
+                  {/* Thinking / Processing Pulse — Stitch light style */}
                   {isLoading && (
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
-                        <BrainCircuit className="w-4 h-4 animate-spin" />
+                      <div className="w-8 h-8 rounded-xl bg-[#0f0f11] border border-[#0ea5e9]/40 flex items-center justify-center text-[#38bdf8] shrink-0 shadow-[0_0_12px_rgba(14,165,233,0.3)] robot-idle">
+                        <BrainCircuit className="w-4 h-4 animate-spin text-[#38bdf8]" />
                       </div>
-                      <div className="px-4 py-2.5 rounded-2xl bg-[#181c24] border border-[#272e3b] text-xs font-mono text-cyan-300 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                      <div className="px-4 py-2.5 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] text-xs font-mono text-[#0284c7] flex items-center gap-2 shadow-sm">
+                        <span className="w-2 h-2 rounded-full bg-[#38bdf8] animate-ping" />
                         <span>Ultron is reasoning and executing tools...</span>
                       </div>
                     </div>
@@ -391,9 +390,9 @@ export const KimiChatWorkspace: React.FC = () => {
               )}
             </div>
 
-            {/* ── Floating Input Card (Only rendered here if chat has messages) ── */}
+            {/* ── Floating Input Card (only in chat mode) ── */}
             {messages.length > 0 && (
-              <div className="pt-2 pb-1 bg-gradient-to-t from-[#12151b] via-[#12151b]/90 to-transparent">
+              <div className="pt-2 pb-1 bg-gradient-to-t from-white via-white/95 to-transparent">
                 <ChatInput
                   value={inputVal}
                   onChange={setInputVal}
@@ -414,22 +413,22 @@ export const KimiChatWorkspace: React.FC = () => {
             )}
           </div>
 
-          {/* ── Resizable Splitter Divider Bar ── */}
+          {/* ── Resizable Splitter Divider Bar — light version ── */}
           {isCanvasOpen && (
             <div
               onMouseDown={handleMouseDown}
               className={cn(
-                "relative flex items-center justify-center w-1.5 hover:w-2 bg-[#1c222e] hover:bg-cyan-500/50 cursor-col-resize transition-colors z-20 group",
-                isDragging && "bg-cyan-500 w-2"
+                "relative flex items-center justify-center w-1.5 hover:w-2 bg-[#e2e8f0] hover:bg-[#0284c7]/50 cursor-col-resize transition-colors z-20 group shrink-0",
+                isDragging && "bg-[#0284c7] w-2"
               )}
             />
           )}
 
-          {/* ── Right Canvas Pane (60 FPS WebRTC Player & Screencast) ── */}
+          {/* ── Right Canvas Pane (WebRTC Player) ── */}
           {isCanvasOpen && (
             <div
               style={{ width: `${100 - splitRatio}%` }}
-              className="h-full overflow-hidden bg-[#0c0e12]"
+              className="h-full overflow-hidden bg-white"
             >
               <CanvasPane
                 mediaStream={mediaStream}
@@ -459,3 +458,4 @@ export const KimiChatWorkspace: React.FC = () => {
     </div>
   );
 };
+

@@ -131,22 +131,22 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col rounded-3xl bg-[#141820] border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-4xl max-h-[85vh] flex flex-col rounded-3xl bg-white border border-[#cbd5e1] shadow-2xl overflow-hidden text-[#0f172a]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#12151c]/90">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e2e8f0] bg-[#f8fafc]">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.25)]">
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#f0f9ff] border border-[#bae6fd] text-[#0284c7] shadow-sm">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white tracking-wide flex items-center gap-2">
+              <h2 className="text-base font-bold text-[#0f172a] tracking-wide flex items-center gap-2">
                 <span>Ultron Skills Matrix</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-950 text-cyan-400 border border-cyan-800">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-sky-50 text-[#0284c7] border border-sky-200 font-semibold">
                   {skills.length} Loaded
                 </span>
               </h2>
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-slate-500">
                 Browse autonomous capabilities, dynamic tools, and install custom execution behaviors
               </p>
             </div>
@@ -154,13 +154,13 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
 
           <div className="flex items-center gap-2">
             {/* Tabs */}
-            <div className="flex p-1 rounded-xl bg-zinc-900 border border-white/5 text-xs font-medium">
+            <div className="flex p-1 rounded-xl bg-[#f1f5f9] border border-[#e2e8f0] text-xs font-medium">
               <button
                 onClick={() => setActiveTab("browse")}
                 className={`px-3 py-1.5 rounded-lg transition-all ${
                   activeTab === "browse"
-                    ? "bg-cyan-500/20 text-cyan-300 font-semibold"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-white text-[#0284c7] font-semibold shadow-xs"
+                    : "text-slate-600 hover:text-[#0f172a]"
                 }`}
               >
                 Browse Matrix
@@ -169,8 +169,8 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
                 onClick={() => setActiveTab("create")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
                   activeTab === "create"
-                    ? "bg-cyan-500/20 text-cyan-300 font-semibold"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-white text-[#0284c7] font-semibold shadow-xs"
+                    : "text-slate-600 hover:text-[#0f172a]"
                 }`}
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -181,7 +181,7 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
             {/* Close Button */}
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+              className="p-2 rounded-xl text-slate-400 hover:text-[#0f172a] hover:bg-slate-100 transition-colors"
               title="Close Modal"
             >
               <X className="w-5 h-5" />
@@ -190,19 +190,19 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 bg-white">
           {activeTab === "browse" ? (
             <div className="space-y-5">
               {/* Search & Category Filter Bar */}
               <div className="flex flex-col sm:flex-row items-center gap-3">
                 <div className="relative flex-1 w-full">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search by skill name, capability, or keywords..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#1a1f2c] border border-white/10 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/60"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#cbd5e1] text-sm text-[#0f172a] placeholder:text-slate-400 focus:outline-none focus:border-[#0284c7] focus:ring-1 focus:ring-[#0284c7]"
                   />
                 </div>
 
@@ -212,10 +212,10 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
                     <button
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
-                      className={`px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ${
+                      className={`px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all font-medium ${
                         selectedCategory === cat
-                          ? "bg-cyan-500 text-zinc-950 font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)]"
-                          : "bg-zinc-900/80 border border-white/5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+                          ? "bg-[#0284c7] text-white shadow-sm font-bold"
+                          : "bg-[#f1f5f9] border border-[#e2e8f0] text-slate-600 hover:text-[#0f172a] hover:bg-[#e2e8f0]"
                       }`}
                     >
                       {cat}
@@ -226,13 +226,13 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
 
               {/* Skills Grid */}
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-16 text-zinc-400 gap-3">
-                  <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+                  <div className="w-8 h-8 border-2 border-[#0284c7] border-t-transparent rounded-full animate-spin" />
                   <span className="text-xs font-mono">Synchronizing Skills Matrix...</span>
                 </div>
               ) : filteredSkills.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-zinc-500 gap-2 border border-dashed border-white/10 rounded-2xl">
-                  <Layers className="w-8 h-8 text-zinc-600" />
+                <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2 border border-dashed border-[#e2e8f0] rounded-2xl">
+                  <Layers className="w-8 h-8 text-slate-300" />
                   <p className="text-sm">No skills found matching your query.</p>
                 </div>
               ) : (
@@ -242,41 +242,41 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
                     return (
                       <div
                         key={skillId}
-                        className="group relative flex flex-col justify-between p-4 rounded-2xl bg-[#191e28] border border-white/5 hover:border-cyan-500/40 hover:bg-[#1d2330] transition-all shadow-sm"
+                        className="group relative flex flex-col justify-between p-4 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] hover:border-[#0284c7] hover:bg-white transition-all shadow-sm"
                       >
                         <div>
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2.5">
                               <span className="text-xl">{skill.icon || "⚡"}</span>
                               <div>
-                                <h3 className="text-sm font-semibold text-zinc-100 group-hover:text-cyan-300 transition-colors">
+                                <h3 className="text-sm font-bold text-[#0f172a] group-hover:text-[#0284c7] transition-colors">
                                   {skill.name}
                                 </h3>
-                                <span className="text-[10px] font-mono text-zinc-500">
+                                <span className="text-[10px] font-mono text-slate-500">
                                   {skillId}
                                 </span>
                               </div>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-zinc-800/80 text-zinc-400 border border-white/5">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-200 text-slate-700">
                               {skill.category || "General"}
                             </span>
                           </div>
 
-                          <p className="text-xs text-zinc-400 leading-relaxed line-clamp-3 mb-3">
+                          <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 mb-3">
                             {skill.description || "No description provided."}
                           </p>
                         </div>
 
                         {/* Tags & Action */}
-                        <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                        <div className="flex items-center justify-between pt-2 border-t border-[#e2e8f0]">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {skill.tags &&
                               skill.tags.slice(0, 3).map((tag, tIdx) => (
                                 <span
                                   key={tIdx}
-                                  className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-400 font-mono"
+                                  className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 font-mono"
                                 >
-                                  <Tag className="w-2.5 h-2.5 text-cyan-400" />
+                                  <Tag className="w-2.5 h-2.5 text-[#0284c7]" />
                                   {tag}
                                 </span>
                               ))}
@@ -288,7 +288,7 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
                                 onSelectSkill(skill);
                                 onClose();
                               }}
-                              className="px-3 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500 hover:text-zinc-950 transition-all"
+                              className="px-3.5 py-1 rounded-xl text-xs font-semibold bg-[#0f172a] text-white hover:bg-black transition-all"
                             >
                               Activate
                             </button>
@@ -304,7 +304,7 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
             /* Create Skill Form */
             <form onSubmit={handleCreateSkill} className="space-y-4 max-w-2xl mx-auto">
               {submitSuccess && (
-                <div className="flex items-center gap-2 p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs">
+                <div className="flex items-center gap-2 p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs">
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                   <span>{submitSuccess}</span>
                 </div>
@@ -312,7 +312,7 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Skill Identifier (ID) *
                   </label>
                   <input
@@ -321,12 +321,12 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
                     value={formId}
                     onChange={(e) => setFormId(e.target.value)}
                     placeholder="e.g. data_visualizer"
-                    className="w-full px-3.5 py-2 rounded-xl bg-[#1a1f2c] border border-white/10 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/60 font-mono"
+                    className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#cbd5e1] text-sm text-[#0f172a] placeholder:text-slate-400 focus:outline-none focus:border-[#0284c7] font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Display Name *
                   </label>
                   <input
@@ -335,20 +335,20 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
                     placeholder="e.g. Advanced Data Visualizer"
-                    className="w-full px-3.5 py-2 rounded-xl bg-[#1a1f2c] border border-white/10 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/60"
+                    className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#cbd5e1] text-sm text-[#0f172a] placeholder:text-slate-400 focus:outline-none focus:border-[#0284c7]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Category
                   </label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-[#1a1f2c] border border-white/10 text-sm text-zinc-200 focus:outline-none focus:border-cyan-500/60"
+                    className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#cbd5e1] text-sm text-[#0f172a] focus:outline-none focus:border-[#0284c7]"
                   >
                     <option value="Custom">Custom</option>
                     <option value="Development">Development</option>
@@ -360,7 +360,7 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Tags (Comma-separated)
                   </label>
                   <input
@@ -368,13 +368,13 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
                     value={formTags}
                     onChange={(e) => setFormTags(e.target.value)}
                     placeholder="e.g. chart, plotting, matplotlib"
-                    className="w-full px-3.5 py-2 rounded-xl bg-[#1a1f2c] border border-white/10 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/60 font-mono text-xs"
+                    className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#cbd5e1] text-sm text-[#0f172a] placeholder:text-slate-400 focus:outline-none focus:border-[#0284c7] font-mono text-xs"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Brief Summary / Description
                 </label>
                 <input
@@ -382,12 +382,12 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
                   value={formDesc}
                   onChange={(e) => setFormDesc(e.target.value)}
                   placeholder="Summarize what this skill enables Ultron to execute"
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#1a1f2c] border border-white/10 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/60"
+                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#cbd5e1] text-sm text-[#0f172a] placeholder:text-slate-400 focus:outline-none focus:border-[#0284c7]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Agent Execution Instructions / Prompt Directive *
                 </label>
                 <textarea
@@ -396,7 +396,7 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
                   value={formInstructions}
                   onChange={(e) => setFormInstructions(e.target.value)}
                   placeholder="Provide precise guidelines, tool workflows, and output format standards for Ultron when using this skill..."
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#1a1f2c] border border-white/10 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/60 font-mono text-xs leading-relaxed"
+                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#cbd5e1] text-sm text-[#0f172a] placeholder:text-slate-400 focus:outline-none focus:border-[#0284c7] font-mono text-xs leading-relaxed"
                 />
               </div>
 
@@ -404,10 +404,10 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-cyan-500 text-zinc-950 font-bold text-sm hover:bg-cyan-400 transition-all shadow-[0_0_15px_rgba(0,240,255,0.4)] disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#0f172a] text-white font-bold text-sm hover:bg-black transition-all shadow-md disabled:opacity-50"
                 >
                   {submitting ? (
-                    <div className="w-4 h-4 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <Plus className="w-4 h-4" />
                   )}
@@ -421,3 +421,4 @@ export const SkillsModal: React.FC<SkillsModalProps> = ({
     </div>
   );
 };
+

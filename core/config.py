@@ -325,16 +325,67 @@ class EmailConfig:
     default_profile: str = field(default_factory=lambda: _get("EMAIL_DEFAULT_PROFILE", "primary"))
 
     # Profiles mapping
-    primary_user: str = field(default_factory=lambda: _get("primary_EMAIL_USER", ""))
-    primary_password: str = field(default_factory=lambda: _get("primary_EMAIL_PASSWORD", ""))
-
-    reach_user: str = field(default_factory=lambda: _get("REACH_EMAIL_USER", ""))
-    reach_password: str = field(default_factory=lambda: _get("REACH_EMAIL_PASSWORD", ""))
+    work_user: str = field(default_factory=lambda: _get("WORK_EMAIL_USER", ""))
+    work_password: str = field(default_factory=lambda: _get("WORK_EMAIL_PASSWORD", ""))
 
     personal_user: str = field(default_factory=lambda: _get("PERSONAL_EMAIL_USER", ""))
     personal_password: str = field(default_factory=lambda: _get("PERSONAL_EMAIL_PASSWORD", ""))
 
+    secondary_user: str = field(default_factory=lambda: _get("SECONDARY_EMAIL_USER", ""))
+    secondary_password: str = field(default_factory=lambda: _get("SECONDARY_EMAIL_PASSWORD", ""))
+
     drafts_dir: str = field(default_factory=lambda: _get("EMAIL_DRAFTS_DIR", "./data/email_drafts"))
+
+
+def check_startup_env() -> list[str]:
+    """
+    Validates environment configuration for configured email and browser features.
+    If required .env variables are missing, logs ONE warning naming the variable (never values).
+    Returns list of missing variable names.
+    """
+    import logging
+    logger = logging.getLogger("ultron.startup")
+    missing_vars = []
+
+    # 1. Email feature check
+    email_enabled = os.getenv("EMAIL_ENABLED", "false").lower() in ("true", "1", "yes")
+
+    personal_user = os.getenv("PERSONAL_EMAIL_USER")
+    personal_pass = os.getenv("PERSONAL_EMAIL_PASSWORD")
+    if personal_user and not personal_pass:
+        missing_vars.append("PERSONAL_EMAIL_PASSWORD")
+    elif personal_pass and not personal_user:
+        missing_vars.append("PERSONAL_EMAIL_USER")
+    elif email_enabled and not personal_user:
+        missing_vars.append("PERSONAL_EMAIL_USER")
+        if not personal_pass:
+            missing_vars.append("PERSONAL_EMAIL_PASSWORD")
+
+    work_user = os.getenv("WORK_EMAIL_USER")
+    work_pass = os.getenv("WORK_EMAIL_PASSWORD")
+    if work_user and not work_pass:
+        missing_vars.append("WORK_EMAIL_PASSWORD")
+    elif work_pass and not work_user:
+        missing_vars.append("WORK_EMAIL_USER")
+
+    sec_user = os.getenv("SECONDARY_EMAIL_USER")
+    sec_pass = os.getenv("SECONDARY_EMAIL_PASSWORD")
+    if sec_user and not sec_pass:
+        missing_vars.append("SECONDARY_EMAIL_PASSWORD")
+    elif sec_pass and not sec_user:
+        missing_vars.append("SECONDARY_EMAIL_USER")
+
+    if email_enabled:
+        if not os.getenv("EMAIL_IMAP_HOST"):
+            missing_vars.append("EMAIL_IMAP_HOST")
+        if not os.getenv("EMAIL_SMTP_HOST"):
+            missing_vars.append("EMAIL_SMTP_HOST")
+
+    deduped = sorted(list(set(missing_vars)))
+    for var in deduped:
+        logger.warning(f"Missing required environment variable for configured feature: {var}")
+
+    return deduped
 
 
 @dataclass(frozen=True)

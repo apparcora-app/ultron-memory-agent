@@ -7,7 +7,7 @@ multi-model routing, multi-agent swarm orchestration, and governance guardrails.
 
 [![CI](https://github.com/apparcora-app/ultron-memory-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/apparcora-app/ultron-memory-agent/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![Vector Store](https://img.shields.io/badge/Vector%20Store-ChromaDB%20%7C%20Qdrant-green.svg)](https://www.trychroma.com/)
 [![Memory Engine](https://img.shields.io/badge/Memory-Mem0-purple.svg)](https://github.com/mem0ai/mem0)
 [![Orchestration](https://img.shields.io/badge/Orchestrator-LangGraph%20%7C%20CrewAI-orange.svg)](https://langchain-ai.github.io/langgraph/)
@@ -268,7 +268,7 @@ Report vulnerabilities privately — see [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT License — see [LICENSE](LICENSE).
+Proprietary — All Rights Reserved. See [LICENSE](LICENSE).
 
 Author: **Hanzla Rehman** ([@apparcora-app](https://github.com/apparcora-app))
 

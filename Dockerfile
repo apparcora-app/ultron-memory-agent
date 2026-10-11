@@ -19,7 +19,7 @@ FROM python:3.11-slim AS runtime
 
 LABEL org.opencontainers.image.title="Ultron Memory Agent"
 LABEL org.opencontainers.image.description="Enterprise-grade autonomous AI cognitive system with persistent long-term memory"
-LABEL org.opencontainers.image.author="Hanzla Rehman <reach.hanzla@gmail.com>"
+LABEL org.opencontainers.image.author="Ultron Maintainers <maintainer@example.com>"
 LABEL org.opencontainers.image.source="https://github.com/apparcora-app/ultron-memory-agent"
 LABEL org.opencontainers.image.licenses="MIT"
 

@@ -161,18 +161,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           {attachedFiles.map((file, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#1c222e] border border-white/10 text-xs text-zinc-300 shadow-md flex-shrink-0"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#f1f5f9] border border-[#cbd5e1] text-xs text-[#0f172a] shadow-sm flex-shrink-0"
             >
               {file.type.startsWith("image/") ? (
-                <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
+                <ImageIcon className="w-3.5 h-3.5 text-[#0284c7]" />
               ) : (
-                <FileText className="w-3.5 h-3.5 text-amber-400" />
+                <FileText className="w-3.5 h-3.5 text-amber-600" />
               )}
               <span className="max-w-[130px] truncate">{file.name}</span>
               <button
                 type="button"
                 onClick={() => removeFile(idx)}
-                className="text-zinc-500 hover:text-white transition-colors ml-0.5"
+                className="text-slate-400 hover:text-slate-700 transition-colors ml-0.5"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -181,19 +181,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Floating Syntrix Chat Input Card */}
-      <div className="relative rounded-2xl sm:rounded-3xl bg-[#181c24] border border-[#272e3b] shadow-[0_15px_45px_rgba(0,0,0,0.6)] backdrop-blur-xl focus-within:border-cyan-500/50 transition-all p-3 sm:p-4">
+      {/* Floating Stitch Chat Input Card (Crisp White with High-Contrast Border) */}
+      <div className="relative rounded-2xl bg-white border border-[#cbd5e1] shadow-lg focus-within:border-[#0284c7] focus-within:ring-2 focus-within:ring-[#0284c7]/20 transition-all p-3 sm:p-4">
         {/* Top Textarea with Sparkle */}
         <div className="flex items-start gap-2.5">
-          <Sparkles className="w-4 h-4 text-cyan-400 mt-1 flex-shrink-0 animate-pulse" />
+          <Sparkles className="w-4 h-4 text-[#0284c7] mt-1 flex-shrink-0" />
           <textarea
             ref={textareaRef}
             rows={1}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask me anything..."
-            className="w-full max-h-40 resize-none bg-transparent text-sm sm:text-base text-zinc-100 placeholder:text-zinc-500 focus:outline-none font-sans leading-relaxed pt-0.5"
+            placeholder="How can I help you today?"
+            className="w-full max-h-40 resize-none bg-transparent text-sm sm:text-base text-[#0f172a] placeholder:text-slate-400 focus:outline-none font-sans leading-relaxed pt-0.5 font-medium"
           />
         </div>
 
@@ -207,21 +207,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           accept="image/*,.pdf,.csv,.xlsx,.xls,.docx,.py,.js,.ts,.json,.txt"
         />
 
-        {/* Bottom Controls Bar (Syntrix Layout) */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-white/5 mt-2">
-          {/* Left Controls Group */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            {/* '+' Attach File Button */}
+        {/* Bottom Controls Bar (Stitch Layout) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-[#e2e8f0] mt-2">
+          {/* Left Controls Group with High-Contrast Pills */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Paperclip Attach File Button */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#202632] hover:bg-[#28303f] text-zinc-300 hover:text-white transition-colors border border-white/5"
+              className="flex items-center justify-center w-7 h-7 rounded-full bg-[#f1f5f9] hover:bg-[#e2e8f0] text-slate-700 hover:text-[#0f172a] transition-colors border border-[#cbd5e1]"
               title="Attach document, spreadsheet, or image"
             >
-              <Paperclip className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <Paperclip className="w-3.5 h-3.5" />
             </button>
 
-            {/* Tools Dropdown Button */}
+            {/* Tools Dropdown Button with Sky Blue Accents */}
             <div className="relative">
               <button
                 type="button"
@@ -230,22 +230,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   setShowModelDropdown(false);
                 }}
                 className={cn(
-                  "flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium transition-all border",
+                  "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all border",
                   showToolsDropdown || isCanvasOpen
-                    ? "bg-[#252d3c] text-cyan-300 border-cyan-500/40"
-                    : "bg-[#202632] text-zinc-300 border-white/5 hover:bg-[#28303f]"
+                    ? "bg-[#f0f9ff] text-[#0284c7] border-[#bae6fd]"
+                    : "bg-[#f1f5f9] text-slate-700 border-[#cbd5e1] hover:bg-[#e2e8f0]"
                 )}
                 title="Tools & Browser Automation"
               >
-                <Wrench className="w-3 h-3 text-cyan-400" />
+                <Wrench className="w-3.5 h-3.5 text-[#0284c7]" />
                 <span>Tools</span>
-                <ChevronDown className="w-3 h-3 opacity-60" />
+                <ChevronDown className="w-3.5 h-3.5 opacity-70" />
               </button>
 
               {/* Tools Dropdown Menu */}
               {showToolsDropdown && (
-                <div className="absolute left-0 bottom-full mb-2 w-56 rounded-2xl bg-[#1c222e] border border-white/10 shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-bottom-2">
-                  <div className="text-[10px] font-mono text-zinc-400 uppercase px-2 py-1 tracking-wider">
+                <div className="absolute left-0 bottom-full mb-2 w-56 rounded-2xl bg-white border border-[#cbd5e1] shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-bottom-2 text-[#0f172a]">
+                  <div className="text-[10px] font-mono text-slate-500 uppercase px-2 py-1 tracking-wider">
                     Execution Tools
                   </div>
                   <button
@@ -254,45 +254,45 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       onToggleCanvas();
                       setShowToolsDropdown(false);
                     }}
-                    className="flex items-center justify-between w-full px-2.5 py-1.5 rounded-xl text-xs text-zinc-200 hover:bg-white/5 transition-colors"
+                    className="flex items-center justify-between w-full px-2.5 py-1.5 rounded-xl text-xs text-slate-800 hover:bg-[#f1f5f9] transition-colors"
                   >
                     <span className="flex items-center gap-2">
-                      <Layout className="w-3.5 h-3.5 text-cyan-400" />
+                      <Layout className="w-3.5 h-3.5 text-[#0284c7]" />
                       <span>WebRTC Canvas</span>
                     </span>
                     <span
                       className={`flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                        isCanvasOpen ? "bg-cyan-500/20 text-cyan-300" : "text-zinc-500"
+                        isCanvasOpen ? "bg-sky-50 text-[#0284c7] border border-sky-200" : "text-slate-400"
                       }`}
                     >
                       {isStreamConnected && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       )}
                       <span>{isCanvasOpen ? "OPEN" : "OFF"}</span>
                     </span>
                   </button>
 
-                  <div className="h-px bg-white/5 my-1" />
+                  <div className="h-px bg-slate-200 my-1" />
 
-                  <div className="text-[10px] font-mono text-zinc-400 uppercase px-2 py-1 tracking-wider">
+                  <div className="text-[10px] font-mono text-slate-500 uppercase px-2 py-1 tracking-wider">
                     Autonomous Capabilities
                   </div>
-                  <div className="px-2.5 py-1 text-[11px] text-zinc-400 leading-snug">
+                  <div className="px-2.5 py-1 text-[11px] text-slate-600 leading-snug">
                     OpenBot Browser Screencast, Forensic Ledger CPA, Shell Sandbox, & Graph RAG.
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Solo Agent vs Swarm Agent Mode Toggle */}
+            {/* Solo Agent vs Swarm Toggle */}
             <button
               type="button"
               onClick={() => onChangeMode(operationMode === "DIRECT" ? "SWARM" : "DIRECT")}
               className={cn(
-                "flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium transition-all border",
+                "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all border",
                 operationMode === "SWARM"
-                  ? "bg-amber-500/15 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-                  : "bg-[#202632] text-zinc-300 border-white/5 hover:bg-[#28303f]"
+                  ? "bg-[#f0f9ff] text-[#0284c7] border-[#bae6fd] shadow-sm font-semibold"
+                  : "bg-[#f1f5f9] text-slate-700 border-[#cbd5e1] hover:bg-[#e2e8f0]"
               )}
               title={
                 operationMode === "SWARM"
@@ -302,8 +302,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             >
               <Bot
                 className={cn(
-                  "w-3 h-3",
-                  operationMode === "SWARM" ? "text-amber-400" : "text-zinc-400"
+                  "w-3.5 h-3.5",
+                  operationMode === "SWARM" ? "text-[#0284c7]" : "text-slate-600"
                 )}
               />
               <span>{operationMode === "SWARM" ? "Swarm (6 Bots)" : "Solo Agent"}</span>
@@ -314,17 +314,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               type="button"
               onClick={onToggleOptimizePrompt}
               className={cn(
-                "flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium transition-all border",
+                "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all border",
                 optimizePrompt
-                  ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
-                  : "bg-[#202632] text-zinc-400 border-white/5 hover:bg-[#28303f] hover:text-zinc-300"
+                  ? "bg-[#f0f9ff] text-[#0284c7] border-[#bae6fd] shadow-sm font-semibold"
+                  : "bg-[#f1f5f9] text-slate-700 border-[#cbd5e1] hover:bg-[#e2e8f0]"
               )}
               title="Toggle Ultron Prompt Optimizer (Enhances input clarity & tool adherence)"
             >
               <Zap
                 className={cn(
-                  "w-3 h-3",
-                  optimizePrompt ? "text-emerald-400" : "text-zinc-500"
+                  "w-3.5 h-3.5",
+                  optimizePrompt ? "text-[#0284c7]" : "text-slate-500"
                 )}
               />
               <span>Opt: {optimizePrompt ? "ON" : "OFF"}</span>
@@ -339,22 +339,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   setShowToolsDropdown(false);
                 }}
                 className={cn(
-                  "flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium transition-all border",
+                  "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all border",
                   showModelDropdown
-                    ? "bg-[#252d3c] text-cyan-300 border-cyan-500/40"
-                    : "bg-[#202632] text-zinc-300 border-white/5 hover:bg-[#28303f]"
+                    ? "bg-[#f0f9ff] text-[#0284c7] border-[#bae6fd]"
+                    : "bg-[#f1f5f9] text-slate-700 border-[#cbd5e1] hover:bg-[#e2e8f0]"
                 )}
                 title="Shift Active LLM Inference Engine"
               >
-                <Cpu className="w-3 h-3 text-cyan-400" />
-                <span className="max-w-[95px] truncate">{currentModelObj.name}</span>
-                <ChevronDown className="w-3 h-3 opacity-60" />
+                <Cpu className="w-3.5 h-3.5 text-[#0284c7]" />
+                <span className="max-w-[85px] truncate font-semibold text-[#0f172a]">{currentModelObj.name}</span>
+                <ChevronDown className="w-3.5 h-3.5 opacity-60" />
               </button>
 
               {/* LLM Shift Dropdown Menu */}
               {showModelDropdown && (
-                <div className="absolute left-0 bottom-full mb-2 w-64 rounded-2xl bg-[#1c222e] border border-white/10 shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-bottom-2">
-                  <div className="text-[10px] font-mono text-zinc-400 uppercase px-2.5 py-1 tracking-wider">
+                <div className="absolute left-0 bottom-full mb-2 w-64 rounded-2xl bg-white border border-[#cbd5e1] shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-bottom-2 text-[#0f172a]">
+                  <div className="text-[10px] font-mono text-slate-500 uppercase px-2.5 py-1 tracking-wider">
                     LLM Engine Shift
                   </div>
                   {models.map((model) => (
@@ -368,19 +368,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       className={cn(
                         "flex flex-col w-full px-2.5 py-2 rounded-xl text-left transition-colors mb-0.5",
                         selectedModel === model.id
-                          ? "bg-cyan-500/15 border border-cyan-500/30"
-                          : "hover:bg-white/5 border border-transparent"
+                          ? "bg-sky-50 border border-sky-200"
+                          : "hover:bg-[#f1f5f9] border border-transparent"
                       )}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-zinc-100">
+                        <span className="text-xs font-semibold text-[#0f172a]">
                           {model.name}
                         </span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-cyan-300">
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-[#0284c7]">
                           {model.badge}
                         </span>
                       </div>
-                      <span className="text-[10px] text-zinc-400 mt-0.5 leading-snug line-clamp-1">
+                      <span className="text-[10px] text-slate-500 mt-0.5 leading-snug line-clamp-1">
                         {model.tagline}
                       </span>
                     </button>
@@ -389,41 +389,41 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               )}
             </div>
 
-            {/* Skills Button */}
+            {/* Skills Button with Sky Blue Accent */}
             <button
               type="button"
               onClick={onOpenSkills}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium bg-[#202632] hover:bg-[#28303f] text-cyan-300 border border-cyan-500/20 hover:border-cyan-500/50 transition-all shadow-sm"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#f0f9ff] hover:bg-[#e0f2fe] text-[#0284c7] border border-[#bae6fd] transition-all"
               title="Open Ultron Skills Matrix (View & Install Skills)"
             >
-              <Sparkles className="w-3 h-3 text-cyan-400" />
+              <Sparkles className="w-3.5 h-3.5 text-[#0284c7]" />
               <span>Skills</span>
             </button>
           </div>
 
-          {/* Right Controls: Voice & Circular Send Button */}
+          {/* Right Controls: Voice & High-Contrast Black Send Button */}
           <div className="flex items-center gap-2">
             {/* Voice Microphone Pill */}
             <button
               type="button"
               onClick={handleToggleVoice}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium transition-all border",
+                "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all border",
                 isRecording
-                  ? "bg-rose-500/20 text-rose-300 border-rose-500 animate-pulse"
-                  : "bg-[#202632] text-zinc-300 border-white/5 hover:bg-[#28303f] hover:text-white"
+                  ? "bg-rose-50 text-rose-600 border-rose-300 animate-pulse font-semibold"
+                  : "bg-[#f1f5f9] text-slate-700 border-[#cbd5e1] hover:bg-[#e2e8f0]"
               )}
               title="Voice Input"
             >
               {isRecording ? (
-                <MicOff className="w-3.5 h-3.5 text-rose-400" />
+                <MicOff className="w-3.5 h-3.5 text-rose-500" />
               ) : (
-                <Mic className="w-3.5 h-3.5 text-zinc-400" />
+                <Mic className="w-3.5 h-3.5 text-slate-600" />
               )}
               <span>Voice</span>
             </button>
 
-            {/* Circular Send Button (White with black arrow as in Syntrix) */}
+            {/* High-Contrast Send Button (Dark background with white arrow) */}
             <button
               type="button"
               onClick={() => {
@@ -434,17 +434,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               }}
               disabled={(!value.trim() && attachedFiles.length === 0) || isLoading}
               className={cn(
-                "flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full font-bold transition-all shadow-lg flex-shrink-0",
+                "flex items-center justify-center w-8 h-8 rounded-full font-bold transition-all shadow-md flex-shrink-0",
                 (value.trim() || attachedFiles.length > 0) && !isLoading
-                  ? "bg-white text-zinc-950 hover:bg-zinc-200 shadow-[0_0_15px_rgba(255,255,255,0.4)]"
-                  : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                  ? "bg-[#0f172a] text-white hover:bg-black hover:scale-105 shadow-md"
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed"
               )}
               title="Send Prompt"
             >
               {isLoading ? (
-                <div className="w-4 h-4 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                <ArrowUp className="w-4 h-4 stroke-[3]" />
               )}
             </button>
           </div>
@@ -453,3 +453,4 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     </div>
   );
 };
+

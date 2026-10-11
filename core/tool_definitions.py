@@ -15,6 +15,8 @@ Each tool has:
 
 from __future__ import annotations
 
+import json
+import logging
 import os
 import subprocess
 import tempfile
@@ -234,11 +236,7 @@ ULTRON_TOOLS: list[dict[str, Any]] = [
         "description": (
             "Open Google Chrome, Microsoft Edge, or the default browser on Boss's desktop to a specific URL and profile. "
             "Supports targeting specific Chrome profiles on Boss's machine: "
-            "'primary' (hanzla.rehman@primarybooksntax.com / Profile 7), "
-            "'reach' (reach.hanzla@gmail.com / Profile 1), "
-            "'personal' or 'default' (hanzlahmalik123@gmail.com / Default), "
-            "'arcora' (app.arcora@gmail.com / Profile 10), "
-            "'loyal_agency' (Profile 3). "
+            "'work' (Profile 1), 'personal' (Default), or profile directory name. "
             "Use this whenever Boss asks to open websites, Gmail, portals, web dashboards, or Chrome profiles."
         ),
         "input_schema": {
@@ -246,12 +244,12 @@ ULTRON_TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "url": {
                     "type": "string",
-                    "description": "The URL to open (e.g. 'https://mail.google.com' or 'https://primarybooksntax.com').",
+                    "description": "The URL to open (e.g. 'https://mail.google.com' or 'https://example.com').",
                 },
                 "profile": {
                     "type": "string",
-                    "description": "Chrome profile to use: 'primary', 'reach', 'default', 'arcora', 'loyal_agency', or profile directory name.",
-                    "default": "primary",
+                    "description": "Chrome profile to use: 'work', 'personal', 'default', or profile directory name.",
+                    "default": "default",
                 },
                 "browser": {
                     "type": "string",
@@ -373,8 +371,8 @@ ULTRON_TOOLS: list[dict[str, Any]] = [
         "name": "search_emails",
         "description": (
             "Search Boss's email inbox using IMAP. "
-            "Filter by sender (e.g. 'sarah'), subject (e.g. 'confirmation of invoices'), "
-            "keywords, or unread status across profiles ('primary', 'reach', 'personal'). "
+            "Filter by sender (e.g. 'client'), subject (e.g. 'confirmation of invoices'), "
+            "keywords, or unread status across profiles ('work', 'personal', 'default'). "
             "Returns matching message IDs, senders, subjects, dates, and snippets."
         ),
         "input_schema": {
@@ -387,7 +385,7 @@ ULTRON_TOOLS: list[dict[str, Any]] = [
                 },
                 "sender": {
                     "type": "string",
-                    "description": "Filter by sender email or name (e.g. 'sarah' or 'client@domain.com').",
+                    "description": "Filter by sender email or name (e.g. 'client' or 'client@example.com').",
                     "default": "",
                 },
                 "subject": {
@@ -402,8 +400,8 @@ ULTRON_TOOLS: list[dict[str, Any]] = [
                 },
                 "profile": {
                     "type": "string",
-                    "description": "Email profile: 'primary', 'reach', 'personal'. Defaults to 'primary'.",
-                    "default": "primary",
+                    "description": "Email profile: 'work', 'personal', 'default'. Defaults to 'default'.",
+                    "default": "default",
                 },
                 "limit": {
                     "type": "integer",
@@ -428,8 +426,8 @@ ULTRON_TOOLS: list[dict[str, Any]] = [
                 },
                 "profile": {
                     "type": "string",
-                    "description": "Email profile: 'primary', 'reach', 'personal'. Defaults to 'primary'.",
-                    "default": "primary",
+                    "description": "Email profile: 'work', 'personal', 'default'. Defaults to 'default'.",
+                    "default": "default",
                 },
                 "folder": {
                     "type": "string",
@@ -468,8 +466,8 @@ ULTRON_TOOLS: list[dict[str, Any]] = [
                 },
                 "profile": {
                     "type": "string",
-                    "description": "Sender profile: 'primary', 'reach', 'personal'. Defaults to 'primary'.",
-                    "default": "primary",
+                    "description": "Sender profile: 'work', 'personal', 'default'. Defaults to 'default'.",
+                    "default": "default",
                 },
             },
             "required": ["to", "subject", "body"],
@@ -508,8 +506,8 @@ ULTRON_TOOLS: list[dict[str, Any]] = [
                 },
                 "profile": {
                     "type": "string",
-                    "description": "Sender profile: 'primary', 'reach', 'personal'. Defaults to 'primary'.",
-                    "default": "primary",
+                    "description": "Sender profile: 'work', 'personal', 'default'. Defaults to 'default'.",
+                    "default": "default",
                 },
                 "attachments": {
                     "type": "array",
@@ -1202,7 +1200,7 @@ class ToolExecutor:
 
     def _handle_open_browser(self, inp: dict[str, Any]) -> dict[str, Any]:
         url = inp.get("url", "").strip()
-        profile_req = inp.get("profile", "primary").strip().lower()
+        profile_req = inp.get("profile", "default").strip().lower()
         browser = inp.get("browser", "chrome").strip().lower()
 
         if not url:
@@ -1210,27 +1208,25 @@ class ToolExecutor:
 
         # Map friendly profile names to Chrome profile directories
         profile_map = {
-            "primary": "Profile 7",
-            "primarybooks": "Profile 7",
-            "primarybooksntax": "Profile 7",
-            "profile 7": "Profile 7",
-            "7": "Profile 7",
-            "reach": "Profile 1",
-            "reach.hanzla": "Profile 1",
-            "profile 1": "Profile 1",
-            "1": "Profile 1",
-            "arcora": "Profile 10",
-            "project arcora": "Profile 10",
-            "profile 10": "Profile 10",
-            "10": "Profile 10",
-            "loyal": "Profile 3",
-            "loyal tax": "Profile 3",
-            "profile 3": "Profile 3",
-            "3": "Profile 3",
+            "work": "Profile 1",
+            "corp": "Profile 1",
             "personal": "Default",
             "default": "Default",
-            "hanzlahmalik": "Default",
         }
+
+        # Load local gitignored browser profiles mapping if present
+        local_profiles_path = os.path.join(self._project_root, "data", "browser_profiles.local.json")
+        if os.path.exists(local_profiles_path):
+            try:
+                with open(local_profiles_path, "r", encoding="utf-8-sig") as f:
+                    local_map = json.load(f)
+                    if isinstance(local_map, dict):
+                        profile_map.update({k.lower(): v for k, v in local_map.items()})
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"Failed to load browser profiles from {os.path.basename(local_profiles_path)}: {type(e).__name__}"
+                )
 
         resolved_profile = profile_map.get(profile_req, profile_req)
 
@@ -1761,7 +1757,7 @@ class ToolExecutor:
             subject=inp.get("subject", ""),
             unread_only=inp.get("unread_only", False),
             folder=inp.get("folder", "INBOX"),
-            profile=inp.get("profile", "primary"),
+            profile=inp.get("profile", "default"),
             limit=inp.get("limit", 10),
         )
 
@@ -1803,7 +1799,7 @@ class ToolExecutor:
         res = self._email_engine.read_email_thread(
             message_id=msg_id,
             folder=inp.get("folder", "INBOX"),
-            profile=inp.get("profile", "primary"),
+            profile=inp.get("profile", "default"),
         )
 
         if not res.get("success"):
@@ -1848,7 +1844,7 @@ class ToolExecutor:
             body=body,
             cc=inp.get("cc", ""),
             bcc=inp.get("bcc", ""),
-            profile=inp.get("profile", "primary"),
+            profile=inp.get("profile", "default"),
         )
 
         if not res.get("success"):
@@ -1888,7 +1884,7 @@ class ToolExecutor:
             body=body,
             cc=inp.get("cc", ""),
             bcc=inp.get("bcc", ""),
-            profile=inp.get("profile", "primary"),
+            profile=inp.get("profile", "default"),
             attachments=inp.get("attachments"),
         )
 

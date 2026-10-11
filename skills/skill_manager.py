@@ -49,14 +49,20 @@ class SkillManager:
         skills_dir: Path | str = SKILLS_DIR,
         chroma_path: str = "./data/chroma",
         enable_vector_search: bool = True,
+        local_skills_dir: Path | str | None = None,
     ) -> None:
         self.skills_dir = Path(skills_dir)
         self.skills_dir.mkdir(parents=True, exist_ok=True)
+        if local_skills_dir is None:
+            self.local_skills_dir = Path(__file__).resolve().parent.parent / "data" / "skills_local"
+        else:
+            self.local_skills_dir = Path(local_skills_dir)
         self.chroma_path = Path(chroma_path)
         self.chroma_path.mkdir(parents=True, exist_ok=True)
         self.enable_vector_search = enable_vector_search
 
         self._skills: dict[str, UltronSkill] = {}
+        self._skill_origins: dict[str, str] = {}
         self._vector_collection = None
         self._synced_hashes: dict[str, str] = {}
         self.evolution_db = SkillEvolutionDB(self.chroma_path.parent / "skill_evolution.db")
@@ -155,18 +161,43 @@ class SkillManager:
     # â”€â”€ 2. Skill Discovery & Parsing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def reload_skills(self) -> dict[str, UltronSkill]:
-        """Scans the skills directory and loads all SKILL.md files."""
-        self._skills.clear()
+        """Scans the skills directory and data/skills_local/ and loads all SKILL.md files.
+        A skill in local_skills_dir overrides a same-name skill in skills_dir.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
 
-        for skill_folder in self.skills_dir.iterdir():
-            if skill_folder.is_dir():
-                skill_file = skill_folder / "SKILL.md"
-                if skill_file.exists():
-                    try:
-                        skill = self._parse_skill_file(skill_folder.name, skill_file)
-                        self._skills[skill.id] = skill
-                    except Exception as e:
-                        print(f"[Ultron Skill Error] Failed to load {skill_file}: {e}")
+        self._skills.clear()
+        self._skill_origins.clear()
+
+        # 1. Base skills
+        if self.skills_dir.exists():
+            for skill_folder in self.skills_dir.iterdir():
+                if skill_folder.is_dir():
+                    skill_file = skill_folder / "SKILL.md"
+                    if skill_file.exists():
+                        try:
+                            skill = self._parse_skill_file(skill_folder.name, skill_file)
+                            self._skills[skill.id] = skill
+                            self._skill_origins[skill.id] = str(self.skills_dir)
+                        except Exception as e:
+                            print(f"[Ultron Skill Error] Failed to load {skill_file}: {e}")
+
+        # 2. Local skills override
+        if self.local_skills_dir and self.local_skills_dir.exists():
+            for skill_folder in self.local_skills_dir.iterdir():
+                if skill_folder.is_dir():
+                    skill_file = skill_folder / "SKILL.md"
+                    if skill_file.exists():
+                        try:
+                            skill = self._parse_skill_file(skill_folder.name, skill_file)
+                            self._skills[skill.id] = skill
+                            self._skill_origins[skill.id] = str(self.local_skills_dir)
+                        except Exception as e:
+                            print(f"[Ultron Skill Error] Failed to load {skill_file}: {e}")
+
+        for sid, origin in self._skill_origins.items():
+            logger.info(f"Active skill '{sid}' loaded from {origin}")
 
         if self._vector_collection:
             self._sync_vector_index()

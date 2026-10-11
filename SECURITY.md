@@ -17,7 +17,7 @@
 
 If you discover a security vulnerability in Ultron Memory Agent, please report it privately:
 
-1. **Email:** `reach.hanzla@gmail.com`  
+1. **Email:** `security@example.com` (or open a private GitHub Security Advisory)  
    Subject line: `[SECURITY] ultron-memory-agent — <brief description>`
 
 2. Include in your report:

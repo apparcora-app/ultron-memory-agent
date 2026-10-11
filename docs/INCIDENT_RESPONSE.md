@@ -40,7 +40,7 @@ Remove the exposed data and restore from a safe state.
   ```
 
 ### 5. Notification Checklist
-- [ ] **primary Management:** Notify my employer immediately about the breach severity.
+- [ ] **Employer / Organization Management:** Notify management immediately about the breach severity.
 - [ ] **Affected Clients:** Draft a notification to affected clients detailing what data was exposed and mitigation steps taken.
 - [ ] **IRS/FTC Duty:** For U.S. taxpayer data, consult the [IRS Data Theft Information for Tax Professionals](https://www.irs.gov/individuals/data-theft-information-for-tax-professionals) and FTC guidelines. (Report to local IRS Stakeholder Liaison).
 
@@ -80,7 +80,7 @@ Revert the harmful action.
 
 ### 5. Notification Checklist
 - [ ] **Affected Clients/Users:** If the action affected an external user, notify them of the error and the correction.
-- [ ] **primary Management:** Report the incident if business operations were disrupted.
+- [ ] **Employer / Organization Management:** Report the incident if business operations were disrupted.
 
 ---
 

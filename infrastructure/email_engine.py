@@ -2,7 +2,7 @@
 email_engine.py — Ultron Autonomous Email & Inbox Intelligence Engine.
 
 Provides complete autonomous email capabilities for Ultron:
-  1. Multi-Profile Mapping (primary, Reach, Personal, Custom)
+  1. Multi-Profile Mapping (Work, Personal, Secondary, Custom)
   2. Inbox and Thread Search via IMAP SSL (sender, subject, keyword, unread)
   3. Full Message and MIME Thread Reading (HTML + Plaintext decoding)
   4. Local Email Draft Generation and .eml Archiving
@@ -67,27 +67,27 @@ class EmailEngine:
     def resolve_profile(self, profile_name: str | None = None) -> Dict[str, Any]:
         """
         Resolves account credentials and connection endpoints for a given profile.
-        Supports: 'primary', 'reach', 'personal', 'default'.
+        Supports: 'work', 'personal', 'secondary', 'default'.
         """
         p = (profile_name or self.cfg.default_profile).lower().strip()
 
         # Map profiles
-        if "primary" in p or "hanzla.rehman" in p or "booksntax" in p:
-            email_user = self.cfg.primary_user
-            email_pass = self.cfg.primary_password
-            display_name = "Hanzla Rehman (primary Books & Tax)"
-        elif "reach" in p or "reach.hanzla" in p:
-            email_user = self.cfg.reach_user
-            email_pass = self.cfg.reach_password
-            display_name = "Hanzla Rehman (Reach)"
-        elif "personal" in p or "hanzlahmalik" in p:
+        if "work" in p or "primary" in p or "corp" in p or "business" in p:
+            email_user = self.cfg.work_user
+            email_pass = self.cfg.work_password
+            display_name = os.getenv("WORK_EMAIL_DISPLAY_NAME", "Ultron Work Agent")
+        elif "personal" in p or "direct" in p:
             email_user = self.cfg.personal_user
             email_pass = self.cfg.personal_password
-            display_name = "Hanzla Rehman (Personal)"
+            display_name = os.getenv("PERSONAL_EMAIL_DISPLAY_NAME", "Ultron Personal Agent")
+        elif "secondary" in p or "alt" in p:
+            email_user = self.cfg.secondary_user
+            email_pass = self.cfg.secondary_password
+            display_name = os.getenv("SECONDARY_EMAIL_DISPLAY_NAME", "Ultron Secondary Agent")
         else:
-            email_user = self.cfg.primary_user
-            email_pass = self.cfg.primary_password
-            display_name = f"Hanzla Rehman ({p.title()})"
+            email_user = self.cfg.work_user
+            email_pass = self.cfg.work_password
+            display_name = os.getenv("DEFAULT_EMAIL_DISPLAY_NAME", f"Ultron Agent ({p.title()})")
 
         return {
             "profile_name": p,
@@ -110,7 +110,7 @@ class EmailEngine:
         subject: str = "",
         unread_only: bool = False,
         folder: str = "INBOX",
-        profile: str = "primary",
+        profile: str = "default",
         limit: int = 10,
     ) -> Dict[str, Any]:
         """
@@ -235,7 +235,7 @@ class EmailEngine:
         self,
         message_id: str,
         folder: str = "INBOX",
-        profile: str = "primary",
+        profile: str = "default",
     ) -> Dict[str, Any]:
         """
         Fetches and parses the full content of an email (plain text, HTML, and attachment names).
@@ -346,7 +346,7 @@ class EmailEngine:
         body: str,
         cc: str = "",
         bcc: str = "",
-        profile: str = "primary",
+        profile: str = "default",
     ) -> Dict[str, Any]:
         """
         Generates and archives an email draft locally as .eml and JSON.
@@ -409,7 +409,7 @@ class EmailEngine:
         body: str,
         cc: str = "",
         bcc: str = "",
-        profile: str = "primary",
+        profile: str = "default",
         attachments: list[str] | None = None,
         is_html: bool = False,
     ) -> Dict[str, Any]:

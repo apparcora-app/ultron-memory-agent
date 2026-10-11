@@ -71,7 +71,7 @@ VALID_TOOL_PAYLOADS = {
     "run_python": {"code": "print('hello')", "description": "test script"},
     "web_search": {"query": "python pydantic v2", "num_results": 3},
     "fetch_web_page": {"url": "https://example.com"},
-    "open_browser": {"url": "https://example.com", "profile": "primary", "browser": "chrome"},
+    "open_browser": {"url": "https://example.com", "profile": "default", "browser": "chrome"},
     "open_application": {"app_name": "notepad", "arguments": ""},
     "desktop_create_and_show_note": {"content": "Test note", "filename": "note.txt", "open_in_foreground": True},
     "control_desktop_gui": {
@@ -87,10 +87,10 @@ VALID_TOOL_PAYLOADS = {
             "expected_next_state": "Submitted",
         },
     },
-    "search_emails": {"query": "invoice", "sender": "sarah", "limit": 5, "profile": "primary", "unread_only": False},
-    "read_email_thread": {"message_id": "msg_123", "profile": "primary", "folder": "INBOX"},
-    "draft_email": {"to": "sarah@example.com", "subject": "Review", "body": "Please review", "cc": "", "bcc": "", "profile": "primary"},
-    "send_email": {"to": "sarah@example.com", "subject": "Contract", "body": "Here is the contract", "cc": "", "bcc": "", "profile": "primary", "attachments": ["file.pdf"]},
+    "search_emails": {"query": "invoice", "sender": "client", "limit": 5, "profile": "default", "unread_only": False},
+    "read_email_thread": {"message_id": "msg_123", "profile": "default", "folder": "INBOX"},
+    "draft_email": {"to": "client@example.com", "subject": "Review", "body": "Please review", "cc": "", "bcc": "", "profile": "default"},
+    "send_email": {"to": "client@example.com", "subject": "Contract", "body": "Here is the contract", "cc": "", "bcc": "", "profile": "default", "attachments": ["file.pdf"]},
     "sleep_seconds": {"seconds": 2},
 }
 
@@ -177,7 +177,7 @@ def test_missing_required_fields():
 
     # draft_email requires 'to', 'subject', 'body'
     with pytest.raises(ContractValidationError) as exc_info:
-        validate_contract(DraftEmailInput, {"to": "sarah@example.com"})
+        validate_contract(DraftEmailInput, {"to": "client@example.com"})
     assert exc_info.value.field in ("subject", "body")
 
 

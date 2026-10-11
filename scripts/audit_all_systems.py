@@ -400,15 +400,15 @@ def run_master_audit():
     try:
         from email_engine import EmailEngine
         email_engine = EmailEngine()
-        p_res = email_engine.resolve_profile("primary")
+        p_res = email_engine.resolve_profile("default")
         draft_res = email_engine.draft_email(
-            to="sarah.adams@generic_firm.com",
+            to="client@example.com",
             subject="Audit Invoice Verification",
-            body="Hi sarah, confirming invoice review status.",
-            profile="primary",
+            body="Hi Client, confirming invoice review status.",
+            profile="default",
         )
         passed = (
-            p_res["user"] == "hanzla.rehman@primarybooksntax.com"
+            p_res["profile_name"] == "default"
             and draft_res["success"] is True
             and Path(draft_res["eml_path"]).exists()
         )

@@ -177,7 +177,7 @@ class FetchWebPageInput(StrictBaseModel):
 
 class OpenBrowserInput(StrictBaseModel):
     url: str
-    profile: str = "primary"
+    profile: str = "default"
     browser: Literal["chrome", "edge", "default"] = "chrome"
 
 
@@ -221,13 +221,13 @@ class SearchEmailsInput(StrictBaseModel):
     sender: str = ""
     subject: str = ""
     unread_only: bool = False
-    profile: str = "primary"
+    profile: str = "default"
     limit: int = 10
 
 
 class ReadEmailThreadInput(StrictBaseModel):
     message_id: str
-    profile: str = "primary"
+    profile: str = "default"
     folder: str = "INBOX"
 
 
@@ -237,7 +237,7 @@ class DraftEmailInput(StrictBaseModel):
     body: str
     cc: str = ""
     bcc: str = ""
-    profile: str = "primary"
+    profile: str = "default"
 
 
 class SendEmailInput(StrictBaseModel):
@@ -246,7 +246,7 @@ class SendEmailInput(StrictBaseModel):
     body: str
     cc: str = ""
     bcc: str = ""
-    profile: str = "primary"
+    profile: str = "default"
     attachments: list[str] | None = None
 
 

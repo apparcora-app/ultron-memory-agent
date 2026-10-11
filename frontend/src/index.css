@@ -1,6 +1,136 @@
+/* Font: Nunito Sans (body) + Roboto Mono (code) */
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ──────────────────────────────────────────
+   Stitch Design System — Ultron Protocol
+   Vivid Sky Blue Edition
+   ────────────────────────────────────────── */
+
+body, input, textarea, button, select {
+  font-family: 'Nunito Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.font-mono, code, pre, [class*="font-mono"] {
+  font-family: 'Roboto Mono', monospace;
+}
+
+/* ── Custom Scrollbars ── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Dark sidebar scrollbar */
+.dark-scrollbar::-webkit-scrollbar-track {
+  background: #0f0f11;
+}
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: #27272e;
+}
+
+/* ── Orb Glow ── */
+.orb-glow {
+  filter: drop-shadow(0 12px 32px rgba(14, 165, 233, 0.45));
+}
+
+/* ── Robot Avatar Animations ── */
+@keyframes robotBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2.5px) rotate(1.2deg); }
+}
+@keyframes antennaPulseSky {
+  0%, 100% { opacity: 0.6; filter: drop-shadow(0 0 2px #38bdf8); }
+  50% { opacity: 1; filter: drop-shadow(0 0 8px #38bdf8); }
+}
+@keyframes visorScan {
+  0%, 100% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+}
+@keyframes thoughtRing {
+  0% { transform: scale(0.85); opacity: 0.8; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+@keyframes calmBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+/* ── Electric Arc / Lightning Animations ── */
+@keyframes lightningFlash1 {
+  0%, 100% { opacity: 0.2; transform: rotate(0deg) scale(0.98); }
+  15% { opacity: 1; filter: drop-shadow(0 0 10px #38bdf8) drop-shadow(0 0 20px #0284c7); }
+  22% { opacity: 0.3; }
+  48% { opacity: 0.95; filter: drop-shadow(0 0 12px #7dd3fc); }
+  65% { opacity: 0.15; }
+  82% { opacity: 0.85; }
+}
+@keyframes lightningFlash2 {
+  0%, 100% { opacity: 0.1; transform: rotate(180deg) scale(1.02); }
+  25% { opacity: 0.9; filter: drop-shadow(0 0 8px #38bdf8); }
+  35% { opacity: 0.2; }
+  70% { opacity: 1; filter: drop-shadow(0 0 14px #0ea5e9); }
+  85% { opacity: 0.3; }
+}
+@keyframes orbitSpinCW {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes orbitSpinCCW {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+@keyframes orbFloatPhysics {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-10px) scale(1.02); }
+}
+@keyframes auraPulseRing {
+  0% { transform: scale(0.8); opacity: 0.7; }
+  50% { opacity: 0.35; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+@keyframes orbCyberBreatheRotate {
+  0% { transform: scale(0.96) rotate(0deg); filter: drop-shadow(0 0 6px rgba(56,189,248,0.5)); }
+  50% { transform: scale(1.05) rotate(180deg); filter: drop-shadow(0 0 12px rgba(14,165,233,0.8)) drop-shadow(0 0 18px rgba(56,189,248,0.6)); }
+  100% { transform: scale(0.96) rotate(360deg); filter: drop-shadow(0 0 6px rgba(56,189,248,0.5)); }
+}
+
+/* ── Animation Class Shortcuts ── */
+.electric-ring-1 { animation: orbitSpinCW 7s linear infinite; }
+.electric-ring-2 { animation: orbitSpinCCW 11s linear infinite; }
+.lightning-arc-1 { animation: lightningFlash1 2.2s infinite ease-in-out; }
+.lightning-arc-2 { animation: lightningFlash2 1.8s infinite ease-in-out; }
+.floating-orb     { animation: orbFloatPhysics 4s ease-in-out infinite; }
+.sidebar-orb-animated { animation: orbCyberBreatheRotate 8s ease-in-out infinite; transform-origin: center; will-change: transform, filter; }
+
+/* Robot state classes */
+.robot-thinking .robot-body     { animation: robotBob 1.8s ease-in-out infinite; }
+.robot-thinking .antenna-light  { animation: antennaPulseSky 0.9s ease-in-out infinite; }
+.robot-thinking .robot-eyes     { animation: visorScan 1.6s ease-in-out infinite alternate; }
+.robot-thinking .thought-halo   { display: block; animation: thoughtRing 1.5s cubic-bezier(0,0.2,0.8,1) infinite; }
+.robot-idle .robot-body         { animation: calmBreathe 3.5s ease-in-out infinite; }
+.robot-idle .antenna-light      { opacity: 0.85; filter: drop-shadow(0 0 4px #0284c7); }
+.robot-idle .thought-halo       { display: none; }
+
+/* ── Custom pulse glow (legacy compat) ── */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 12px rgba(14,165,233,0.6)); }
+  50%       { opacity: 0.6; filter: drop-shadow(0 0 4px rgba(14,165,233,0.2)); }
+}
+.animate-pulse-glow { animation: pulseGlow 2s cubic-bezier(0.4,0,0.6,1) infinite; }
 
 @layer base {
   :root {
