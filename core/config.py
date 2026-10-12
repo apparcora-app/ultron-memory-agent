@@ -98,11 +98,11 @@ class VectorStoreConfig:
     """
     Vector store configuration.
 
-    Defaults to ChromaDB which runs 100% locally on your machine with no Docker
-    or background services needed. Data is persisted to ./data/chroma.
+    Defaults to embedded Qdrant which runs 100% locally in-process with no Docker
+    or background services needed. Data is persisted to ./data/qdrant.
     """
-    provider: str = field(default_factory=lambda: _get("VECTOR_STORE_PROVIDER", "chroma"))
-    path: str = field(default_factory=lambda: _get("VECTOR_STORE_PATH", "./data/chroma"))
+    provider: str = field(default_factory=lambda: _get("VECTOR_STORE_PROVIDER", "qdrant"))
+    path: str = field(default_factory=lambda: _get("VECTOR_STORE_PATH", "./data/qdrant"))
     collection_name: str = field(
         default_factory=lambda: _get("COLLECTION_NAME", "mem0_agent_claude")
     )
@@ -125,7 +125,7 @@ class VectorStoreConfig:
             return {
                 "provider": "qdrant",
                 "config": {
-                    "path": "./data/qdrant",
+                    "path": self.path or "./data/qdrant",
                     "collection_name": self.collection_name,
                     "embedding_model_dims": 384,
                     "on_disk": True,
