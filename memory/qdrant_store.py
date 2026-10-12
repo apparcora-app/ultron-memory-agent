@@ -106,11 +106,11 @@ class LocalQdrantStore:
         """
         query_filter = None
         if filter_dict:
-            must_conditions = [
+            conds: list[Any] = [
                 FieldCondition(key=k, match=MatchValue(value=v))
                 for k, v in filter_dict.items()
             ]
-            query_filter = Filter(must=must_conditions)
+            query_filter = Filter(must=conds)
 
         results = self.client.query_points(
             collection_name=self.collection_name,

@@ -47,7 +47,7 @@ class SentenceTransformerProvider:
 
     @property
     def dimension(self) -> int:
-        return int(self._dim)
+        return int(self._dim or 384)
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
         if not texts:
