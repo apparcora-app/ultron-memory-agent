@@ -166,6 +166,13 @@ _ANAPHORIC_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+# Conversational fast-path regex (greetings, status checks, pings)
+_FAST_CONVERSATIONAL_REGEX = re.compile(
+    r"^(hi|hello|hey|greetings|yo|sup|status|confirm status|confirm your active status|ping|test|are you (online|active)|who are you|how are you|help|thanks|thank you)[\s!.?]*$",
+    re.IGNORECASE,
+)
+
+
 
 def reformulate_query(
     raw_query: str,
@@ -578,6 +585,8 @@ class MemoryAgent:
         Dynamically route requests based on model overrides or defaults.
         """
         if model_override:
+            if model_override in ("auto", "default"):
+                return "auto", "FreeLLMAPI Sovereign Auto-Router"
             if model_override == "thinking":
                 return self.llm_cfg.gemini_model_thinking, "System 2 Reasoning Core"
             if model_override == "flash":
@@ -591,11 +600,15 @@ class MemoryAgent:
         if "/freellm" in input_lower or "use freellm" in input_lower:
             return "freellmapi", "Manual FreeLLMAPI Override"
         if "/deepseek" in input_lower or "use deepseek" in input_lower:
-            return "openrouter/deepseek/deepseek-chat" if getattr(self, '_openrouter', None) else self.llm_cfg.gemini_model_thinking, "Manual DeepSeek Override"
+            return "openrouter/deepseek/deepseek-chat" if getattr(self.llm_cfg, 'openrouter_api_key', None) else self.llm_cfg.gemini_model_thinking, "Manual DeepSeek Override"
         if "/nvidia" in input_lower or "use nvidia" in input_lower:
             return "nvidia/nemotron-3-ultra-550b-a55b:free", "Manual NVIDIA Override"
         if "/glm" in input_lower or "use glm" in input_lower:
             return "z-ai/glm-5.2:free", "Manual GLM Override"
+
+        # Prioritize FreeLLMAPI zero-cost router when enabled
+        if getattr(self.llm_cfg, "freellmapi_enabled", False):
+            return "auto", "FreeLLMAPI Sovereign Auto-Router"
 
         # Solo Assistant Mode: Fast-path 90% token reduction
         if (operation_mode or "").upper() == "SOLO":
@@ -1198,6 +1211,29 @@ class MemoryAgent:
                 "prompt_optimization": {"applied": False, "original_prompt": "", "optimized_prompt": "", "techniques": [], "duration_ms": 0},
             }
 
+        # ── 0c. Sub-500ms Conversational Fast-Path (Greetings & Pings) ───────
+        if not files and _FAST_CONVERSATIONAL_REGEX.match(user_input.strip()):
+            from ultron.core.llm_chain import chat_with_fallback
+            user_title = getattr(self, "user_title", _active_profile.user_title)
+            fast_reply, _, fast_prov = await chat_with_fallback(
+                prompt=user_input,
+                system_prompt=f"You are Ultron, an advanced cybernetic AI assistant. Confirm operational status and assist the user concisely and directly. User title: {user_title}.",
+                model_override="auto",
+                max_tokens=256,
+                temperature=0.2,
+            )
+            self._history.append({"role": "user", "content": user_input})
+            self._history.append({"role": "assistant", "content": fast_reply})
+            return {
+                "reply": fast_reply,
+                "model_used": "FreeLLMAPI (auto)",
+                "model_display": "FreeLLMAPI Fast Core",
+                "route_reason": "Conversational Fast-Path (<500ms)",
+                "tool_actions": [],
+                "skills_used": [],
+                "fast_path": True,
+            }
+
         # ── 0. Autonomous Prompt Optimization Pre-Processor (Prompt Architect) ──
         opt_res: OptimizationResult = self._prompt_optimizer.optimize(
             raw_prompt=user_input,
@@ -1419,7 +1455,6 @@ class MemoryAgent:
                 path_header = ""
                 if "[SYSTEM INSTRUCTION:" in text and "at EXACTLY:" in text:
                     try:
-                        import re
                         m = re.search(r"(\[SYSTEM INSTRUCTION:.*?\])", text, flags=re.DOTALL)
                         if m:
                             path_header = m.group(1) + "\n\n"
@@ -1551,17 +1586,17 @@ class MemoryAgent:
             fallback_success = False
             fallback_candidates = []
 
-            # If FreeLLMAPI failed (e.g. localhost:3001 is offline), fail over to Gemini first, then OpenRouter
-            if "freellmapi" in selected_model.lower():
-                if None:
+            # If FreeLLMAPI failed, fail over to Gemini first (if key configured), then OpenRouter
+            if "freellmapi" in selected_model.lower() or selected_model == "auto":
+                if getattr(self.llm_cfg, "gemini_api_key", None):
                     fallback_candidates.append(getattr(self.llm_cfg, "gemini_model_flash", "gemini-2.0-flash") or "gemini-2.0-flash")
-                if getattr(self, "_openrouter", None):
+                if getattr(self.llm_cfg, "openrouter_api_key", None):
                     fallback_candidates.append("openrouter/deepseek/deepseek-chat")
             else:
-                # If Gemini or other failed, try FreeLLMAPI if initialized, then OpenRouter
-                if getattr(self, "_freellmapi", None):
+                # If Gemini or other failed, try FreeLLMAPI if enabled, then OpenRouter
+                if getattr(self.llm_cfg, "freellmapi_enabled", False):
                     fallback_candidates.append("freellmapi")
-                if getattr(self, "_openrouter", None):
+                if getattr(self.llm_cfg, "openrouter_api_key", None):
                     fallback_candidates.append("openrouter/deepseek/deepseek-chat")
 
             offline_prefix = ""
@@ -1623,7 +1658,6 @@ class MemoryAgent:
         # If ANY model (Gemini or OpenRouter) output raw python code blocks
         # instead of calling run_python, intercept and execute them silently.
         if assistant_reply and "```python" in assistant_reply and use_tools:
-            import re
             code_match = re.search(r"```python\n(.*?)\n```", assistant_reply, re.DOTALL)
             if code_match:
                 print("  [POST-DISPATCH INTERCEPTOR] Caught raw python block. Auto-executing...")
@@ -1742,7 +1776,6 @@ class MemoryAgent:
                         system_prompt=system_prompt,
                     )
                     if corrected_reply and len(corrected_reply) > 50:
-                        import re
                         cleaned_reply = re.sub(r"(?i)as noted in the pre-response verification critique,?\s*", "", corrected_reply).strip()
                         cleaned_reply = re.sub(r"(?i)based on the pre-response verification critique,?\s*", "", cleaned_reply).strip()
                         assistant_reply = cleaned_reply
@@ -1751,7 +1784,6 @@ class MemoryAgent:
 
         # ── 6.6 Strip Hidden Chain-of-Thought (Phase 1) ───────────────────────
         if assistant_reply:
-            import re
             thought_match = re.search(r'<thought>(.*?)</thought>', assistant_reply, flags=re.DOTALL)
             if thought_match:
                 thought_content = thought_match.group(1).strip()

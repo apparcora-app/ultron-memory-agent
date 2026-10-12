@@ -24,9 +24,9 @@ class DynamicToolRouter:
 
     async def route_tools(self, user_input: str, mcp_manager: MCPManager) -> list[dict[str, Any]]:
         if not user_input or not user_input.strip():
-            return [t for t in ULTRON_TOOLS if t["name"] in self.ALWAYS_ON_TOOLS]
+            return []
 
-        # Fast-Path: Pure conversational queries or simple conceptual questions don't need external tool routing
+        # Fast-Path: Pure conversational queries or simple conceptual questions don't need external tools
         tool_keywords = {
             "browser", "search", "google", "website", "url", "fetch", "scrape", "open",
             "run", "python", "script", "file", "folder", "read", "write", "delete", "excel",
@@ -35,9 +35,9 @@ class DynamicToolRouter:
         }
         lower_input = user_input.lower()
         has_tool_keyword = any(kw in lower_input for kw in tool_keywords)
-        if not has_tool_keyword and len(user_input.split()) < 25:
-            # Skip LLM tool triaging entirely for conversational turns (<0.01ms latency)
-            return [t for t in ULTRON_TOOLS if t["name"] in self.ALWAYS_ON_TOOLS]
+        if not has_tool_keyword and len(user_input.split()) < 30:
+            # Skip tool injection entirely for conversational/informational turns (<0.01ms latency, enables 1-pass execution)
+            return []
 
         mcp_schemas = mcp_manager.get_anthropic_schemas()
         all_schemas = ULTRON_TOOLS + mcp_schemas

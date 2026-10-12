@@ -1,4 +1,4 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 
 from ultron.core.log_config import get_logger
 
@@ -44,6 +44,16 @@ class ComplexityRouter:
 
         if not self.llm_cfg or not message.strip():
             return RoutingDecision(model=self.haiku_model, score=0, reason="baseline fallback")
+
+        # When FreeLLMAPI is active, route directly to zero-cost auto-router (0ms latency overhead)
+        if getattr(self.llm_cfg, "freellmapi_enabled", False):
+            return RoutingDecision(model="auto", score=0, reason="FreeLLMAPI Sovereign Zero-Cost Router")
+
+        # Zero-latency heuristic triage for short / conversational queries (<0.01ms)
+        words = message.split()
+        complex_keywords = {"code", "python", "script", "analyze", "debug", "refactor", "architect", "plan", "complex", "evaluate"}
+        if len(words) < 25 and not any(kw in message.lower() for kw in complex_keywords):
+            return RoutingDecision(model=self.haiku_model, score=0, reason="Heuristic: SIMPLE (<0.01ms)")
 
         fast_model = self.llm_cfg.gemini_model_lite
         fast_model.replace("openrouter/", "") if fast_model.startswith("openrouter/") else fast_model

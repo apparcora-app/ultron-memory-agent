@@ -16,84 +16,97 @@ async def chat_with_fallback(prompt, system_prompt="", max_tokens=1024, temperat
         raise ValueError("No approved provider for client data")
 
     cfg = LLMConfig()
-    active_providers = getattr(cfg, "providers", ["freellmapi"])
+    active_providers = list(getattr(cfg, "providers", ["freellmapi"]))
+    if getattr(cfg, "gemini_api_key", "") and "gemini" not in active_providers:
+        active_providers.append("gemini")
+    if getattr(cfg, "openrouter_api_key", "") and "openrouter" not in active_providers:
+        active_providers.append("openrouter")
 
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
 
+    formatted_tools = []
+    if tools:
+        for t in tools:
+            if isinstance(t, dict):
+                if "function" in t:
+                    if "type" not in t:
+                        formatted_tools.append({"type": "function", "function": t["function"]})
+                    else:
+                        formatted_tools.append(t)
+                elif "name" in t:
+                    formatted_tools.append({
+                        "type": "function",
+                        "function": {
+                            "name": t["name"],
+                            "description": t.get("description", ""),
+                            "parameters": t.get("input_schema") or t.get("parameters") or {"type": "object", "properties": {}}
+                        }
+                    })
+                else:
+                    formatted_tools.append(t)
+
     for provider in active_providers:
-        # 1. FreeLLMAPI
+        # 1. FreeLLMAPI (with resilient intra-router model fallback & fail-fast timeouts)
         if provider == "freellmapi" and cfg.freellmapi_enabled:
             base_url = cfg.freellmapi_base_url or "http://localhost:31415/v1"
             api_key = cfg.freellmapi_api_key or cfg.openrouter_api_key or "sk-dummy"
-            if not model_override or model_override in ("freellmapi", "local-fallback-chain", "auto"):
-                target_model = "auto"
-            else:
-                target_model = model_override.replace("freellmapi/", "").strip()
-                if target_model in ("freellmapi", ""):
-                    target_model = "auto"
-            print(f'FreeLLMAPI model selected: {target_model}')
+
+            # Build candidate models ladder: requested model first, then ultra-fast verified fallbacks
+            candidate_models = []
+            if model_override and model_override not in ("freellmapi", "local-fallback-chain", "auto"):
+                clean_target = model_override.replace("freellmapi/", "").strip()
+                if clean_target:
+                    candidate_models.append(clean_target)
+
+            for safe_m in ["auto", "gpt-oss-120b"]:
+                if safe_m not in candidate_models:
+                    candidate_models.append(safe_m)
+
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+            timeout_cfg = aiohttp.ClientTimeout(total=8, connect=2.5)
 
             if len(system_prompt) > 8000:
                 system_prompt = system_prompt[:8000] + '\n[TRUNCATED]'
             if len(prompt) > 4000:
                 prompt = prompt[:4000] + '\n[TRUNCATED]'
-            payload = {
-                "model": target_model,
-                "messages": messages,
-                "max_tokens": max_tokens,
-                "temperature": temperature
-            }
-            if response_format:
-                payload["response_format"] = response_format
-            if tools:
-                formatted_tools = []
-                for t in tools:
-                    if isinstance(t, dict):
-                        if "function" in t:
-                            if "type" not in t:
-                                formatted_tools.append({"type": "function", "function": t["function"]})
+
+            for target_model in candidate_models:
+                payload = {
+                    "model": target_model,
+                    "messages": messages,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature
+                }
+                if response_format:
+                    payload["response_format"] = response_format
+                if formatted_tools:
+                    payload["tools"] = formatted_tools
+
+                try:
+                    async with aiohttp.ClientSession(timeout=timeout_cfg) as session:
+                        async with session.post(f"{base_url}/chat/completions", json=payload, headers=headers) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                msg = data["choices"][0]["message"]
+                                content = msg.get("content") or ""
+                                tool_actions = []
+                                if "tool_calls" in msg and msg["tool_calls"]:
+                                    for tc in msg["tool_calls"]:
+                                        if tc["type"] == "function":
+                                            tool_actions.append({
+                                                "name": tc["function"]["name"],
+                                                "arguments": json.loads(tc["function"]["arguments"])
+                                            })
+                                print(f"  [LLM Chain] Served by FreeLLMAPI (model: {target_model})")
+                                return content, tool_actions, "freellmapi"
                             else:
-                                formatted_tools.append(t)
-                        elif "name" in t:
-                            formatted_tools.append({
-                                "type": "function",
-                                "function": {
-                                    "name": t["name"],
-                                    "description": t.get("description", ""),
-                                    "parameters": t.get("input_schema") or t.get("parameters") or {"type": "object", "properties": {}}
-                                }
-                            })
-                        else:
-                            formatted_tools.append(t)
-                payload["tools"] = formatted_tools
-
-            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(f"{base_url}/chat/completions", json=payload, headers=headers, timeout=60) as resp:
-                        if resp.status == 200:
-                            data = await resp.json()
-                            msg = data["choices"][0]["message"]
-                            content = msg.get("content") or ""
-                            tool_actions = []
-                            if "tool_calls" in msg and msg["tool_calls"]:
-                                for tc in msg["tool_calls"]:
-                                    if tc["type"] == "function":
-                                        tool_actions.append({
-                                            "name": tc["function"]["name"],
-                                            "arguments": json.loads(tc["function"]["arguments"])
-                                        })
-                            print("  [LLM Chain] Served by FreeLLMAPI")
-                            return content, tool_actions, "freellmapi"
-                        else:
-                            text = await resp.text()
-                            print(f"  [LLM Chain] FreeLLMAPI failed ({resp.status}): {text[:100]}")
-            except Exception as e:
-                print(f"  [LLM Chain] FreeLLMAPI error: {e}")
+                                text = await resp.text()
+                                print(f"  [LLM Chain] FreeLLMAPI model '{target_model}' failed ({resp.status}): {text[:100]}. Falling over to next candidate...")
+                except Exception as e:
+                    print(f"  [LLM Chain] FreeLLMAPI model '{target_model}' error/timeout: {e}. Falling over to next candidate...")
 
         # 2. OpenRouter (disabled unless added to cfg.providers)
         elif provider == "openrouter" and cfg.openrouter_api_key:

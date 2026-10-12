@@ -155,7 +155,14 @@ class LLMConfig:
     freellmapi_api_key: str = field(default_factory=_detect_freellmapi_api_key)
     freellmapi_enabled: bool = field(default_factory=lambda: _get("FREELLMAPI_ENABLED", "true").lower() in ("true", "1", "yes"))
     freellmapi_model: str = field(default_factory=lambda: _get("FREELLMAPI_MODEL", "gpt-oss-120b"))
-    providers: list[str] = field(default_factory=lambda: ["freellmapi"])
+    providers: list[str] = field(
+        default_factory=lambda: [
+            p for p in ["freellmapi", "gemini", "openrouter"]
+            if (p == "freellmapi" and _get("FREELLMAPI_ENABLED", "true").lower() in ("true", "1", "yes"))
+            or (p == "gemini" and _get("GEMINI_API_KEY", ""))
+            or (p == "openrouter" and _get("OPENROUTER_API_KEY", ""))
+        ] or ["freellmapi"]
+    )
 
     # ── Gemini Matrix ────────────────────────────────────────────────────────
     gemini_model: str = field(

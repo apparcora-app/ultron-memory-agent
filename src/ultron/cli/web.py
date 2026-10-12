@@ -459,7 +459,7 @@ async def chat_endpoint(
             user_input=message,
             files=processed_files,
             module_id=module_id,
-            model_override=None if effective_model == "auto" else effective_model,
+            model_override=effective_model,
             optimize_prompt=should_opt,
             operation_mode=operation_mode,
         )
