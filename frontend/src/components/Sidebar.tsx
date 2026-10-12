@@ -11,6 +11,7 @@ import {
   Search,
   Trash2,
   Video,
+  Brain,
 } from "lucide-react";
 import type { ChatSessionItem } from "../types/chat";
 import { cn } from "../lib/utils";
@@ -22,6 +23,7 @@ interface SidebarProps {
   onNewSession: () => void;
   onDeleteSession?: (sessionId: string) => void;
   onSelectFeature?: (feature: string) => void;
+  onOpenMemories?: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
@@ -33,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNewSession,
   onDeleteSession,
   onSelectFeature,
+  onOpenMemories,
   isCollapsed,
   onToggleCollapse,
 }) => {
@@ -40,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [showSearch, setShowSearch] = useState(false);
 
   const FEATURES = [
+    { id: "memories", label: "Memories", icon: Brain, color: "text-[#38bdf8]", prompt: "" },
     { id: "images", label: "Images", icon: ImageIcon, color: "text-[#38bdf8]", prompt: "Generate high-definition imagery and analyze visual assets." },
     { id: "videos", label: "Videos", icon: Video, color: "text-[#c084fc]", prompt: "Create cinematic video generation scripts and production storyboards." },
     { id: "codex", label: "Codex", icon: Code2, color: "text-[#38bdf8]", prompt: "Open Codex engineering mode: review, refactor, and write clean production code." },
@@ -183,7 +187,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             return (
               <button
                 key={feat.id}
-                onClick={() => onSelectFeature && onSelectFeature(feat.prompt)}
+                onClick={() => (feat.id === "memories" ? onOpenMemories?.() : onSelectFeature?.(feat.prompt))}
                 className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-[#1a1a20] transition-colors text-left"
               >
                 <Icon className={cn("w-4 h-4", feat.color)} />

@@ -23,6 +23,7 @@ interface WelcomeHeroProps {
   optimizePrompt: boolean;
   onToggleOptimizePrompt: () => void;
   onOpenSkills: () => void;
+  onOpenMemories?: () => void;
   onSelectPrompt: (prompt: string) => void;
 }
 
@@ -41,6 +42,7 @@ export const WelcomeHero: React.FC<WelcomeHeroProps> = ({
   optimizePrompt,
   onToggleOptimizePrompt,
   onOpenSkills,
+  onOpenMemories,
   onSelectPrompt,
 }) => {
   const CAPABILITY_CARDS = [
@@ -98,6 +100,7 @@ export const WelcomeHero: React.FC<WelcomeHeroProps> = ({
           optimizePrompt={optimizePrompt}
           onToggleOptimizePrompt={onToggleOptimizePrompt}
           onOpenSkills={onOpenSkills}
+          onOpenMemories={onOpenMemories}
         />
       </div>
 

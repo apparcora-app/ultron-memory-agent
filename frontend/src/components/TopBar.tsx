@@ -4,6 +4,7 @@ import {
   Layout,
   ShieldCheck,
   Cpu,
+  Brain,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -15,6 +16,7 @@ interface TopBarProps {
   onToggleCanvas: () => void;
   isStreamConnected: boolean;
   onOpenSettings?: () => void;
+  onOpenMemories?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -25,6 +27,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onToggleCanvas,
   isStreamConnected,
   onOpenSettings,
+  onOpenMemories,
 }) => {
   const [showStatusModal, setShowStatusModal] = useState(false);
 
@@ -76,6 +79,16 @@ export const TopBar: React.FC<TopBarProps> = ({
           {isStreamConnected && (
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           )}
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenMemories}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs bg-[#f8fafc] text-slate-700 border-[#e2e8f0] hover:text-[#0284c7] hover:border-[#bae6fd] hover:bg-[#f0f9ff] transition-all shadow-xs"
+          title="Open Neural Long-Term Memories Matrix"
+        >
+          <Brain className="w-3.5 h-3.5 text-[#0284c7]" />
+          <span>Memories</span>
         </button>
 
         <a

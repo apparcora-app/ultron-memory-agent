@@ -6,6 +6,14 @@ Usage:
 """
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Ensure root .env is loaded
+_env_path = Path(__file__).resolve().parent / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path)
+else:
+    load_dotenv()
 
 # Ensure src/ is on sys.path for direct repository checkouts
 _src_dir = Path(__file__).resolve().parent / "src"

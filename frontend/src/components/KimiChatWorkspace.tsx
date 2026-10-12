@@ -25,6 +25,7 @@ import { ChatMessageItem } from "./ChatMessageItem";
 import { ChatInput } from "./ChatInput";
 import { CanvasPane } from "./CanvasPane";
 import { SkillsModal } from "./SkillsModal";
+import { MemoriesModal } from "./MemoriesModal";
 import { useWebRTCStream } from "../hooks/useWebRTCStream";
 import type { ChatMessage, ChatSessionItem } from "../types/chat";
 import { cn } from "../lib/utils";
@@ -42,6 +43,7 @@ export const KimiChatWorkspace: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<string>("auto");
   const [optimizePrompt, setOptimizePrompt] = useState<boolean>(false);
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState<boolean>(false);
+  const [isMemoriesModalOpen, setIsMemoriesModalOpen] = useState<boolean>(false);
   const [splitRatio, setSplitRatio] = useState<number>(50); // 50% chat, 50% canvas
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
@@ -314,6 +316,7 @@ export const KimiChatWorkspace: React.FC = () => {
         onNewSession={handleNewSession}
         onDeleteSession={handleDeleteSession}
         onSelectFeature={(prompt) => handleSendMessage(prompt)}
+        onOpenMemories={() => setIsMemoriesModalOpen(true)}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
@@ -338,6 +341,7 @@ export const KimiChatWorkspace: React.FC = () => {
               onToggleCanvas={() => setIsCanvasOpen(!isCanvasOpen)}
               isStreamConnected={isConnected}
               onOpenSettings={() => setIsSkillsModalOpen(true)}
+              onOpenMemories={() => setIsMemoriesModalOpen(true)}
             />
 
             {/* ── Center Content: Welcome Hero OR Chat Stream ── */}
@@ -359,6 +363,7 @@ export const KimiChatWorkspace: React.FC = () => {
                   optimizePrompt={optimizePrompt}
                   onToggleOptimizePrompt={() => setOptimizePrompt(!optimizePrompt)}
                   onOpenSkills={() => setIsSkillsModalOpen(true)}
+                  onOpenMemories={() => setIsMemoriesModalOpen(true)}
                   onSelectPrompt={(p) => handleSendMessage(p)}
                 />
               ) : (
@@ -408,6 +413,7 @@ export const KimiChatWorkspace: React.FC = () => {
                   optimizePrompt={optimizePrompt}
                   onToggleOptimizePrompt={() => setOptimizePrompt(!optimizePrompt)}
                   onOpenSkills={() => setIsSkillsModalOpen(true)}
+                  onOpenMemories={() => setIsMemoriesModalOpen(true)}
                 />
               </div>
             )}
@@ -454,6 +460,12 @@ export const KimiChatWorkspace: React.FC = () => {
         onSelectSkill={(skill) => {
           handleSendMessage(`Activate and execute capability skill: ${skill.name} (${skill.id || skill.skill_id}).`);
         }}
+      />
+
+      {/* ── Neural Memories Matrix Modal ── */}
+      <MemoriesModal
+        isOpen={isMemoriesModalOpen}
+        onClose={() => setIsMemoriesModalOpen(false)}
       />
     </div>
   );

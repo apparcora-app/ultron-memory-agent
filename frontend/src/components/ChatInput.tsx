@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import {
   ArrowUp,
   Bot,
+  Brain,
   ChevronDown,
   Cpu,
   FileText,
@@ -48,6 +49,7 @@ interface ChatInputProps {
   optimizePrompt: boolean;
   onToggleOptimizePrompt: () => void;
   onOpenSkills: () => void;
+  onOpenMemories?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -65,6 +67,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   optimizePrompt,
   onToggleOptimizePrompt,
   onOpenSkills,
+  onOpenMemories,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -399,6 +402,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <Sparkles className="w-3.5 h-3.5 text-[#0284c7]" />
               <span>Skills</span>
             </button>
+
+            {/* Memories Button with Sky Blue Accent */}
+            {onOpenMemories && (
+              <button
+                type="button"
+                onClick={onOpenMemories}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#f0f9ff] hover:bg-[#e0f2fe] text-[#0284c7] border border-[#bae6fd] transition-all"
+                title="Open Ultron Vector Memories (Long-Term Knowledge)"
+              >
+                <Brain className="w-3.5 h-3.5 text-[#0284c7]" />
+                <span>Memories</span>
+              </button>
+            )}
           </div>
 
           {/* Right Controls: Voice & High-Contrast Black Send Button */}

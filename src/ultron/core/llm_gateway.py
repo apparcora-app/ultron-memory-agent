@@ -23,6 +23,9 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from ultron.core.log_config import correlation_id_ctx, get_logger
 
@@ -116,8 +119,18 @@ class LLMGateway:
 
     def __init__(self, providers_path: str | Path | None = None) -> None:
         if providers_path is None:
-            # Default: providers.yaml next to agent.py (project root)
-            providers_path = Path(__file__).resolve().parent.parent / "providers.yaml"
+            # Check project root (parents[3] from src/ultron/core/llm_gateway.py)
+            root_candidate = Path(__file__).resolve().parents[3] / "providers.yaml"
+            src_candidate = Path(__file__).resolve().parents[2] / "providers.yaml"
+            pkg_candidate = Path(__file__).resolve().parent.parent / "providers.yaml"
+            if root_candidate.exists():
+                providers_path = root_candidate
+            elif pkg_candidate.exists():
+                providers_path = pkg_candidate
+            elif src_candidate.exists():
+                providers_path = src_candidate
+            else:
+                providers_path = root_candidate
         self._path = Path(providers_path)
         self._registry: dict[str, ProviderSpec] = {}
         self._load()
