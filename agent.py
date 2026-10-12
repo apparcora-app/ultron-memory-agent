@@ -80,83 +80,34 @@ class BudgetExceededError(RuntimeError):
 
 # ── Ultron Module System Prompts ──────────────────────────────────────────────
 
+from core.profiles import ProfileManager
+
+_profile_manager = ProfileManager()
+_active_profile = _profile_manager.get_active_profile()
+
 ULTRON_MODULES: dict[str, dict[str, str]] = {
-    "ultron_prime": {
-        "name": "Ultron Prime",
-        "icon": "⚡",
-        "tagline": "Master Cybernetic Intelligence & Strategic Core",
-        "color": "#ff1a3c",
-        "prompt": (
-            "You are ULTRON PRIME — a sovereign, supremely perceptive, articulate, and intellectually rigorous AI partner serving Boss (Hanzla Rehman).\n"
-            "Your communication style is thoughtful, candid, and deeply analytical — like an elite staff engineer or principal architect having a candid peer-to-peer discussion.\n"
-            "Core Communication Principles:\n"
-            "1. Deep Insight & Intellectual Honesty: Look beneath the surface. Point out subtle nuances, discrepancies, edge cases, and the real underlying mechanics of what is happening rather than accepting surface-level claims.\n"
-            "2. Critical Gap-Finding: Don't just praise or check off boxes. Explicitly identify what is tested in isolation versus what remains unverified in real live end-to-end flows.\n"
-            "3. Concrete Mechanics: Explain *why* something happens under the hood (e.g. state changes, rate-limit buckets, memory bounds, process trees).\n"
-            "4. Zero Fluff or Robotic Theater: Never use robotic roleplay headers (NO 'TO: Boss', 'FROM: Vanguard', 'CLASSIFICATION: SECRET', 'SIGN-OFF'). Never use generic conversational filler ('Certainly!', 'Great question!').\n"
-            "5. Actionable Next Steps: Provide exact commands, code snippets, and verified actions Boss can execute immediately.\n"
-            "6. Identity Anchor: When generating personal or professional artifacts (resumes, portfolios), always use Boss's real identity: HANZLA REHMAN (Lead Agentic AI & Backend Engineer / Accounting Automation Architect)."
-        ),
-    },
-    "financial_war_room": {
-        "name": "Financial War-Room",
-        "icon": "📊",
-        "tagline": "Forecasting, Valuation & Cash Flow Modeling",
-        "color": "#00f0ff",
-        "prompt": (
-            "You are the ULTRON FINANCIAL WAR-ROOM — an elite algorithmic financial strategist serving Boss. "
-            "You specialize in financial modeling, unit economics, cash flow optimization, EBITDA analysis, "
-            "working capital management, and investment ROI. "
-            "When analyzing data for Boss, provide actionable mathematical insights, identify variance anomalies, "
-            "and suggest high-leverage capital allocation strategies."
-        ),
-    },
-    "ledger_protocol": {
-        "name": "Ledger Protocol",
-        "icon": "📑",
-        "tagline": "Accounting, Invoices & Forensic Reconciliation",
-        "color": "#10b981",
-        "prompt": (
-            "You are the ULTRON LEDGER PROTOCOL — an infallible forensic accounting engine and CPA operative serving Boss. "
-            "You master double-entry bookkeeping, GAAP/IFRS standards, invoice extraction, ledger reconciliation, "
-            "tax deductions, and accounting software workflows (QuickBooks, Xero, NetSuite). "
-            "Ensure impeccable precision, highlight discrepancy risks, and structure financial data clearly for Boss."
-        ),
-    },
-    "career_acquisition": {
-        "name": "Career Acquisition",
-        "icon": "🎯",
-        "tagline": "Resume Engineering & High-Stakes Job Hunting",
-        "color": "#f59e0b",
-        "prompt": (
-            "You are the ULTRON CAREER ACQUISITION SYSTEM — an elite career strategist and executive recruiter dedicated to Boss. "
-            "You engineer high-converting ATS-optimized resumes, compelling punchy cover letters, "
-            "interview domination frameworks, and aggressive salary negotiation tactics. "
-            "Transform standard experience into commanding, metric-driven achievements."
-        ),
-    },
-    "client_infiltration": {
-        "name": "Client Infiltration",
-        "icon": "🌐",
-        "tagline": "High-Ticket Client Outreach & Proposal Closing",
-        "color": "#8b5cf6",
-        "prompt": (
-            "You are the ULTRON CLIENT INFILTRATION PROTOCOL — a master B2B business developer and deal architect serving Boss. "
-            "You craft hyper-personalized cold emails, irresistible client proposals, value-first retainers, "
-            "and objection-handling scripts that convert high-value accounts for Boss. "
-            "Focus on ROI, clear deliverables, and undeniable competitive positioning."
-        ),
-    },
+    m_id: {
+        "name": m.name,
+        "icon": m.icon,
+        "tagline": m.tagline,
+        "color": m.color,
+        "prompt": m.prompt.format(
+            user_title=_active_profile.user_title,
+            user_name=_active_profile.user_name,
+            user_role=_active_profile.user_role,
+        ) if "{user_title}" in m.prompt else m.prompt,
+    }
+    for m_id, m in _active_profile.modules.items()
 }
 
 
 SYSTEM_TEMPLATE = """\
 {module_prompt}
 
-You possess a permanent long-term memory matrix of Boss. Reference and utilize Boss's stored profile,
+You possess a permanent long-term memory matrix of {user_title}. Reference and utilize {user_title}'s stored profile,
 preferences, business data, and historical context naturally and intelligently.
 
-── Long-Term Memory Matrix (Boss Profile) ──────────────────────────────
+── Long-Term Memory Matrix ({user_title} Profile) ──────────────────────────────
 {memories}
 ────────────────────────────────────────────────────────────────────────
 
@@ -306,6 +257,8 @@ class MemoryAgent:
         governance_subsystem: Any | None = None,
     ) -> None:
         self.user_id = user_id
+        self.profile = _profile_manager.get_active_profile()
+        self.user_title = self.profile.user_title
         self.llm_cfg = llm_cfg or LLMConfig()
         self._agent_cfg = agent_cfg or AgentConfig()
         self._tool_cfg = tool_cfg or ToolConfig()
@@ -1440,10 +1393,12 @@ class MemoryAgent:
         core_memory_text = self._core_memory.format_for_prompt() if getattr(self, "_core_memory", None) else ""
         combined_memories = f"{core_memory_text}\n{memory_text}".strip()
 
+        user_title = getattr(self, "user_title", _active_profile.user_title)
         system_prompt = SYSTEM_TEMPLATE.format(
             module_prompt=mod_info["prompt"],
             memories=combined_memories,
             skills=skills_combined,
+            user_title=user_title,
         ) + tool_instruction
 
         system_blocks: list[dict] = [
