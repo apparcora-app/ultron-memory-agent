@@ -868,6 +868,9 @@ class ToolExecutor:
         try:
             import subprocess
 
+            from security.environment import SanitizedEnvironmentBuilder
+
+            clean_cmd_env = SanitizedEnvironmentBuilder().build()
             p = subprocess.Popen(
                 command,
                 shell=True,
@@ -877,6 +880,7 @@ class ToolExecutor:
                 encoding="utf-8",
                 errors="replace",
                 cwd=working_dir,
+                env=clean_cmd_env,
             )
             default_process_tracker.register(p)
 
@@ -1051,7 +1055,10 @@ class ToolExecutor:
 
             try:
                 import sys as _sys
-                env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+
+                from security.environment import SanitizedEnvironmentBuilder
+
+                clean_env = SanitizedEnvironmentBuilder().build()
                 result = subprocess.run(
                     [_sys.executable, script_path],
                     capture_output=True,
@@ -1060,7 +1067,7 @@ class ToolExecutor:
                     errors="replace",
                     timeout=self.sandbox.config.python_timeout,
                     cwd=self._project_root,
-                    env=env,
+                    env=clean_env,
                 )
 
 
