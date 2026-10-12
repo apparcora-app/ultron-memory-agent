@@ -61,7 +61,7 @@ async def chat_with_fallback(prompt, system_prompt="", max_tokens=1024, temperat
                 if clean_target:
                     candidate_models.append(clean_target)
 
-            for safe_m in ["auto", "gpt-oss-120b"]:
+            for safe_m in ["gpt-oss-120b", "auto"]:
                 if safe_m not in candidate_models:
                     candidate_models.append(safe_m)
 

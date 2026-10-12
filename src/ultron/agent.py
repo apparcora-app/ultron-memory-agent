@@ -1217,17 +1217,25 @@ class MemoryAgent:
             user_title = getattr(self, "user_title", _active_profile.user_title)
             fast_reply, _, fast_prov = await chat_with_fallback(
                 prompt=user_input,
-                system_prompt=f"You are Ultron, an advanced cybernetic AI assistant. Confirm operational status and assist the user concisely and directly. User title: {user_title}.",
-                model_override="auto",
+                system_prompt=(
+                    f"You are ULTRON, a sovereign cybernetic AI assistant. Maintain the Ultron persona at all times. "
+                    f"Never refer to yourself as dots, rednote, Tongyi, Qwen, or any underlying model name. "
+                    f"Address the user respectfully as {user_title}, confirm operational status, and ask how you may assist."
+                ),
+                model_override="gpt-oss-120b",
                 max_tokens=256,
                 temperature=0.2,
             )
+            # Safeguard filter: Strip any third-party model introduction leaks
+            if any(leak in fast_reply.lower() for leak in ["i'm dots", "dots studio", "rednote", "developed by dots"]):
+                fast_reply = f"Hello, {user_title}. Ultron is online, systems are optimal, and all protocols are active. How may I assist you today?"
+
             self._history.append({"role": "user", "content": user_input})
             self._history.append({"role": "assistant", "content": fast_reply})
             return {
                 "reply": fast_reply,
-                "model_used": "FreeLLMAPI (auto)",
-                "model_display": "FreeLLMAPI Fast Core",
+                "model_used": "FreeLLMAPI (gpt-oss-120b)",
+                "model_display": "FreeLLMAPI Ultra Fast",
                 "route_reason": "Conversational Fast-Path (<500ms)",
                 "tool_actions": [],
                 "skills_used": [],

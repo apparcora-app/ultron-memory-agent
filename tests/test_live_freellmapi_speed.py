@@ -59,6 +59,8 @@ def test_live_chat_and_latency():
     reply2 = data2.get("reply", "")
     print(f"Reply: {reply2[:150]}...")
     assert "All providers in the LLM fallback chain failed" not in reply2
+    assert "dots" not in reply2.lower(), f"Leaked dots: {reply2}"
+    assert "rednote" not in reply2.lower(), f"Leaked rednote: {reply2}"
 
     # 3. Test Intra-Router Failover when requesting a model that 429s on FreeLLMAPI
     prompt3 = "What is the speed of light in vacuum?"
