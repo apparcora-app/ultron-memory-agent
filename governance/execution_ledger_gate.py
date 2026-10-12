@@ -9,13 +9,12 @@ Enforces zero-faking, strict truthfulness, and empirical verification:
 """
 
 from __future__ import annotations
-from core.log_config import get_logger
 
 import re
-import os
-import time
 from dataclasses import dataclass, field
 from typing import Any
+
+from core.log_config import get_logger
 
 
 @dataclass
@@ -103,7 +102,7 @@ class ExecutionLedgerGate:
                 description="File read/write operation",
             ))
 
-        
+
         # 5. Code Intent
         if self._re_code.search(text):
             intents.append(ActionIntent(
@@ -135,7 +134,7 @@ class ExecutionLedgerGate:
             return draft_reply, tool_actions, report
 
         # Map of tool types executed
-        executed_tool_names = [a.get("tool") or a.get("tool_name") for a in tool_actions]
+        [a.get("tool") or a.get("tool_name") for a in tool_actions]
         successful_tools = [
             a for a in tool_actions
             if a.get("success") is True or (isinstance(a.get("result"), dict) and a["result"].get("success") is True)
@@ -230,7 +229,7 @@ class ExecutionLedgerGate:
                     report.satisfied_intents += 1
                     report.audit_trail.append("✓ FILE_OP verified from tool execution trace.")
 
-        
+
             elif intent.intent_type == "CODE_EXECUTION":
                 matched = any(name in ["run_python"] for name in successful_names)
                 if matched:

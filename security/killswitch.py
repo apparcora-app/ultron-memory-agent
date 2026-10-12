@@ -11,7 +11,6 @@ Provides multi-surface instantaneous kill-switch protection:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import signal
@@ -40,7 +39,7 @@ def get_configured_secret() -> str | None:
         code = None
 
     if not code and ENV_FILE.exists():
-        with open(ENV_FILE, "r", encoding="utf-8") as f:
+        with open(ENV_FILE, encoding="utf-8") as f:
             for line in f:
                 line_str = line.strip()
                 if line_str.startswith("KILLSWITCH_OVERRIDE_CODE="):
@@ -68,7 +67,7 @@ def get_lockdown_details() -> dict[str, Any]:
     if not LOCK_FILE.exists():
         return {}
     try:
-        with open(LOCK_FILE, "r", encoding="utf-8") as f:
+        with open(LOCK_FILE, encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return {"locked": True, "raw": LOCK_FILE.read_text(errors="ignore")}

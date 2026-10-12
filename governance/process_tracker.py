@@ -9,14 +9,15 @@ Provides:
 """
 
 from __future__ import annotations
-from core.log_config import get_logger
 
 import asyncio
 import os
 import platform
 import subprocess
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
+
+from core.log_config import get_logger
 
 
 class BufferOverflowError(RuntimeError):
@@ -63,7 +64,7 @@ class BoundedMemoryQueue:
         except asyncio.TimeoutError as err:
             raise BufferOverflowError(self.name, self._queue.qsize(), self.maxsize) from err
 
-    async def get(self, timeout: Optional[float] = None) -> Any:
+    async def get(self, timeout: float | None = None) -> Any:
         """Gets item with optional timeout."""
         if timeout is not None:
             return await asyncio.wait_for(self._queue.get(), timeout=timeout)
@@ -80,11 +81,11 @@ class ProcessTracker:
     """
 
     def __init__(self) -> None:
-        self._processes: Dict[int, Union[subprocess.Popen, Any]] = {}
+        self._processes: dict[int, subprocess.Popen | Any] = {}
         self._terminated_pids: set[int] = set()
         self.is_windows = platform.system() == "Windows"
 
-    def register(self, proc: Union[subprocess.Popen, Any]) -> int:
+    def register(self, proc: subprocess.Popen | Any) -> int:
         """Registers a spawned subprocess."""
         pid = proc.pid
         self._processes[pid] = proc
@@ -220,7 +221,7 @@ class ProcessTracker:
                 terminated_count += 1
         return terminated_count
 
-    def active_pids(self) -> List[int]:
+    def active_pids(self) -> list[int]:
         """Returns list of currently registered active PIDs."""
         return [pid for pid in self._processes if self.is_alive(pid)]
 

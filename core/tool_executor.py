@@ -1,9 +1,9 @@
 """
 tool_executor.py — Convenience bridge exporting direct standalone tool helpers, Active Window Guard, and ToolExecutor.
 """
+
 from core.log_config import get_logger
-import os
-import sys
+from tool_definitions import ToolExecutor
 
 # ── 1. Safety Failsafe Configuration ──────────────────────────────────────────
 try:
@@ -39,8 +39,6 @@ def is_active_window(window_title: str) -> bool:
     return window_title.lower() in active_title.lower()
 
 # ── 3. Tool Executor & Standalone Tool Exports ────────────────────────────────
-from tool_definitions import ToolExecutor, ULTRON_TOOLS
-
 # Singleton default executor instance
 _default_executor = ToolExecutor()
 

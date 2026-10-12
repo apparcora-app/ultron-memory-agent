@@ -15,10 +15,12 @@ Enforces:
 """
 
 from __future__ import annotations
-from core.log_config import get_logger
 
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
+
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from core.log_config import get_logger
 
 
 class ContractValidationError(ValueError):
@@ -251,7 +253,7 @@ class SendEmailInput(StrictBaseModel):
 
 
 class SleepSecondsInput(StrictBaseModel):
-    seconds: Union[int, float]
+    seconds: int | float
 
 
 # ── 2. Tool Output Contracts ──────────────────────────────────────────────────

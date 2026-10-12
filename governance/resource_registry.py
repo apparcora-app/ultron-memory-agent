@@ -9,13 +9,15 @@ Provides:
 """
 
 from __future__ import annotations
-from core.log_config import get_logger
 
 import asyncio
 import time
 import uuid
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Callable, Coroutine, Dict, List, Optional, Set
+from typing import Any
+
+from core.log_config import get_logger
 
 
 class PoolStarvationError(TimeoutError):
@@ -56,8 +58,8 @@ class ResourcePool:
         name: str,
         max_connections: int = 10,
         pool_timeout_sec: float = 5.0,
-        factory: Optional[Callable[[], Any]] = None,
-        closer: Optional[Callable[[Any], Any]] = None,
+        factory: Callable[[], Any] | None = None,
+        closer: Callable[[Any], Any] | None = None,
     ) -> None:
         self.name = name
         self.max_connections = max_connections
@@ -66,7 +68,7 @@ class ResourcePool:
         self.closer = closer or (lambda obj: None)
 
         self._semaphore = asyncio.Semaphore(max_connections)
-        self._active_leases: Dict[str, ManagedResource] = {}
+        self._active_leases: dict[str, ManagedResource] = {}
         self._lock = asyncio.Lock()
         self._is_shutdown = False
 
@@ -79,7 +81,7 @@ class ResourcePool:
         return self.max_connections - len(self._active_leases)
 
     @asynccontextmanager
-    async def acquire(self, timeout: Optional[float] = None) -> AsyncIterator[ManagedResource]:
+    async def acquire(self, timeout: float | None = None) -> AsyncIterator[ManagedResource]:
         """
         Leases a connection from the pool.
         Guarantees release back to pool even if task is cancelled.
@@ -132,7 +134,7 @@ class ResourcePool:
         """Force-closes all active resources and shuts down the pool."""
         self._is_shutdown = True
         async with self._lock:
-            for res_id, res in list(self._active_leases.items()):
+            for _res_id, res in list(self._active_leases.items()):
                 try:
                     close_res = self.closer(res.raw_object)
                     if asyncio.iscoroutine(close_res):
@@ -150,8 +152,8 @@ class ResourceRegistry:
     """
 
     def __init__(self) -> None:
-        self._pools: Dict[str, ResourcePool] = {}
-        self._cleanup_hooks: List[Callable[[], Any]] = []
+        self._pools: dict[str, ResourcePool] = {}
+        self._cleanup_hooks: list[Callable[[], Any]] = []
         self._lock = asyncio.Lock()
 
     def register_pool(
@@ -159,8 +161,8 @@ class ResourceRegistry:
         name: str,
         max_connections: int = 10,
         pool_timeout_sec: float = 5.0,
-        factory: Optional[Callable[[], Any]] = None,
-        closer: Optional[Callable[[Any], Any]] = None,
+        factory: Callable[[], Any] | None = None,
+        closer: Callable[[Any], Any] | None = None,
     ) -> ResourcePool:
         pool = ResourcePool(
             name=name,
@@ -181,7 +183,7 @@ class ResourceRegistry:
     async def lease(
         self,
         pool_name: str,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> AsyncIterator[ManagedResource]:
         """Convenience context manager to lease from a named pool."""
         pool = self.get_pool(pool_name)
@@ -207,7 +209,7 @@ class ResourceRegistry:
                 pass
         self._cleanup_hooks.clear()
 
-    def active_leak_count(self, pool_name: Optional[str] = None) -> int:
+    def active_leak_count(self, pool_name: str | None = None) -> int:
         """Returns total active resource checkouts across all pools (or a single pool)."""
         if pool_name:
             pool = self._pools.get(pool_name)

@@ -9,9 +9,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-import anthropic
 
-from skill_evolution import SkillMutator, MutationRecord
+from skill_evolution import SkillMutator
 
 SKILLS_DIR = Path(__file__).parent / "skills"
 

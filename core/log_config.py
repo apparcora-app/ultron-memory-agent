@@ -13,9 +13,9 @@ from __future__ import annotations
 import logging
 import sys
 import uuid
-from contextvars import ContextVar
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
+from contextvars import ContextVar
 
 # ── Correlation-ID context variable ──────────────────────────────────────────
 #  A ContextVar is the safe, async-compatible way to store per-task state.

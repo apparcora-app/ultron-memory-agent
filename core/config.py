@@ -16,8 +16,9 @@ LLM stack
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from dataclasses import dataclass, field
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -38,7 +39,7 @@ def _require(key: str) -> str:
     """Return env var value or raise a clear error at startup."""
     value = os.getenv(key)
     if not value:
-        raise EnvironmentError(
+        raise OSError(
             f"Missing required environment variable: {key}\n"
             f"Copy .env.example → .env and fill in the value."
         )
@@ -59,7 +60,7 @@ def _detect_freellmapi_base_url() -> str:
             cfg_path = Path(appdata) / "FreeLLMAPI" / "config.json"
             if cfg_path.exists():
                 import json
-                with open(cfg_path, "r", encoding="utf-8") as f:
+                with open(cfg_path, encoding="utf-8") as f:
                     cfg = json.load(f)
                     port = cfg.get("port", 31415)
                     return f"http://localhost:{port}/v1"
@@ -96,7 +97,7 @@ def _detect_freellmapi_api_key() -> str:
 class VectorStoreConfig:
     """
     Vector store configuration.
-    
+
     Defaults to ChromaDB which runs 100% locally on your machine with no Docker
     or background services needed. Data is persisted to ./data/chroma.
     """

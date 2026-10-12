@@ -16,27 +16,25 @@ Each tool has:
 from __future__ import annotations
 
 import json
-import logging
 import os
 import subprocess
 import tempfile
 import time
-import traceback
-from pathlib import Path
 from typing import Any
 
-from sandbox import Sandbox, SandboxConfig, SandboxViolation
-from guardrails.ast_sandbox import ASTSecurityViolation
-from guardrails.limits import ExecutionLimitExceeded, dispatch_with_timeout, DEFAULT_TOOL_TIMEOUT_SEC
 from concurrency import atomic_write, atomic_write_json
-from governance import default_process_tracker
 from contracts import (
-    ContractValidationError,
     TOOL_INPUT_CONTRACTS,
     TOOL_OUTPUT_CONTRACTS,
     validate_contract,
 )
-
+from governance import default_process_tracker
+from guardrails.ast_sandbox import ASTSecurityViolation
+from guardrails.limits import (
+    DEFAULT_TOOL_TIMEOUT_SEC,
+    dispatch_with_timeout,
+)
+from sandbox import Sandbox, SandboxViolation
 
 # ── Anthropic Tool Schemas ────────────────────────────────────────────────────
 
@@ -565,22 +563,23 @@ class ToolExecutor:
             }
         """
         # ── Ingress Contract Validation (Fail-Fast) ───────────────────────────
-        import os
         import json
+        import os
+
         from infrastructure.sandbox import require_approval
-        
+
         IRREVS = {
-            'control_desktop_gui', 'control_desktop_gui_raw', 'send_email', 
+            'control_desktop_gui', 'control_desktop_gui_raw', 'send_email',
             'core_memory_update', 'core_memory_append', 'core_memory_replace',
             'run_python', 'execute_command'
         }
-        
+
         needs_approval = (tool_name in IRREVS)
         if tool_name == 'file_operation' and tool_input.get('operation') in ('write', 'append', 'delete'):
             needs_approval = True
         if tool_name == 'web_automation' and tool_input.get('action') in ('click', 'submit', 'type'):
             needs_approval = True
-            
+
         if needs_approval and os.environ.get('APPROVAL_MODE', 'on').lower() == 'on':
             if not require_approval(tool_name, json.dumps(tool_input)):
                 return {'success': False, 'output': '', 'error': 'Execution blocked: User denied action or timed out.'}
@@ -590,8 +589,8 @@ class ToolExecutor:
             tool_input = validated.model_dump()
 
         import collections
-        import json
         import hashlib
+        import json
         import time
 
         if not hasattr(self, "_cache"):
@@ -632,7 +631,7 @@ class ToolExecutor:
                     "error": f"Unknown tool: {tool_name}",
                     "duration_ms": 0,
                 }
-            
+
             if is_cacheable:
                 print(f"  [CACHE MISS] {tool_name} executing...")
 
@@ -687,22 +686,23 @@ class ToolExecutor:
             elif tool_name == "execute_command":
                 timeout_sec = float(getattr(self.sandbox.config, "command_timeout", 60.0))
 
-        import os
         import json
+        import os
+
         from infrastructure.sandbox import require_approval
-        
+
         IRREVS = {
-            'control_desktop_gui', 'control_desktop_gui_raw', 'send_email', 
+            'control_desktop_gui', 'control_desktop_gui_raw', 'send_email',
             'core_memory_update', 'core_memory_append', 'core_memory_replace',
             'run_python', 'execute_command'
         }
-        
+
         needs_approval = (tool_name in IRREVS)
         if tool_name == 'file_operation' and tool_input.get('operation') in ('write', 'append', 'delete'):
             needs_approval = True
         if tool_name == 'web_automation' and tool_input.get('action') in ('click', 'submit', 'type'):
             needs_approval = True
-            
+
         if needs_approval and os.environ.get('APPROVAL_MODE', 'on').lower() == 'on':
             if not require_approval(tool_name, json.dumps(tool_input)):
                 return {'success': False, 'output': '', 'error': 'Execution blocked: User denied action or timed out.'}
@@ -801,17 +801,18 @@ class ToolExecutor:
         findings = inp.get("findings", "").strip()
         if not filename or not findings:
             return {"success": False, "output": "", "error": "filename and findings are required"}
-        
+
         try:
-            import os, json
+            import json
+            import os
             file_mem_path = os.path.join("data", "file_memory.json")
             os.makedirs("data", exist_ok=True)
-            
+
             mem_data = {}
             if os.path.exists(file_mem_path):
-                with open(file_mem_path, "r", encoding="utf-8") as f:
+                with open(file_mem_path, encoding="utf-8") as f:
                     mem_data = json.load(f)
-                    
+
             mem_data[filename] = findings
             atomic_write_json(file_mem_path, mem_data, indent=4)
             return {"success": True, "output": f"Successfully stored findings for {filename} into local file memory.", "error": None}
@@ -822,21 +823,22 @@ class ToolExecutor:
         filename = inp.get("filename", "").strip()
         if not filename:
             return {"success": False, "output": "", "error": "filename is required"}
-        
+
         try:
-            import os, json
+            import json
+            import os
             file_mem_path = os.path.join("data", "file_memory.json")
-            
+
             if not os.path.exists(file_mem_path):
                 return {"success": True, "output": f"No previous findings found in memory for {filename}. You must scan it from scratch.", "error": None}
-                
-            with open(file_mem_path, "r", encoding="utf-8") as f:
+
+            with open(file_mem_path, encoding="utf-8") as f:
                 mem_data = json.load(f)
-                
+
             if filename in mem_data:
                 output_str = f"--- MEMORY RESULTS FOR {filename} ---\n{mem_data[filename]}\n"
                 return {"success": True, "output": output_str, "error": None}
-            
+
             # Fuzzy match
             for k, v in mem_data.items():
                 if filename.lower() in k.lower():
@@ -846,7 +848,7 @@ class ToolExecutor:
             return {"success": True, "output": f"No previous findings found in memory for {filename}. You must scan it from scratch.", "error": None}
         except Exception as e:
             return {"success": False, "output": "", "error": str(e)}
-            
+
     # ── execute_command ───────────────────────────────────────────────────────
 
     def _handle_execute_command(self, inp: dict[str, Any]) -> dict[str, Any]:
@@ -864,10 +866,8 @@ class ToolExecutor:
 
         # Execute with process tree killing for Windows
         try:
-            import platform
             import subprocess
-            is_win = platform.system() == "Windows"
-            
+
             p = subprocess.Popen(
                 command,
                 shell=True,
@@ -879,7 +879,7 @@ class ToolExecutor:
                 cwd=working_dir,
             )
             default_process_tracker.register(p)
-            
+
             try:
                 stdout_data, stderr_data = p.communicate(timeout=self.sandbox.config.command_timeout)
             except subprocess.TimeoutExpired:
@@ -952,7 +952,7 @@ class ToolExecutor:
                 pf = FileProcessor.process_file(os.path.basename(path), content_bytes)
                 return {"success": True, "output": self.sandbox.truncate_output(pf.text_content), "error": None}
 
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
+            with open(path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
             content = self.sandbox.truncate_output(content)
             return {"success": True, "output": content, "error": None}
@@ -1021,7 +1021,7 @@ class ToolExecutor:
 
     def _handle_run_python(self, inp: dict[str, Any]) -> dict[str, Any]:
         code = inp.get("code", "").strip()
-        description = inp.get("description", "Python script")
+        inp.get("description", "Python script")
 
         # Validate code
         self.sandbox.validate_python_code(code)
@@ -1218,7 +1218,7 @@ class ToolExecutor:
         local_profiles_path = os.path.join(self._project_root, "data", "browser_profiles.local.json")
         if os.path.exists(local_profiles_path):
             try:
-                with open(local_profiles_path, "r", encoding="utf-8-sig") as f:
+                with open(local_profiles_path, encoding="utf-8-sig") as f:
                     local_map = json.load(f)
                     if isinstance(local_map, dict):
                         profile_map.update({k.lower(): v for k, v in local_map.items()})
@@ -1408,7 +1408,7 @@ class ToolExecutor:
             }}
             Write-Output "STATUS:OPENED"
             '''
-            res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True)
+            subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True)
             launch_msg = "Note written to disk and popped up in Notepad on your active screen."
 
         return {
@@ -1430,11 +1430,11 @@ class ToolExecutor:
             verifier = DesktopActionVerifier()
             if window_title:
                 pre_state = verifier.capture_window_state(window_title)
-        except Exception as e:
+        except Exception:
             pass
-            
+
         result = self._handle_control_desktop_gui_raw(inp)
-        
+
         if verifier and window_title and result.get("success"):
             import time
             time.sleep(verifier.SETTLE_DELAY)
@@ -1510,9 +1510,9 @@ class ToolExecutor:
                 ps_script = f'''
                 $txtPath = "{norm_tmp}"
                 $content = if (Test-Path $txtPath) {{ Get-Content $txtPath -Raw -Encoding UTF8 }} else {{ "" }}
-                
+
                 $wshell = New-Object -ComObject wscript.shell;
-                
+
                 # Try multiple activation heuristics for Windows 10/11
                 $activated = $wshell.AppActivate("{safe_title_esc}");
                 if (-not $activated) {{
@@ -1682,7 +1682,7 @@ class ToolExecutor:
             elif action == "click_element":
                 if not element_name:
                     return {"success": False, "output": "", "error": "element_name is required for click_element."}
-                
+
                 try:
                     import uiautomation as auto
                     search_root = auto.GetRootControl()
@@ -1691,7 +1691,7 @@ class ToolExecutor:
                         if win.Exists(maxSearchSeconds=2):
                             search_root = win
                             win.SetActive()
-                    
+
                     target = search_root.Control(searchDepth=6, Name=element_name)
                     if target.Exists(maxSearchSeconds=3):
                         target.Click()
@@ -1925,7 +1925,7 @@ class ToolExecutor:
         import asyncio
         import platform
         import subprocess
-        
+
         command = inp.get("command", "").strip()
         working_dir = inp.get("working_directory", self._project_root)
 
@@ -1938,7 +1938,7 @@ class ToolExecutor:
 
         is_win = platform.system() == "Windows"
         internal_timeout = min(float(self.sandbox.config.command_timeout), max(0.5, timeout_sec - 0.5) if timeout_sec > 1.0 else timeout_sec)
-        
+
         try:
             process = await asyncio.create_subprocess_shell(
                 command,
@@ -1946,7 +1946,7 @@ class ToolExecutor:
                 stderr=asyncio.subprocess.PIPE,
                 cwd=working_dir,
             )
-            
+
             try:
                 stdout_bytes, stderr_bytes = await asyncio.wait_for(
                     process.communicate(),
@@ -1962,7 +1962,7 @@ class ToolExecutor:
                         process.kill()
                     except ProcessLookupError:
                         pass
-                
+
                 return {
                     "success": False,
                     "output": "",
@@ -1989,13 +1989,13 @@ class ToolExecutor:
 
     async def _handle_run_python_async(self, inp: dict[str, Any], timeout_sec: float = DEFAULT_TOOL_TIMEOUT_SEC) -> dict[str, Any]:
         import asyncio
-        import tempfile
         import os
         import platform
         import subprocess
-        
+        import tempfile
+
         code = inp.get("code", "").strip()
-        
+
         try:
             self.sandbox.validate_python_code(code)
         except (SandboxViolation, ASTSecurityViolation) as e:
@@ -2045,14 +2045,14 @@ class ToolExecutor:
                         process.kill()
                     except ProcessLookupError:
                         pass
-                
+
                 os.unlink(temp_script_path)
                 return {
                     "success": False,
                     "output": "",
                     "error": f"Python script timed out after {internal_timeout:.1f}s.",
                 }
-                
+
             os.unlink(temp_script_path)
 
             output = ""

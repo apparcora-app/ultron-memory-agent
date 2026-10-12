@@ -10,12 +10,12 @@ Provides:
 """
 
 from __future__ import annotations
-from core.log_config import get_logger
 
 import enum
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, ConfigDict, Field
 
+from pydantic import BaseModel, ConfigDict
+
+from core.log_config import get_logger
 from resilience.circuit_breaker import default_breaker_registry
 
 
@@ -51,7 +51,7 @@ class ModelSpec(BaseModel):
 
 DEFAULT_FREELLMAPI_MODEL = 'gpt-oss-120b'
 
-DEFAULT_ROTATION_POOLS: Dict[str, List[str]] = {
+DEFAULT_ROTATION_POOLS: dict[str, list[str]] = {
     "gemini": [
         "gemini-2.0-flash",
         "gemini-1.5-flash",
@@ -91,15 +91,15 @@ class ModelRegistry:
     Centralized registry managing LLM models, provider selection, and resilient candidate pools.
     """
 
-    def __init__(self, rotation_pools: Optional[Dict[str, List[str]]] = None) -> None:
-        self._rotation_pools: Dict[str, List[str]] = dict(rotation_pools or DEFAULT_ROTATION_POOLS)
+    def __init__(self, rotation_pools: dict[str, list[str]] | None = None) -> None:
+        self._rotation_pools: dict[str, list[str]] = dict(rotation_pools or DEFAULT_ROTATION_POOLS)
 
     def get_candidate_pool(
         self,
         provider: str = "gemini",
-        preferred_model: Optional[str] = None,
+        preferred_model: str | None = None,
         filter_open_circuit: bool = True,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Returns an ordered, deduplicated candidate model rotation pool for the specified provider.
         If preferred_model is given, it is placed at the front of the candidate sequence.
@@ -107,7 +107,7 @@ class ModelRegistry:
         """
         base_pool = list(self._rotation_pools.get(provider.lower(), []))
 
-        candidates: List[str] = []
+        candidates: list[str] = []
         if preferred_model:
             candidates.append(preferred_model)
         for m in base_pool:
@@ -118,7 +118,7 @@ class ModelRegistry:
             return candidates
 
         # Filter out models whose circuit breaker is currently OPEN
-        healthy_candidates: List[str] = []
+        healthy_candidates: list[str] = []
         for model in candidates:
             breaker = default_breaker_registry.get_breaker(f"{provider}_{model}") or default_breaker_registry.get_breaker(model)
             if breaker is not None:
@@ -130,11 +130,11 @@ class ModelRegistry:
         # Fallback to candidates if all breakers are open to allow probe trials
         return healthy_candidates if healthy_candidates else candidates
 
-    def register_candidate_pool(self, provider: str, models: List[str]) -> None:
+    def register_candidate_pool(self, provider: str, models: list[str]) -> None:
         """Dynamically registers or overrides a provider's model pool."""
         self._rotation_pools[provider.lower()] = list(dict.fromkeys(models))
 
-    def list_providers(self) -> List[str]:
+    def list_providers(self) -> list[str]:
         """Returns all configured provider keys."""
         return list(self._rotation_pools.keys())
 

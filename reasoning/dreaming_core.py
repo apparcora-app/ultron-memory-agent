@@ -8,10 +8,10 @@ executes auto-patches in a safe Python sandbox, and commits winning trajectories
 from __future__ import annotations
 
 from dreaming_engine import (
-    DreamingEngine,
-    DreamResult,
     DreamCandidate,
     DreamingDB,
+    DreamingEngine,
+    DreamResult,
 )
 
 # First-class alias for Dreaming Core

@@ -20,14 +20,12 @@ from __future__ import annotations
 
 import json
 import math
-import os
 import re
 import sys
 import time
 import uuid
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any
 
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -36,21 +34,18 @@ except Exception:
     pass
 
 import anthropic
-from dotenv import load_dotenv
 
 # Try Google GenAI SDK
 try:
-    from google import genai
-    from google.genai import types as genai_types
+    from google import genai  # noqa: F401
+    from google.genai import types as genai_types  # noqa: F401
     _HAS_GEMINI = True
 except ImportError:
     _HAS_GEMINI = False
 
-from config import LLMConfig
+from telemetry import TelemetryEngine
 from tool_definitions import ToolExecutor
 from trajectory_manager import TrajectoryManager
-from telemetry import TelemetryEngine
-
 
 # ── 1. Data Structures: ThoughtNode & ToTResult ───────────────────────────────
 
@@ -58,13 +53,13 @@ from telemetry import TelemetryEngine
 class ThoughtNode:
     """Represents an individual node / state in the reasoning tree."""
     node_id: str
-    parent_id: Optional[str]
+    parent_id: str | None
     depth: int
     thought: str
     action_type: str = "reasoning"  # "reasoning", "tool_call", "synthesis"
-    tool_name: Optional[str] = None
-    tool_args: Optional[dict[str, Any]] = None
-    tool_output: Optional[str] = None
+    tool_name: str | None = None
+    tool_args: dict[str, Any] | None = None
+    tool_output: str | None = None
     tool_success: bool = True
     value_score: float = 0.0  # 0.0 to 1.0
     critique: str = ""
@@ -155,7 +150,7 @@ class ThoughtGenerator:
 
     def __init__(
         self,
-        claude: Optional[anthropic.Anthropic] = None,
+        claude: anthropic.Anthropic | None = None,
         gemini: Any = None,
         model: str = "claude-haiku-4-5-20251001",
         gemini_model: str = "gemini-2.5-flash",
@@ -192,7 +187,7 @@ class ThoughtGenerator:
         )
 
         raw_json = self._call_llm(prompt)
-        
+
         # 1. Clean markdown code fences
         cleaned = re.sub(r"^```(?:json)?\s*", "", raw_json.strip(), flags=re.IGNORECASE)
         cleaned = re.sub(r"\s*```$", "", cleaned.strip())
@@ -204,7 +199,7 @@ class ThoughtGenerator:
                 data = json.loads(match.group(0))
                 if isinstance(data, list) and data:
                     return data[:branch_factor]
-        except Exception as e:
+        except Exception:
             pass
 
         # 3. Try parsing individual objects if array was truncated
@@ -326,7 +321,7 @@ class ThoughtEvaluator:
 
     def __init__(
         self,
-        claude: Optional[anthropic.Anthropic] = None,
+        claude: anthropic.Anthropic | None = None,
         gemini: Any = None,
         model: str = "claude-haiku-4-5-20251001",
         gemini_model: str = "gemini-2.5-flash",
@@ -338,7 +333,7 @@ class ThoughtEvaluator:
         self.gemini_model = gemini_model
         self.provider = provider
 
-    def evaluate(self, user_query: str, node: ThoughtNode) -> Tuple[float, str, bool]:
+    def evaluate(self, user_query: str, node: ThoughtNode) -> tuple[float, str, bool]:
         """Returns (score: float, critique: str, is_goal_reached: bool)."""
         # Hard fail if tool failed with non-zero exit or exception
         if not node.tool_success and node.tool_name:
@@ -408,15 +403,15 @@ class TreeOfThoughtsEngine:
 
     def __init__(
         self,
-        claude: Optional[anthropic.Anthropic] = None,
+        claude: anthropic.Anthropic | None = None,
         gemini: Any = None,
         haiku_model: str = "claude-haiku-4-5-20251001",
         sonnet_model: str = "claude-sonnet-5",
         gemini_model: str = "gemini-2.5-flash",
         provider: str = "anthropic",
-        tool_executor: Optional[ToolExecutor] = None,
-        trajectory_manager: Optional[TrajectoryManager] = None,
-        telemetry: Optional[TelemetryEngine] = None,
+        tool_executor: ToolExecutor | None = None,
+        trajectory_manager: TrajectoryManager | None = None,
+        telemetry: TelemetryEngine | None = None,
     ) -> None:
         self.claude = claude
         self.gemini = gemini

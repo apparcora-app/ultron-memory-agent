@@ -22,7 +22,6 @@ Author: Ultron Cybernetic Systems Architect
 from __future__ import annotations
 
 import json
-import math
 import os
 import re
 import sqlite3
@@ -31,7 +30,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 # Ensure UTF-8 stdout/stderr on Windows console
 try:
@@ -41,21 +40,18 @@ except Exception:
     pass
 
 import anthropic
-from dotenv import load_dotenv
 
 # Try Google GenAI SDK
 try:
-    from google import genai
-    from google.genai import types as genai_types
+    from google import genai  # noqa: F401
+    from google.genai import types as genai_types  # noqa: F401
     _HAS_GEMINI = True
 except ImportError:
     _HAS_GEMINI = False
 
-from config import LLMConfig
 from telemetry import TelemetryEngine
-from trajectory_manager import TrajectoryManager
 from tool_definitions import ToolExecutor
-
+from trajectory_manager import TrajectoryManager
 
 # ──────────────────────────────────────────────────────────────────────────────
 # DATA STRUCTURES
@@ -66,25 +62,25 @@ class HTNode:
     """Represents a discrete hierarchical task node in the H-Tree / DAG."""
     node_id: str
     tree_id: str
-    parent_id: Optional[str]
+    parent_id: str | None
     title: str
     description: str
     level: str  # ROOT, MACRO, MESO, MICRO
     status: str = "PENDING"  # PENDING, READY, RUNNING, COMPLETED, FAILED, SKIPPED, MUTATED
     assigned_specialist: str = "ultron_prime"  # ultron_prime, titan, nexus, sentinel, ledger, oracle
-    depends_on: List[str] = field(default_factory=list)
-    children_ids: List[str] = field(default_factory=list)
-    required_tool: Optional[str] = None  # run_python, file_operation, execute_command, web_search
-    tool_input: Dict[str, Any] = field(default_factory=dict)
-    tool_output: Optional[str] = None
+    depends_on: list[str] = field(default_factory=list)
+    children_ids: list[str] = field(default_factory=list)
+    required_tool: str | None = None  # run_python, file_operation, execute_command, web_search
+    tool_input: dict[str, Any] = field(default_factory=dict)
+    tool_output: str | None = None
     execution_time_s: float = 0.0
     retry_count: int = 0
     max_retries: int = 2
-    mutation_history: List[str] = field(default_factory=list)
+    mutation_history: list[str] = field(default_factory=list)
     created_at: float = field(default_factory=time.time)
-    completed_at: Optional[float] = None
+    completed_at: float | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "node_id": self.node_id,
             "tree_id": self.tree_id,
@@ -119,11 +115,11 @@ class PlanExecutionResult:
     mutated_nodes: int
     total_duration_s: float
     final_output: str = ""
-    node_summary: List[Dict[str, Any]] = field(default_factory=list)
-    trajectory_id: Optional[str] = None
+    node_summary: list[dict[str, Any]] = field(default_factory=list)
+    trajectory_id: str | None = None
 
     @property
-    def nodes_executed(self) -> List[Dict[str, Any]]:
+    def nodes_executed(self) -> list[dict[str, Any]]:
         """Alias returning the executed node summaries."""
         return self.node_summary
 
@@ -302,7 +298,7 @@ class HierarchicalGoalTree:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_tree_nodes_status ON tree_nodes(status);")
             conn.commit()
 
-    def save_tree(self, tree_id: str, root_goal: str, nodes: List[HTNode]) -> None:
+    def save_tree(self, tree_id: str, root_goal: str, nodes: list[HTNode]) -> None:
         """Persists a complete tree and all its constituent nodes atomically."""
         now = time.time()
         with self._get_conn() as conn:
@@ -333,7 +329,7 @@ class HierarchicalGoalTree:
                 )
             conn.commit()
 
-    def get_nodes(self, tree_id: str) -> List[HTNode]:
+    def get_nodes(self, tree_id: str) -> list[HTNode]:
         """Loads all nodes belonging to a tree."""
         with self._get_conn() as conn:
             rows = conn.execute("SELECT * FROM tree_nodes WHERE tree_id = ?", (tree_id,)).fetchall()
@@ -381,7 +377,7 @@ class HierarchicalGoalTree:
             cur.execute("UPDATE goal_trees SET total_nodes = total_nodes + 1 WHERE tree_id = ?", (node.tree_id,))
             conn.commit()
 
-    def get_ready_nodes(self, tree_id: str) -> List[HTNode]:
+    def get_ready_nodes(self, tree_id: str) -> list[HTNode]:
         """
         Returns all Micro or leaf nodes whose dependencies are 100% COMPLETED
         and whose own status is PENDING or READY.
@@ -400,14 +396,14 @@ class HierarchicalGoalTree:
                     ready.append(n)
         return ready
 
-    def topological_sort(self, nodes: List[HTNode]) -> List[HTNode]:
+    def topological_sort(self, nodes: list[HTNode]) -> list[HTNode]:
         """
         Computes a valid topological execution order for nodes based on depends_on.
         Detects and resolves cyclic dependencies gracefully.
         """
         node_map = {n.node_id: n for n in nodes}
-        in_degree: Dict[str, int] = {n.node_id: 0 for n in nodes}
-        adj_list: Dict[str, List[str]] = {n.node_id: [] for n in nodes}
+        in_degree: dict[str, int] = {n.node_id: 0 for n in nodes}
+        adj_list: dict[str, list[str]] = {n.node_id: [] for n in nodes}
 
         for n in nodes:
             for dep_id in n.depends_on:
@@ -416,7 +412,7 @@ class HierarchicalGoalTree:
                     in_degree[n.node_id] += 1
 
         queue = [nid for nid, deg in in_degree.items() if deg == 0]
-        sorted_nodes: List[HTNode] = []
+        sorted_nodes: list[HTNode] = []
 
         while queue:
             curr_id = queue.pop(0)
@@ -441,7 +437,7 @@ class HierarchicalGoalTree:
         if not nodes:
             return "[Empty Tree]"
 
-        node_map = {n.node_id: n for n in nodes}
+        {n.node_id: n for n in nodes}
         macros = [n for n in nodes if n.level == "MACRO"]
 
         lines = [f"🌳 H-TREE EXECUTION DAG: {tree_id}"]
@@ -524,7 +520,7 @@ class HDecomposerEngine:
 
     def __init__(
         self,
-        claude: Optional[anthropic.Anthropic] = None,
+        claude: anthropic.Anthropic | None = None,
         gemini: Any = None,
         sonnet_model: str = "claude-sonnet-5",
         haiku_model: str = "claude-haiku-4-5-20251001",
@@ -544,7 +540,7 @@ class HDecomposerEngine:
         self.gemini_model = gemini_model
         self.provider = provider
 
-    def decompose(self, goal_text: str, tree_id: Optional[str] = None) -> Tuple[str, List[HTNode]]:
+    def decompose(self, goal_text: str, tree_id: str | None = None) -> tuple[str, list[HTNode]]:
         """Decomposes goal_text into a list of HTNodes."""
         tree_id = tree_id or f"htree_{uuid.uuid4().hex[:10]}"
         prompt = _DECOMPOSITION_PROMPT.format(goal_text=goal_text)
@@ -553,7 +549,7 @@ class HDecomposerEngine:
         cleaned = re.sub(r"^```(?:json)?\s*", "", raw_json.strip(), flags=re.IGNORECASE)
         cleaned = re.sub(r"\s*```$", "", cleaned.strip())
 
-        nodes: List[HTNode] = []
+        nodes: list[HTNode] = []
         try:
             data = json.loads(cleaned)
             raw_nodes = data.get("nodes", [])
@@ -626,7 +622,7 @@ class HDecomposerEngine:
 
         return "{}"
 
-    def _fallback_decomposition(self, goal_text: str, tree_id: str) -> List[HTNode]:
+    def _fallback_decomposition(self, goal_text: str, tree_id: str) -> list[HTNode]:
         """Deterministic 3-tier structure fallback for offline execution."""
         m1_id = f"macro_1_{tree_id[:6]}"
         m2_id = f"macro_2_{tree_id[:6]}"
@@ -659,15 +655,15 @@ class HierarchicalPlanner:
     def __init__(
         self,
         db_path: str = "./data/hierarchical_plans.sqlite3",
-        claude: Optional[anthropic.Anthropic] = None,
+        claude: anthropic.Anthropic | None = None,
         gemini: Any = None,
         sonnet_model: str = "claude-sonnet-5",
         haiku_model: str = "claude-haiku-4-5-20251001",
         gemini_model: str = "gemini-2.5-flash",
         provider: str = "anthropic",
-        tool_executor: Optional[ToolExecutor] = None,
-        trajectory_manager: Optional[TrajectoryManager] = None,
-        telemetry: Optional[TelemetryEngine] = None,
+        tool_executor: ToolExecutor | None = None,
+        trajectory_manager: TrajectoryManager | None = None,
+        telemetry: TelemetryEngine | None = None,
     ) -> None:
         self.store = HierarchicalGoalTree(db_path=db_path)
         self.decomposer = HDecomposerEngine(
@@ -928,7 +924,7 @@ class HierarchicalPlanner:
     def _rollup_parent_states(self, tree_id: str) -> None:
         """Rolls up status from Micro leaves to Meso and Macro parents."""
         nodes = self.store.get_nodes(tree_id)
-        node_map = {n.node_id: n for n in nodes}
+        {n.node_id: n for n in nodes}
 
         # 1. Rollup to Meso
         for meso in [n for n in nodes if n.level == "MESO"]:
@@ -952,10 +948,10 @@ class HierarchicalPlanner:
                     macro.status = "FAILED"
                 self.store.update_node(macro)
 
-    def _synthesize_final_brief(self, root_goal: str, nodes: List[HTNode], success: bool) -> str:
+    def _synthesize_final_brief(self, root_goal: str, nodes: list[HTNode], success: bool) -> str:
         """Assembles a clean, structured executive deliverable from node outputs."""
         lines = [
-            f"### 👑 ULTRON HIERARCHICAL PLANNER — EXECUTIVE DELIVERABLE",
+            "### 👑 ULTRON HIERARCHICAL PLANNER — EXECUTIVE DELIVERABLE",
             f"**Master Objective:** {root_goal}\n",
             f"**Execution Status:** {'✅ 100% SUCCESS' if success else '⚠️ PARTIAL EXECUTION'}\n",
             "**Key Completed Milestones & Output Trajectories:**",

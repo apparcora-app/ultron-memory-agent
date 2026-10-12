@@ -8,28 +8,31 @@ and synchronizing raw conversation history with MemoryAgent.
 
 from __future__ import annotations
 
+import asyncio
 import json
-import os
 import re
+import sys
 import time
 import uuid
-import asyncio
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-import sys
+
+def _default_redact(x: Any) -> Any:
+    return x
+
 try:
     sys.path.append(str(Path(__file__).resolve().parent.parent))
     from pii_redaction import safe_redact_obj
 except ImportError:
-    safe_redact_obj = lambda x: x
+    safe_redact_obj = _default_redact
 
-from concurrency import (
-    atomic_write_json,
-    safe_read_json,
+from concurrency import (  # noqa: E402
     StateConcurrencyConflictError,
+    atomic_write_json,
     default_lock_registry,
+    safe_read_json,
 )
 
 SESSIONS_DIR = Path(__file__).parent / "data" / "sessions"
@@ -41,8 +44,8 @@ class ChatSessionManager:
 
     def __init__(
         self,
-        sessions_dir: Union[Path, str] = SESSIONS_DIR,
-        storage_dir: Optional[Union[Path, str]] = None,
+        sessions_dir: Path | str = SESSIONS_DIR,
+        storage_dir: Path | str | None = None,
     ) -> None:
         target = storage_dir if storage_dir is not None else sessions_dir
         self.sessions_dir = Path(target)
@@ -61,7 +64,7 @@ class ChatSessionManager:
 
         for p in self.sessions_dir.glob(f"{prefix}*.json"):
             try:
-                with open(p, "r", encoding="utf-8") as f:
+                with open(p, encoding="utf-8") as f:
                     data = json.load(f)
                 sessions.append({
                     "id": data.get("id"),
@@ -131,7 +134,7 @@ class ChatSessionManager:
         user_id: str,
         session_id: str,
         data: dict[str, Any],
-        expected_version: Optional[int] = None,
+        expected_version: int | None = None,
     ) -> bool:
         """
         Save session data to disk using Optimistic Concurrency Control (OCC)
@@ -153,9 +156,9 @@ class ChatSessionManager:
         current_v = data.get("version", 1)
         data["version"] = current_v + 1
         data["updated_at"] = datetime.utcnow().isoformat() + "Z"
-        
+
         redacted_data = safe_redact_obj(data)
-        
+
         try:
             atomic_write_json(path, redacted_data)
             return True

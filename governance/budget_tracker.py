@@ -11,15 +11,14 @@ Token cost table (per 1M tokens, August 2026):
 """
 
 from __future__ import annotations
-from core.log_config import get_logger
 
 import json
-import os
-from dataclasses import dataclass, field, asdict
-from datetime import date, datetime
+from dataclasses import asdict, dataclass, field
+from datetime import date
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
+from core.log_config import get_logger
 
 # ── cost table ────────────────────────────────────────────────────────────────
 
@@ -194,7 +193,7 @@ class BudgetTracker:
             )
         return True, ""
 
-    def warn_if_approaching(self, threshold: float = 0.80) -> Optional[str]:
+    def warn_if_approaching(self, threshold: float = 0.80) -> str | None:
         """Return a warning string when usage crosses `threshold` fraction of the limit."""
         if self.daily_token_limit:
             ratio = self._today.total_tokens / self.daily_token_limit

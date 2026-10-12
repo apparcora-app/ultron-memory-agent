@@ -9,14 +9,15 @@ Provides:
 """
 
 from __future__ import annotations
-from core.log_config import get_logger
 
 import os
 import sqlite3
 import threading
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Dict, Iterator, List, Optional
+
+from core.log_config import get_logger
 
 
 class DatabaseManager:
@@ -34,7 +35,7 @@ class DatabaseManager:
         self,
         db_path: str,
         enable_wal: bool = True,
-        busy_timeout_ms: Optional[int] = None,
+        busy_timeout_ms: int | None = None,
     ) -> Iterator[sqlite3.Connection]:
         """
         Context-managed SQLite connection ensuring proper configuration and deterministic cleanup.
@@ -67,8 +68,8 @@ class DatabaseManager:
     def backup_database(
         self,
         source_db_path: str,
-        destination_path: Optional[str] = None,
-        backup_dir: Optional[str] = None,
+        destination_path: str | None = None,
+        backup_dir: str | None = None,
     ) -> str:
         """
         Performs an online, consistent atomic backup of a SQLite database
@@ -95,7 +96,7 @@ class DatabaseManager:
         self,
         data_dir: str = "./data",
         backup_dir: str = "./data/backups",
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         """
         Discovers all active SQLite databases in data_dir and creates consistent backups.
         Returns a mapping of database name -> backup file path.
@@ -104,7 +105,7 @@ class DatabaseManager:
         target_dir = os.path.join(backup_dir, f"snapshot_{timestamp}")
         os.makedirs(target_dir, exist_ok=True)
 
-        backups: Dict[str, str] = {}
+        backups: dict[str, str] = {}
         if not os.path.isdir(data_dir):
             return backups
 

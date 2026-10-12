@@ -17,12 +17,11 @@ Supported providers:
 
 from __future__ import annotations
 
-import os
-import re
 import json
+import re
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -97,7 +96,7 @@ class DiscoveredModel:
 
         vision_str = "true" if self.supports_vision else "false"
         tools_str = "true" if self.supports_tools else "false"
-        free_str = f"  # FREE\n" if self.is_free else ""
+        free_str = "  # FREE\n" if self.is_free else ""
 
         return (
             f"{free_str}"

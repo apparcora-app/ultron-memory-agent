@@ -1,15 +1,16 @@
-import os
 import json
+import os
 import uuid
 from datetime import datetime
-from typing import Any, List, Dict
+from typing import Any
+
 
 class LocalArtifactEngine:
     def __init__(self, user_id: str, data_dir: str = './data', **kwargs):
         self.user_id = user_id
         self.data_dir = data_dir
         os.makedirs(self.data_dir, exist_ok=True)
-        
+
         self.interaction_log_path = os.path.join(self.data_dir, 'interaction_log.jsonl')
 
     def _append_log(self, text: str):
@@ -22,28 +23,28 @@ class LocalArtifactEngine:
             }
             f.write(json.dumps(entry) + '\n')
 
-    def add(self, messages_or_text, user_id: str = None) -> Dict[str, Any]:
+    def add(self, messages_or_text, user_id: str = None) -> dict[str, Any]:
         if isinstance(messages_or_text, str):
             text = messages_or_text
         elif isinstance(messages_or_text, list):
             text = '\n'.join([m.get('content', '') for m in messages_or_text if m.get('content')])
         else:
             text = str(messages_or_text)
-            
+
         if not text.strip():
             return {'results': []}
 
         self._append_log(text)
         return {'status': 'added', 'text_length': len(text)}
 
-    def search(self, query: str, recency_bias: float = 0.3) -> List[Dict[str, Any]]:
+    def search(self, query: str, recency_bias: float = 0.3) -> list[dict[str, Any]]:
         # Interaction log is append-only for debugging; core state handles prompt injection.
         return []
 
-    def format_for_prompt(self, memories: List[Dict[str, Any]]) -> str:
+    def format_for_prompt(self, memories: list[dict[str, Any]]) -> str:
         return ""
 
-    def get_all(self) -> List[Dict[str, Any]]:
+    def get_all(self) -> list[dict[str, Any]]:
         return []
 
     def delete(self, memory_id: str) -> None:

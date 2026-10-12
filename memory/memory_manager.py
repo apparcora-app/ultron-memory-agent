@@ -11,21 +11,21 @@ Design goals (as discussed in the tutorial):
 from __future__ import annotations
 
 import math
-import time
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
-import sys
-from pathlib import Path
 try:
     sys.path.append(str(Path(__file__).resolve().parent.parent))
     from pii_redaction import safe_redact_obj
 except ImportError:
-    safe_redact_obj = lambda x: x
+    def safe_redact_obj(x):
+        return x
 
 from mem0 import Memory
 
-from config import AgentConfig, VectorStoreConfig, LLMConfig, build_mem0_config
+from config import AgentConfig, LLMConfig, VectorStoreConfig, build_mem0_config
 
 
 class MemoryManager:
@@ -47,7 +47,8 @@ class MemoryManager:
         Prevents Rust panic 'range start index out of range for slice' caused by
         phantom migration records exceeding the installed ChromaDB binary's migration slice.
         """
-        import os, sqlite3
+        import os
+        import sqlite3
         sqlite_file = os.path.join(chroma_dir, "chroma.sqlite3")
         if not os.path.isfile(sqlite_file):
             return
@@ -125,7 +126,7 @@ class MemoryManager:
                 results = results.get("results", [])
             else:
                 results = results or []
-                
+
             for res in results:
                 original_score = res.get("score", 0.0)
                 decay = 0.0
@@ -138,7 +139,7 @@ class MemoryManager:
                     except Exception:
                         pass
                 res["score"] = (1 - recency_bias) * original_score + recency_bias * decay
-                
+
             results.sort(key=lambda x: x.get("score", 0.0), reverse=True)
             return results[:effective_k]
         except Exception as e:
@@ -164,7 +165,7 @@ class MemoryManager:
         """
         if not self.mem:
             raise RuntimeError("Mem0 Memory instance is not initialized")
-        
+
         redacted_messages = safe_redact_obj(messages)
         try:
             kwargs: dict[str, Any] = {

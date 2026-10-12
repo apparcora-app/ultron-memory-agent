@@ -11,17 +11,18 @@ Provides:
 """
 
 from __future__ import annotations
-from core.log_config import get_logger
 
 import copy
 import time
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
+from core.log_config import get_logger
 
 # ── Model Cost Table (USD per 1M Tokens) ──────────────────────────────────────
 
-MODEL_COST_TABLE: Dict[str, Dict[str, float]] = {
+MODEL_COST_TABLE: dict[str, dict[str, float]] = {
     # Anthropic Claude
     "claude-3-5-sonnet": {"input": 3.00, "output": 15.00, "cache_write": 3.75, "cache_read": 0.30},
     "claude-3-7-sonnet": {"input": 3.00, "output": 15.00, "cache_write": 3.75, "cache_read": 0.30},
@@ -51,7 +52,7 @@ MODEL_COST_TABLE: Dict[str, Dict[str, float]] = {
 }
 
 
-def lookup_model_rates(model_name: str) -> Dict[str, float]:
+def lookup_model_rates(model_name: str) -> dict[str, float]:
     """Resolves pricing rates per 1M tokens for a given model string."""
     name_lower = (model_name or "").lower()
     for key, rates in MODEL_COST_TABLE.items():
@@ -104,7 +105,7 @@ class TurnSpendRecord(BaseModel):
     timestamp: float = Field(default_factory=time.time)
 
 
-class BudgetExceededException(RuntimeError):
+class BudgetExceededError(RuntimeError):
     """Raised immediately when an agent task breaches configured spend or token caps."""
 
     def __init__(
@@ -114,7 +115,7 @@ class BudgetExceededException(RuntimeError):
         current_val: float,
         limit_val: float,
         model: str,
-        message: Optional[str] = None,
+        message: str | None = None,
     ) -> None:
         unit = "$" if breach_type == "cost" else " tokens"
         msg = message or (
@@ -129,7 +130,7 @@ class BudgetExceededException(RuntimeError):
         self.limit_val = limit_val
         self.model = model
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "error": "BudgetExceededException",
             "session_id": self.session_id,
@@ -138,6 +139,8 @@ class BudgetExceededException(RuntimeError):
             "limit_value": self.limit_val,
             "model": self.model,
         }
+
+BudgetExceededException = BudgetExceededError
 
 
 # ── Spend Governor ───────────────────────────────────────────────────────────
@@ -148,9 +151,9 @@ class SpendGovernor:
     Enforces pre-call verification and post-call budget accumulation.
     """
 
-    def __init__(self, config: Optional[BudgetConfig] = None) -> None:
+    def __init__(self, config: BudgetConfig | None = None) -> None:
         self.config = config or BudgetConfig()
-        self._session_turns: Dict[str, List[TurnSpendRecord]] = {}
+        self._session_turns: dict[str, list[TurnSpendRecord]] = {}
 
     def _get_key(self, session_id: str) -> str:
         try:
@@ -162,10 +165,10 @@ class SpendGovernor:
             pass
         return session_id
 
-    def get_session_records(self, session_id: str) -> List[TurnSpendRecord]:
+    def get_session_records(self, session_id: str) -> list[TurnSpendRecord]:
         return copy.deepcopy(self._session_turns.get(self._get_key(session_id), []))
 
-    def get_session_totals(self, session_id: str) -> Dict[str, Any]:
+    def get_session_totals(self, session_id: str) -> dict[str, Any]:
         records = self._session_turns.get(self._get_key(session_id), [])
         total_tokens = sum(r.total_tokens for r in records)
         total_cost = sum(r.cost_usd for r in records)
@@ -266,7 +269,7 @@ class SpendGovernor:
         self,
         session_id: str,
         exception: BudgetExceededException,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Builds a graceful terminal state summary response to transition the agent
         cleanly instead of throwing an unhandled crash to the user.

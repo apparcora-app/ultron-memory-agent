@@ -9,13 +9,15 @@ Provides:
 """
 
 from __future__ import annotations
-from core.log_config import get_logger
 
 import asyncio
 import time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Dict, Optional
-from pydantic import BaseModel, ConfigDict, Field
+
+from pydantic import BaseModel, ConfigDict
+
+from core.log_config import get_logger
 
 
 class RateLimitQueueTimeoutError(TimeoutError):
@@ -96,7 +98,7 @@ class TokenBucket:
         self,
         requests: int = 1,
         tokens: int = 1,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> float:
         """
         Attempts to acquire capacity, sleeping asynchronously until capacity exists.
@@ -135,16 +137,16 @@ class AsyncRateLimiter:
     Centralized rate limiter managing multiple upstream providers and tool call quotas.
     """
 
-    def __init__(self, default_limits: Optional[ProviderRateLimits] = None) -> None:
+    def __init__(self, default_limits: ProviderRateLimits | None = None) -> None:
         self._default_limits = default_limits or ProviderRateLimits()
-        self._provider_limits: Dict[str, ProviderRateLimits] = {
+        self._provider_limits: dict[str, ProviderRateLimits] = {
             "anthropic":   ProviderRateLimits(rpm=50, tpm=100_000, max_queue_wait_sec=30.0),
             "openai":      ProviderRateLimits(rpm=60, tpm=150_000, max_queue_wait_sec=30.0),
             "gemini":      ProviderRateLimits(rpm=120, tpm=200_000, max_queue_wait_sec=30.0),
             "openrouter":  ProviderRateLimits(rpm=60, tpm=80_000, max_queue_wait_sec=30.0),
             "tools":       ProviderRateLimits(rpm=300, tpm=1_000_000, max_queue_wait_sec=15.0),
         }
-        self._buckets: Dict[str, TokenBucket] = {}
+        self._buckets: dict[str, TokenBucket] = {}
         self._meta_lock = asyncio.Lock()
 
     def set_provider_limits(self, provider: str, limits: ProviderRateLimits) -> None:
@@ -173,7 +175,7 @@ class AsyncRateLimiter:
         provider: str = "default",
         requests: int = 1,
         tokens: int = 1,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> float:
         """
         Acquires rate limit capacity for `provider`.
@@ -192,7 +194,7 @@ class AsyncRateLimiter:
         provider: str = "default",
         requests: int = 1,
         tokens: int = 1,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> AsyncIterator[float]:
         """Async context manager wrapper around acquire."""
         wait_time = await self.acquire(

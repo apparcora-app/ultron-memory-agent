@@ -17,14 +17,14 @@ Adding a new provider:
 
 from __future__ import annotations
 
-import os
 import asyncio
+import os
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from core.log_config import get_logger, correlation_id_ctx
+from core.log_config import correlation_id_ctx, get_logger
 
 _log = get_logger(__name__)
 
@@ -263,7 +263,7 @@ class LLMGateway:
                 res = await self._call_openai_compat(spec, messages, tools, system_prompt, temp, max_tok)
             else:
                 raise ValueError(f"Unknown model format for provider '{provider_id}': {spec.model}")
-                
+
             from langfuse.decorators import langfuse_context
             langfuse_context.update_current_observation(
                 input=messages,
@@ -292,8 +292,8 @@ class LLMGateway:
         try:
             from google import genai
             from google.genai import types as genai_types
-        except ImportError:
-            raise RuntimeError("google-genai package not installed. Run: pip install google-genai")
+        except ImportError as e:
+            raise RuntimeError("google-genai package not installed. Run: pip install google-genai") from e
 
         api_key = spec.api_key or os.environ.get("GEMINI_API_KEY", "")
         client = genai.Client(api_key=api_key)
@@ -374,8 +374,8 @@ class LLMGateway:
         """Call any OpenAI-compatible API and normalize response."""
         try:
             from openai import AsyncOpenAI
-        except ImportError:
-            raise RuntimeError("openai package not installed. Run: pip install openai")
+        except ImportError as e:
+            raise RuntimeError("openai package not installed. Run: pip install openai") from e
 
         client = AsyncOpenAI(
             api_key=spec.api_key or "sk-no-key",

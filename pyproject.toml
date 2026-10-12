@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "Proprietary"}
 authors = [
-    {name = "Ultron Maintainers", email = "maintainer@example.com"}
+    {name = "Hanzla Rehman", email = "contact@apparcora.com"}
 ]
 keywords = [
     "autonomous-agent",
@@ -34,18 +34,9 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Typing :: Typed",
 ]
-
-[project.urls]
-Homepage = "https://github.com/apparcora-app/ultron-memory-agent"
-Repository = "https://github.com/apparcora-app/ultron-memory-agent"
-"Bug Tracker" = "https://github.com/apparcora-app/ultron-memory-agent/issues"
-Changelog = "https://github.com/apparcora-app/ultron-memory-agent/blob/main/CHANGELOG.md"
-Security = "https://github.com/apparcora-app/ultron-memory-agent/blob/main/SECURITY.md"
-
 dependencies = [
     "mem0ai==0.1.101",
     "chromadb>=0.5.0",
@@ -84,6 +75,13 @@ dependencies = [
     "python-dotenv>=1.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/apparcora-app/ultron-memory-agent"
+Repository = "https://github.com/apparcora-app/ultron-memory-agent"
+"Bug Tracker" = "https://github.com/apparcora-app/ultron-memory-agent/issues"
+Changelog = "https://github.com/apparcora-app/ultron-memory-agent/blob/main/CHANGELOG.md"
+Security = "https://github.com/apparcora-app/ultron-memory-agent/blob/main/SECURITY.md"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
@@ -110,6 +108,9 @@ filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::UserWarning",
 ]
+
+[tool.setuptools.packages.find]
+include = ["core*", "memory*", "reasoning*", "security*", "governance*", "pipelines*", "telemetry*", "infrastructure*", "accounting_modules*", "guardrails*", "subsystems*", "concurrency*", "rag*"]
 
 [tool.ruff]
 line-length    = 100

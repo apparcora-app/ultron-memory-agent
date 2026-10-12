@@ -21,8 +21,6 @@ Author: Ultron Cybernetic Systems Architect
 from __future__ import annotations
 
 import json
-import math
-import os
 import re
 import sqlite3
 import sys
@@ -30,7 +28,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 # Ensure UTF-8 stdout/stderr on Windows console
 try:
@@ -40,19 +38,16 @@ except Exception:
     pass
 
 import anthropic
-from dotenv import load_dotenv
 
 # Try Google GenAI SDK
 try:
-    from google import genai
-    from google.genai import types as genai_types
+    from google import genai  # noqa: F401
+    from google.genai import types as genai_types  # noqa: F401
     _HAS_GEMINI = True
 except ImportError:
     _HAS_GEMINI = False
 
-from config import LLMConfig
 from telemetry import TelemetryEngine
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # DATA STRUCTURES
@@ -64,9 +59,9 @@ class GraphEntity:
     id: str
     name: str
     entity_type: str  # PERSON, SYSTEM, TOOL, ORGANIZATION, METRIC, ERROR, CONCEPT, ARTIFACT
-    aliases: List[str] = field(default_factory=list)
+    aliases: list[str] = field(default_factory=list)
     description: str = ""
-    properties: Dict[str, Any] = field(default_factory=dict)
+    properties: dict[str, Any] = field(default_factory=dict)
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
 
@@ -91,26 +86,26 @@ class CausalChain:
     id: str
     trigger_event: str
     root_cause: str
-    intermediate_steps: List[str] = field(default_factory=list)
+    intermediate_steps: list[str] = field(default_factory=list)
     resolution_strategy: str = ""
     outcome: str = ""
-    source_tool: Optional[str] = None
+    source_tool: str | None = None
     created_at: float = field(default_factory=time.time)
 
 
 @dataclass
 class SubGraphContext:
     """Packaged sub-graph result for LLM prompt augmentation."""
-    seed_entities: List[GraphEntity]
-    connected_entities: List[GraphEntity]
-    triples: List[GraphTriple]
-    causal_chains: List[CausalChain]
+    seed_entities: list[GraphEntity]
+    connected_entities: list[GraphEntity]
+    triples: list[GraphTriple]
+    causal_chains: list[CausalChain]
     formatted_markdown: str
     hop_depth: int
     traversal_time_s: float
 
     @property
-    def entities(self) -> List[GraphEntity]:
+    def entities(self) -> list[GraphEntity]:
         """All unique entities in the subgraph (seeds + connected)."""
         seen = set()
         res = []
@@ -272,9 +267,9 @@ class KnowledgeGraphStore:
         self,
         name: str,
         entity_type: str = "CONCEPT",
-        aliases: Optional[List[str]] = None,
+        aliases: list[str] | None = None,
         description: str = "",
-        properties: Optional[Dict[str, Any]] = None,
+        properties: dict[str, Any] | None = None,
     ) -> GraphEntity:
         """Inserts or updates an entity, merging aliases and descriptions."""
         clean_name = name.strip()
@@ -341,7 +336,7 @@ class KnowledgeGraphStore:
                     updated_at=now,
                 )
 
-    def get_entity_by_name(self, name: str) -> Optional[GraphEntity]:
+    def get_entity_by_name(self, name: str) -> GraphEntity | None:
         """Resolves an entity by exact name or registered alias."""
         clean_name = name.strip().lower()
         with self._get_conn() as conn:
@@ -362,7 +357,7 @@ class KnowledgeGraphStore:
                     pass
         return None
 
-    def get_entity_by_id(self, entity_id: str) -> Optional[GraphEntity]:
+    def get_entity_by_id(self, entity_id: str) -> GraphEntity | None:
         with self._get_conn() as conn:
             row = conn.execute("SELECT * FROM entities WHERE id = ?", (entity_id,)).fetchone()
             if row:
@@ -467,10 +462,10 @@ class KnowledgeGraphStore:
         self,
         trigger_event: str,
         root_cause: str,
-        intermediate_steps: Optional[List[str]] = None,
+        intermediate_steps: list[str] | None = None,
         resolution_strategy: str = "",
         outcome: str = "",
-        source_tool: Optional[str] = None,
+        source_tool: str | None = None,
     ) -> CausalChain:
         """Stores a structured cause-and-effect reasoning chain."""
         steps = intermediate_steps or []
@@ -520,7 +515,7 @@ class KnowledgeGraphStore:
             created_at=now,
         )
 
-    def get_recent_causal_chains(self, limit: int = 10) -> List[CausalChain]:
+    def get_recent_causal_chains(self, limit: int = 10) -> list[CausalChain]:
         """Retrieves recent causal chains."""
         with self._get_conn() as conn:
             rows = conn.execute("SELECT * FROM causal_chains ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
@@ -544,7 +539,7 @@ class KnowledgeGraphStore:
 
     # ── Graph Traversal & Search ──────────────────────────────────────────────
 
-    def get_neighbors(self, entity_id: str, direction: str = "both") -> List[Tuple[GraphTriple, GraphEntity]]:
+    def get_neighbors(self, entity_id: str, direction: str = "both") -> list[tuple[GraphTriple, GraphEntity]]:
         """
         Retrieves direct 1-hop neighbors of an entity.
         direction: 'out' (source=entity_id), 'in' (target=entity_id), or 'both'.
@@ -640,15 +635,15 @@ class KnowledgeGraphStore:
 
         return neighbors
 
-    def get_subgraph(self, seed_entity_ids: List[str], max_hops: int = 2, max_nodes: int = 30) -> Tuple[List[GraphEntity], List[GraphTriple]]:
+    def get_subgraph(self, seed_entity_ids: list[str], max_hops: int = 2, max_nodes: int = 30) -> tuple[list[GraphEntity], list[GraphTriple]]:
         """
         Extracts an N-hop neighborhood subgraph around seed entities via Breadth-First Search.
         """
-        visited_nodes: Set[str] = set()
-        collected_entities: Dict[str, GraphEntity] = {}
-        collected_triples: Dict[str, GraphTriple] = {}
+        visited_nodes: set[str] = set()
+        collected_entities: dict[str, GraphEntity] = {}
+        collected_triples: dict[str, GraphTriple] = {}
 
-        queue: List[Tuple[str, int]] = [(sid, 0) for sid in seed_entity_ids]
+        queue: list[tuple[str, int]] = [(sid, 0) for sid in seed_entity_ids]
 
         # Ingest seed entities
         for sid in seed_entity_ids:
@@ -673,7 +668,7 @@ class KnowledgeGraphStore:
 
         return list(collected_entities.values()), list(collected_triples.values())
 
-    def get_stats(self) -> Dict[str, int]:
+    def get_stats(self) -> dict[str, int]:
         """Returns entity and edge counts."""
         with self._get_conn() as conn:
             cur = conn.cursor()
@@ -695,7 +690,7 @@ class EntityRelationExtractor:
 
     def __init__(
         self,
-        claude: Optional[anthropic.Anthropic] = None,
+        claude: anthropic.Anthropic | None = None,
         gemini: Any = None,
         haiku_model: str = "claude-haiku-4-5-20251001",
         gemini_model: str = "gemini-2.5-flash",
@@ -707,7 +702,7 @@ class EntityRelationExtractor:
         self.gemini_model = gemini_model
         self.provider = provider
 
-    def extract_from_text(self, text: str) -> Dict[str, Any]:
+    def extract_from_text(self, text: str) -> dict[str, Any]:
         """Extracts structured entities, triples, and causal chains from text."""
         if not text or len(text.strip()) < 10:
             return {"entities": [], "triples": [], "causal_chains": []}
@@ -749,7 +744,7 @@ class EntityRelationExtractor:
 
         return "{}"
 
-    def _fallback_regex_extract(self, text: str) -> Dict[str, Any]:
+    def _fallback_regex_extract(self, text: str) -> dict[str, Any]:
         """Rule-based heuristic extractor for offline or fallback scenarios."""
         entities = []
         triples = []
@@ -809,12 +804,12 @@ class GraphRAGEngine:
     def __init__(
         self,
         db_path: str = "./data/knowledge_graph.sqlite3",
-        claude: Optional[anthropic.Anthropic] = None,
+        claude: anthropic.Anthropic | None = None,
         gemini: Any = None,
         haiku_model: str = "claude-haiku-4-5-20251001",
         gemini_model: str = "gemini-2.5-flash",
         provider: str = "anthropic",
-        telemetry: Optional[TelemetryEngine] = None,
+        telemetry: TelemetryEngine | None = None,
     ) -> None:
         self.store = KnowledgeGraphStore(db_path=db_path)
         self.extractor = EntityRelationExtractor(
@@ -892,7 +887,7 @@ class GraphRAGEngine:
         """Executes hybrid Graph-RAG subgraph extraction and semantic expansion."""
         return self.query_subgraph(query=query, max_hops=max_hops, max_nodes=max_nodes)
 
-    def ingest_text(self, text: str, source_context: str = "conversation") -> Dict[str, int]:
+    def ingest_text(self, text: str, source_context: str = "conversation") -> dict[str, int]:
         """
         Extracts entities, triples, and causal chains from text and persists them into the graph.
         """
@@ -959,7 +954,7 @@ class GraphRAGEngine:
         words = query.lower()
 
         # 1. Identify seed entities
-        seed_entities: List[GraphEntity] = []
+        seed_entities: list[GraphEntity] = []
         with self.store._get_conn() as conn:
             all_entities = conn.execute("SELECT * FROM entities").fetchall()
             for r in all_entities:
@@ -982,7 +977,7 @@ class GraphRAGEngine:
         connected_entities, triples = self.store.get_subgraph(seed_ids, max_hops=max_hops, max_nodes=max_nodes)
 
         # 3. Retrieve relevant causal chains
-        relevant_causal: List[CausalChain] = []
+        relevant_causal: list[CausalChain] = []
         all_causal = self.store.get_recent_causal_chains(limit=5)
         for chain in all_causal:
             # If any seed entity or keyword matches causal event

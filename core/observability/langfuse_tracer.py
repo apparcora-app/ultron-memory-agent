@@ -5,6 +5,7 @@ Uses the Langfuse @observe decorator for best-practice tracing.
 """
 
 import os
+
 from core.log_config import get_logger
 
 _log = get_logger(__name__)
@@ -31,7 +32,7 @@ def flush_traces():
     try:
         from langfuse.decorators import langfuse_context
         langfuse_context.flush()
-    except:
+    except Exception:
         pass
 
 def get_managed_prompt(prompt_name: str, fallback_prompt: str, **kwargs) -> str:
@@ -55,5 +56,5 @@ def get_managed_prompt(prompt_name: str, fallback_prompt: str, **kwargs) -> str:
                 _log.warning(f"Could not load managed prompt '{prompt_name}' from Langfuse. Using fallback. ({e})")
             else:
                 _log.info(f"Prompt '{prompt_name}' not found in Langfuse. Using hardcoded fallback.")
-    
+
     return fallback_prompt

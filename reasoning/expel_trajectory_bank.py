@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from trajectory_manager import (
     EpisodicTrajectory,
-    TrajectoryStep,
     TrajectoryManager,
+    TrajectoryStep,
 )
 
 # First-class alias for ExpeL Trajectory Bank

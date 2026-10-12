@@ -18,13 +18,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from sandbox import Sandbox, SandboxConfig
-from tool_definitions import ToolExecutor
-from skill_evolution import SkillMutator, SkillEvolutionDB
-from skill_manager import SkillManager
-from trajectory_manager import TrajectoryManager
 from memory_manager import MemoryManager
+from sandbox import Sandbox, SandboxConfig
+from skill_evolution import SkillMutator
+from skill_manager import SkillManager
 from telemetry import TelemetryEngine
+from tool_definitions import ToolExecutor
+from trajectory_manager import TrajectoryManager
 
 DATA_DIR = Path(__file__).parent / "data"
 SKILLS_DIR = Path(__file__).parent / "skills"
@@ -137,7 +137,7 @@ class DreamingDB:
         now = datetime.datetime.now(datetime.timezone.utc).isoformat()
         with self._get_conn() as conn:
             conn.execute(
-                """INSERT OR REPLACE INTO dream_runs 
+                """INSERT OR REPLACE INTO dream_runs
                    (dream_id, candidate_id, domain, success, hypothesis, execution_output, skill_patched, trajectory_id, duration_ms, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
@@ -257,7 +257,7 @@ class DreamingEngine:
             conn = sqlite3.connect(str(self._telemetry.db_path))
             conn.row_factory = sqlite3.Row
             rows = conn.execute(
-                """SELECT * FROM audit_logs 
+                """SELECT * FROM audit_logs
                    WHERE event_type IN ('TOOL_CALL', 'SWARM_RUN', 'CHAT_TURN')
                    AND (details LIKE '%"success": false%' OR details LIKE '%"error":%')
                    ORDER BY timestamp DESC LIMIT 20"""
@@ -303,7 +303,7 @@ class DreamingEngine:
                 conn = sqlite3.connect(str(self._skills.evolution_db.db_path))
                 conn.row_factory = sqlite3.Row
                 degraded_rows = conn.execute(
-                    """SELECT * FROM skill_metadata 
+                    """SELECT * FROM skill_metadata
                        WHERE failure_count > 0 AND (success_count * 1.0 / (success_count + failure_count)) < 0.9
                        ORDER BY failure_count DESC LIMIT 5"""
                 ).fetchall()
@@ -398,12 +398,11 @@ class DreamingEngine:
                         if raw:
                             break
                 except Exception as e:
-                    last_error = str(e)
+                    last_error = f"Claude fallback failed: {e}"
                     print(f"  [DREAM PROMPT RETRY {attempt}/3] {e}")
                     if "credit balance" in last_error.lower() or "400" in last_error or "invalid_request_error" in last_error:
                         break
                     time.sleep(1.0 * attempt)
-                last_error = f"Gemini fallback failed: {gem_e}"
 
         # Parse JSON and code from response with robust fallbacks
         hypothesis = f"Parse payload with json or ast.literal_eval for single-quoted Python dict representations in {candidate.domain}"
@@ -631,10 +630,10 @@ assert isinstance(out, dict)
         2. Replays and simulates fixes in isolated sandbox.
         3. Consolidates verified wins into skills, trajectories, and memories.
         """
-        print(f"\n[ULTRON DREAMING ENGINE] Starting autonomous simulation cycle...")
+        print("\n[ULTRON DREAMING ENGINE] Starting autonomous simulation cycle...")
         candidates = self.mine_candidates(limit=max_simulations)
         if not candidates:
-            print(f"  [DREAM] No pending failures or degraded skills found. System operational health optimal.")
+            print("  [DREAM] No pending failures or degraded skills found. System operational health optimal.")
             return []
 
         results: list[DreamResult] = []

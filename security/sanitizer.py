@@ -15,8 +15,7 @@ Provides:
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Tuple, Union
-
+from typing import Any
 
 # ── Compiled Regular Expressions for Sensitive Patterns ───────────────────────
 
@@ -124,7 +123,7 @@ class DataSanitizer:
             return self.sanitize_text(payload)
 
         elif isinstance(payload, dict):
-            sanitized_dict: Dict[str, Any] = {}
+            sanitized_dict: dict[str, Any] = {}
             for k, v in payload.items():
                 sanitized_key = self.sanitize_text(str(k))
                 sanitized_dict[sanitized_key] = self.sanitize_payload(v)

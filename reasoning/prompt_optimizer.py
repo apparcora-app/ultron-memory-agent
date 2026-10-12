@@ -11,9 +11,9 @@ from __future__ import annotations
 import json
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # Heuristic bypass list for low-complexity / chit-chat messages
 _BYPASS_PATTERNS = re.compile(

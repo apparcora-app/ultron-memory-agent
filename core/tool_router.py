@@ -1,20 +1,19 @@
-import json
-import logging
 from typing import Any
 
 from config import LLMConfig
 from mcp_client import MCPManager
 from tool_definitions import ULTRON_TOOLS
 
+
 class DynamicToolRouter:
     def __init__(self, llm_cfg: LLMConfig):
         self.llm_cfg = llm_cfg
         self.fast_model = llm_cfg.gemini_model_lite
         self.api_key = llm_cfg.openrouter_api_key
-        
+
         self.ALWAYS_ON_TOOLS = {
-            "execute_command", 
-            "run_python", 
+            "execute_command",
+            "run_python",
             "file_operation",
             "core_memory_update",
             "core_memory_append",
@@ -22,7 +21,7 @@ class DynamicToolRouter:
             "store_file_memory",
             "search_file_memory"
         }
-        
+
     async def route_tools(self, user_input: str, mcp_manager: MCPManager) -> list[dict[str, Any]]:
         if not user_input or not user_input.strip():
             return [t for t in ULTRON_TOOLS if t["name"] in self.ALWAYS_ON_TOOLS]
@@ -42,7 +41,7 @@ class DynamicToolRouter:
 
         mcp_schemas = mcp_manager.get_anthropic_schemas()
         all_schemas = ULTRON_TOOLS + mcp_schemas
-        
+
         compact_list = []
         for s in all_schemas:
             name = s["name"]
@@ -50,10 +49,10 @@ class DynamicToolRouter:
                 continue
             desc = s.get("description", "")[:100]
             compact_list.append(f"- {name}: {desc}")
-            
+
         compact_str = "\n".join(compact_list)
-        
-        prompt = f'''You are an ultra-fast tool routing algorithm. 
+
+        prompt = f'''You are an ultra-fast tool routing algorithm.
 The user wants to perform this task:
 {user_input[:1000]}
 
@@ -62,9 +61,9 @@ Review these available optional tools:
 
 Return a JSON array of strings containing ONLY the names of the tools that might be useful for this task.
 If no tools are needed, return []. Respond with RAW JSON ONLY.'''
-        
+
         selected_tool_names = set(self.ALWAYS_ON_TOOLS)
-        
+
         try:
             from core.llm_chain import chat_with_fallback
             content, _, _ = await chat_with_fallback(
@@ -78,7 +77,7 @@ If no tools are needed, return []. Respond with RAW JSON ONLY.'''
             if raw_text.endswith("`"):
                 raw_text = raw_text.rsplit("`", 1)[0]
             raw_text = raw_text.strip()
-            
+
             import json
             parsed = json.loads(raw_text)
             if isinstance(parsed, list):
@@ -86,7 +85,7 @@ If no tools are needed, return []. Respond with RAW JSON ONLY.'''
         except Exception as e:
             print(f"  [TOOL ROUTER ERROR] Failed to triage tools: {e}")
             return all_schemas
-            
+
         final_schemas = [s for s in all_schemas if s["name"] in selected_tool_names]
         print(f"  [TOOL ROUTER] Triaged {len(all_schemas)} total tools down to {len(final_schemas)} active tools.")
         return final_schemas

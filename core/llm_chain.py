@@ -1,8 +1,10 @@
-import os
-import json
-import aiohttp
 import asyncio
+import json
+
+import aiohttp
+
 from core.config import LLMConfig
+
 
 async def chat_with_fallback(prompt, system_prompt="", max_tokens=1024, temperature=0.1, model_override=None, tools=None, client_data=False, response_format=None):
     """
@@ -15,7 +17,7 @@ async def chat_with_fallback(prompt, system_prompt="", max_tokens=1024, temperat
 
     cfg = LLMConfig()
     active_providers = getattr(cfg, "providers", ["freellmapi"])
-    
+
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
@@ -33,9 +35,11 @@ async def chat_with_fallback(prompt, system_prompt="", max_tokens=1024, temperat
                 if target_model in ("freellmapi", ""):
                     target_model = "auto"
             print(f'FreeLLMAPI model selected: {target_model}')
-            
-            if len(system_prompt) > 8000: system_prompt = system_prompt[:8000] + '\n[TRUNCATED]'
-            if len(prompt) > 4000: prompt = prompt[:4000] + '\n[TRUNCATED]'
+
+            if len(system_prompt) > 8000:
+                system_prompt = system_prompt[:8000] + '\n[TRUNCATED]'
+            if len(prompt) > 4000:
+                prompt = prompt[:4000] + '\n[TRUNCATED]'
             payload = {
                 "model": target_model,
                 "messages": messages,
@@ -67,7 +71,7 @@ async def chat_with_fallback(prompt, system_prompt="", max_tokens=1024, temperat
                 payload["tools"] = formatted_tools
 
             headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-            
+
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(f"{base_url}/chat/completions", json=payload, headers=headers, timeout=60) as resp:
@@ -122,17 +126,17 @@ async def chat_with_fallback(prompt, system_prompt="", max_tokens=1024, temperat
         elif provider == "gemini" and cfg.gemini_api_key:
             try:
                 import google.genai as genai
-                from google.genai.types import Tool, FunctionDeclaration, GenerateContentConfig
-                
+                from google.genai.types import FunctionDeclaration, GenerateContentConfig, Tool
+
                 # Timeout changed to 30000 milliseconds
                 client = genai.Client(api_key=cfg.gemini_api_key, http_options={'timeout': 30000})
                 model = cfg.gemini_model_flash
-                
+
                 combined_prompt = ""
                 if system_prompt:
                     combined_prompt += f"System: {system_prompt}\n\n"
                 combined_prompt += prompt
-                
+
                 gemini_tools = []
                 if tools:
                     for t in tools:
@@ -143,20 +147,28 @@ async def chat_with_fallback(prompt, system_prompt="", max_tokens=1024, temperat
                             parameters=f.get("parameters", {})
                         )
                         gemini_tools.append(Tool(function_declarations=[fd]))
-                
-                def sync_call():
-                    return client.models.generate_content(
-                        model=model,
-                        contents=combined_prompt,
+
+                _c, _m, _p, _t = client, model, combined_prompt, gemini_tools
+                def sync_call(
+                    c=_c,
+                    m=_m,
+                    p=_p,
+                    tools=_t,
+                    temp=temperature,
+                    toks=max_tokens,
+                ):
+                    return c.models.generate_content(
+                        model=m,
+                        contents=p,
                         config=GenerateContentConfig(
-                            temperature=temperature,
-                            max_output_tokens=max_tokens,
-                            tools=gemini_tools if gemini_tools else None
-                        )
+                            temperature=temp,
+                            max_output_tokens=toks,
+                            tools=tools if tools else None,
+                        ),
                     )
-                
+
                 response = await asyncio.to_thread(sync_call)
-                
+
                 tool_actions = []
                 content = ""
                 if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
@@ -172,7 +184,7 @@ async def chat_with_fallback(prompt, system_prompt="", max_tokens=1024, temperat
                                 "name": part.function_call.name,
                                 "arguments": args
                             })
-                
+
                 print("  [LLM Chain] Served by Gemini Direct")
                 return content, tool_actions, "gemini"
             except Exception as e:

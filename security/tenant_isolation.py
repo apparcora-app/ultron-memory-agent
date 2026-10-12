@@ -14,10 +14,11 @@ from __future__ import annotations
 import contextvars
 import os
 import shutil
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field
 
 # ── 1. Security Context & Propagation ────────────────────────────────────────
 
@@ -33,12 +34,12 @@ class SecurityContext(BaseModel):
     session_id: str = Field(..., min_length=1, description="Unique conversation / task session identifier")
 
 
-_current_security_context: contextvars.ContextVar[Optional[SecurityContext]] = contextvars.ContextVar(
+_current_security_context: contextvars.ContextVar[SecurityContext | None] = contextvars.ContextVar(
     "current_security_context", default=None
 )
 
 
-def get_current_security_context() -> Optional[SecurityContext]:
+def get_current_security_context() -> SecurityContext | None:
     """Returns the currently active SecurityContext in the current async execution context."""
     return _current_security_context.get()
 
@@ -68,15 +69,15 @@ class IsolatedVectorStore:
 
     def __init__(self) -> None:
         # In-memory document collection: id -> {text, embedding_dim, metadata}
-        self._records: Dict[str, Dict[str, Any]] = {}
+        self._records: dict[str, dict[str, Any]] = {}
 
     def insert(
         self,
         record_id: str,
         text: str,
-        metadata: Optional[Dict[str, Any]] = None,
-        ctx: Optional[SecurityContext] = None,
-    ) -> Dict[str, Any]:
+        metadata: dict[str, Any] | None = None,
+        ctx: SecurityContext | None = None,
+    ) -> dict[str, Any]:
         """
         Inserts a memory item, forcefully stamping immutable tenant_id and user_id metadata.
         """
@@ -101,10 +102,10 @@ class IsolatedVectorStore:
     def query(
         self,
         query_text: str,
-        metadata_filter: Optional[Dict[str, Any]] = None,
+        metadata_filter: dict[str, Any] | None = None,
         limit: int = 10,
-        ctx: Optional[SecurityContext] = None,
-    ) -> List[Dict[str, Any]]:
+        ctx: SecurityContext | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Queries vector memory with mandatory driver-level tenant isolation filtering.
         Even if the model or caller supplies an empty filter, the tenant_id filter is injected.
@@ -117,7 +118,7 @@ class IsolatedVectorStore:
         forced_tenant_id = active_ctx.tenant_id
 
         # Scan and enforce strict tenant matching
-        matching: List[Dict[str, Any]] = []
+        matching: list[dict[str, Any]] = []
         for record in self._records.values():
             rec_meta = record.get("metadata", {})
             # Hard boundary check: record tenant_id must strictly match active context tenant_id
@@ -157,7 +158,7 @@ class TenantWorkspaceSandbox:
         self.base_artifacts_dir = os.path.realpath(os.path.abspath(base_artifacts_dir))
         os.makedirs(self.base_artifacts_dir, exist_ok=True)
 
-    def get_tenant_root(self, ctx: Optional[SecurityContext] = None) -> str:
+    def get_tenant_root(self, ctx: SecurityContext | None = None) -> str:
         """Computes and ensures the canonical root directory for the tenant and session."""
         active_ctx = ctx or get_current_security_context()
         if not active_ctx:
@@ -167,7 +168,7 @@ class TenantWorkspaceSandbox:
         os.makedirs(tenant_dir, exist_ok=True)
         return tenant_dir
 
-    def resolve_safe_path(self, relative_path: str, ctx: Optional[SecurityContext] = None) -> str:
+    def resolve_safe_path(self, relative_path: str, ctx: SecurityContext | None = None) -> str:
         """
         Resolves a user-provided relative path against the tenant sandbox root.
         Enforces canonicalization via os.path.realpath and checks path boundaries.
@@ -194,7 +195,7 @@ class TenantWorkspaceSandbox:
         self,
         relative_path: str,
         content: str | bytes,
-        ctx: Optional[SecurityContext] = None,
+        ctx: SecurityContext | None = None,
     ) -> str:
         """Safely writes content within the tenant's sandbox."""
         resolved_path = self.resolve_safe_path(relative_path, ctx)
@@ -213,7 +214,7 @@ class TenantWorkspaceSandbox:
         self,
         relative_path: str,
         as_bytes: bool = False,
-        ctx: Optional[SecurityContext] = None,
+        ctx: SecurityContext | None = None,
     ) -> str | bytes:
         """Safely reads content from within the tenant's sandbox."""
         resolved_path = self.resolve_safe_path(relative_path, ctx)
@@ -224,13 +225,13 @@ class TenantWorkspaceSandbox:
             with open(resolved_path, "rb") as f:
                 return f.read()
         else:
-            with open(resolved_path, "r", encoding="utf-8") as f:
+            with open(resolved_path, encoding="utf-8") as f:
                 return f.read()
 
-    def list_files(self, ctx: Optional[SecurityContext] = None) -> List[str]:
+    def list_files(self, ctx: SecurityContext | None = None) -> list[str]:
         """Lists all files present in the current tenant session sandbox."""
         root = self.get_tenant_root(ctx)
-        files: List[str] = []
+        files: list[str] = []
         for dirpath, _, filenames in os.walk(root):
             for filename in filenames:
                 full_p = os.path.join(dirpath, filename)
@@ -238,7 +239,7 @@ class TenantWorkspaceSandbox:
                 files.append(rel_p)
         return files
 
-    def clean_session(self, ctx: Optional[SecurityContext] = None) -> None:
+    def clean_session(self, ctx: SecurityContext | None = None) -> None:
         """Removes all files in the current tenant session sandbox."""
         root = self.get_tenant_root(ctx)
         if os.path.exists(root):
