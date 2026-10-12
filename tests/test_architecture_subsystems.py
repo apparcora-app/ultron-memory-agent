@@ -77,7 +77,7 @@ def test_database_manager_wal_pragmas(tmp_path):
 
     with manager.connect(db_path) as conn:
         conn.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);")
-        conn.execute("INSERT INTO users (name) VALUES ('Hanzla');")
+        conn.execute("INSERT INTO users (name) VALUES ('Alice');")
         conn.commit()
 
         cursor = conn.cursor()

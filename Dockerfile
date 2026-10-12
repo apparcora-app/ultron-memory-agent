@@ -47,4 +47,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 # Override CMD to use CLI or Discord bot as needed
-CMD ["python", "app.py"]
+CMD ["python", "-m", "ultron.cli.web"]

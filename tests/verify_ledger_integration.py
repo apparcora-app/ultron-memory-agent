@@ -21,6 +21,7 @@ Verifies:
 
 import asyncio
 import json
+import os
 import sqlite3
 from fastapi.testclient import TestClient
 

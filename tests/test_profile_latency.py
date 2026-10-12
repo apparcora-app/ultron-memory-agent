@@ -24,7 +24,7 @@ async def main():
         optimize_prompt=True,
     )
     t_chat_dur = time.time() - t_chat_start
-    print(f"\n=== RESULTS (DEFAULT SWARM MODE + OPTIMIZE PROMPT) ===")
+    print("\n=== RESULTS (DEFAULT SWARM MODE + OPTIMIZE PROMPT) ===")
     print(f"Total Response Time: {t_chat_dur:.2f}s")
     print(f"Model Used: {res.get('model_used')}")
     print(f"Model Display: {res.get('model_display')}")
@@ -34,7 +34,7 @@ async def main():
     print(f"Reply: {res.get('reply', '')[:200]}...")
 
     # Now let's test SOLO mode with optimize_prompt=False to see the difference!
-    print(f"\nStep 3: Sending test prompt in SOLO MODE (optimize_prompt=False)...")
+    print("\nStep 3: Sending test prompt in SOLO MODE (optimize_prompt=False)...")
     t_solo_start = time.time()
     res_solo = await agent.chat_async(
         user_input=prompt,
@@ -43,7 +43,7 @@ async def main():
     )
     t_solo_dur = time.time() - t_solo_start
     # Test Warm Turn in Solo Mode
-    print(f"\nStep 4: Sending follow-up warm query in SOLO MODE...")
+    print("\nStep 4: Sending follow-up warm query in SOLO MODE...")
     t_warm = time.time()
     res_warm = await agent.chat_async(
         user_input="Tell me three fun facts about it.",
@@ -51,7 +51,7 @@ async def main():
         optimize_prompt=False,
     )
     t_warm_dur = time.time() - t_warm
-    print(f"\n=== RESULTS (WARM TURN, SOLO MODE) ===")
+    print("\n=== RESULTS (WARM TURN, SOLO MODE) ===")
     print(f"Total Response Time: {t_warm_dur:.2f}s")
     print(f"Reply: {res_warm.get('reply', '')[:200]}...")
 

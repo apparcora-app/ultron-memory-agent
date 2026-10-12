@@ -48,12 +48,12 @@ def main():
     initial_swarm_runs = cursor.fetchone()[0]
     conn.close()
 
-    print(f"[CHECK 2] Pre-Execution Telemetry Counts:")
+    print("[CHECK 2] Pre-Execution Telemetry Counts:")
     print(f"          - AGENT_TASK events in DB: {initial_agent_tasks}")
     print(f"          - SWARM_RUN events in DB:  {initial_swarm_runs}\n")
 
     # 3. Execute the LangGraph StateGraph Pipeline
-    print(f"[CHECK 3] Initializing and Executing LangGraph StateGraph (START -> Titan -> Nexus -> END)...")
+    print("[CHECK 3] Initializing and Executing LangGraph StateGraph (START -> Titan -> Nexus -> END)...")
     telemetry = TelemetryEngine()
     pipeline = LangGraphTwoStepSwarm(telemetry=telemetry)
 
@@ -92,7 +92,7 @@ def main():
     post_swarm_runs = cursor.fetchone()[0]
     conn.close()
 
-    print(f"[CHECK 4] Post-Execution Telemetry Counts:")
+    print("[CHECK 4] Post-Execution Telemetry Counts:")
     print(f"          - AGENT_TASK events in DB: {post_agent_tasks} (Expected >= {initial_agent_tasks + 2})")
     print(f"          - SWARM_RUN events in DB:  {post_swarm_runs} (Expected >= {initial_swarm_runs + 1})")
 

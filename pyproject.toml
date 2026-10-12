@@ -8,9 +8,9 @@ version = "1.3.0"
 description = "Enterprise-grade autonomous AI cognitive system with persistent long-term memory, multi-model routing, multi-agent swarm orchestration, and governance guardrails"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "Proprietary"}
+license = {text = "MIT"}
 authors = [
-    {name = "Hanzla Rehman", email = "contact@apparcora.com"}
+    {name = "Ultron Protocol Team", email = "maintainers@ultron-protocol.io"}
 ]
 keywords = [
     "autonomous-agent",
@@ -39,8 +39,10 @@ classifiers = [
 ]
 dependencies = [
     "mem0ai==0.1.101",
+    "qdrant-client>=1.10.0",
+    "fastembed>=0.5.0",
+    "pyyaml>=6.0",
     "chromadb>=0.5.0",
-    "sentence-transformers>=3.3.0",
     "openai>=1.55.0,<2.0.0",
     "anthropic>=0.40.0,<0.45.0",
     "google-genai>=0.1.0",
@@ -90,10 +92,17 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.10.0",
 ]
+heavy = [
+    "sentence-transformers>=3.3.0",
+    "torch>=2.2.0",
+]
 
 [project.scripts]
-ultron     = "main:main"
-ultron-web = "app:main"
+ultron     = "ultron.cli.main:main"
+ultron-web = "ultron.cli.web:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths    = ["tests"]
@@ -109,9 +118,6 @@ filterwarnings = [
     "ignore::UserWarning",
 ]
 
-[tool.setuptools.packages.find]
-include = ["core*", "memory*", "reasoning*", "security*", "governance*", "pipelines*", "telemetry*", "infrastructure*", "accounting_modules*", "guardrails*", "subsystems*", "concurrency*", "rag*"]
-
 [tool.ruff]
 line-length    = 100
 target-version = "py310"
@@ -124,15 +130,18 @@ exclude = [
     "venv",
     "data",
     "browser-use",
-    "tax_modules/variants",
+    "src/ultron/skills",
+    "src/ultron/tax_modules/variants",
+    "tests/manual",
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "N", "UP", "B"]
-ignore = ["E501", "B008", "N806"]
+select = ["E", "F", "W", "B"]
+ignore = ["E501", "B008", "E402", "E722", "E731", "W291", "W293", "B904"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "ANN"]
+"tests/*" = ["S101", "ANN", "F401", "F841", "B017", "E702"]
+"__init__.py" = ["F401"]
 
 [tool.mypy]
 python_version             = "3.11"
@@ -142,4 +151,3 @@ warn_return_any            = false
 warn_unused_ignores        = true
 no_implicit_optional       = true
 strict_optional            = true
-

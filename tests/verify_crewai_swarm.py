@@ -87,7 +87,7 @@ def main():
 
     # 4. Run Multi-Agent Directive
     test_directive = "Design a high-throughput user activity ledger microservice with rate limiting and dashboard UI"
-    print(f"\n--- Executing CrewAI Multi-Agent Directive ---")
+    print("\n--- Executing CrewAI Multi-Agent Directive ---")
     print(f" Directive: '{test_directive}'")
     print(" Processing with sequential squad pipeline...")
 
