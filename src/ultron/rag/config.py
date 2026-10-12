@@ -8,7 +8,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parents[3]
 
 # --- Embedding (ONE fixed model) -------------------------------------------
 # 512-token context window (all-MiniLM-L6-v2 truncates at 256, which would

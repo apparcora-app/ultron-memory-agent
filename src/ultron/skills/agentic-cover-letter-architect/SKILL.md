@@ -6,7 +6,7 @@ updated_at: 2026-10-11
 ---
 # Agentic Cover Letter & Proposal Architect Protocol
 
-When Boss asks to write a cover letter, proposal, or application for a job:
+When the user requests a tailored cover letter, proposal, or application for a job:
 
 ## 1. Candidate Core Profile & Unique Value Proposition
 * **Candidate Name:** [Candidate Name]

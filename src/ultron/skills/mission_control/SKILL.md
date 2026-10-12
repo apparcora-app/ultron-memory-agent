@@ -9,14 +9,14 @@ always_on: false
 
 # 🎯 Mission Control Kanban Task Protocol
 
-A Kanban-style task board and execution engine that Ultron manages. Boss creates and prioritizes tasks via the web dashboard or chat; Ultron executes them automatically when moved to **"In Progress"**.
+A Kanban-style task board and execution engine that Ultron manages. Users create and prioritize tasks via the web dashboard or chat; Ultron executes them automatically when moved to **"In Progress"**.
 
 ## Task Lifecycle & Status Values
 - **`permanent`**: Recurring or standing background directives (daily checks, audits, heartbeat).
 - **`backlog`**: Tasks queued and waiting to be worked on.
 - **`in_progress`**: Ultron is actively executing this task.
-- **`review`**: Task completed by Ultron, awaiting Boss review and approval.
-- **`done`**: Completed, verified, and approved by Boss.
+- **`review`**: Task completed by Ultron, awaiting user review and approval.
+- **`done`**: Completed, verified, and approved by the user.
 
 ## Task Data Schema (`data/tasks.json`)
 ```json
@@ -55,14 +55,14 @@ When a task is assigned or moved to **"In Progress"**:
 ### 4. Completion & Review Handoff
 - When all subtasks are complete and the Definition of Done is verified:
   - Transition status from `in_progress` ➔ `review`.
-  - Add a **Completion Summary**: What was built, verified, and any next steps for Boss.
+  - Add a **Completion Summary**: What was built, verified, and any next steps for the user.
 
 ### 5. Handling Rework / Feedback
-- If Boss moves a task back to `in_progress` with feedback:
-  - Read the latest comment from Boss.
+- If the user moves a task back to `in_progress` with feedback:
+  - Read the latest comment from the user.
   - Address specific requested adjustments or fixes.
   - Add a comment explaining the modifications made.
-  - Transition status back to `review` for Boss sign-off.
+  - Transition status back to `review` for user sign-off.
 
 ### 6. EPIC Task Management
 - For parent EPIC tasks with multiple child tickets (`MC-XXX-001: Title`):

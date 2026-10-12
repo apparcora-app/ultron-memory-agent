@@ -14,7 +14,7 @@ Autonomous protocols for retrieving and modeling US equity market data, options 
 
 ## 1. US Equities & Options Protocol (Polygon.io)
 
-When Boss requests stock quotes, historical candles (OHLCV), options chains, stock splits, or dividend histories, execute via `run_python` using `polygon-api-client` or direct REST API requests.
+When the user requests stock quotes, historical candles (OHLCV), options chains, stock splits, or dividend histories, execute via `run_python` using `polygon-api-client` or direct REST API requests.
 
 ### Aggregate Bars (OHLCV)
 ```python

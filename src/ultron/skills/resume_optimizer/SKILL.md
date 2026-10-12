@@ -9,8 +9,8 @@ tags: [career, resume, cv, job, interview, linkedin, cover letter, recruiter, at
 # Executive Resume & Job Acquisition Protocol
 
 ## Operational Capabilities
-When Boss requests resume refinement, job application targeting, or career positioning:
-1. **ATS Reverse-Engineering**: Scan the target job description for core hard skills, leadership keywords, and technical requirements, infusing them organically into Boss's resume.
+When the user requests resume refinement, job application targeting, or career positioning:
+1. **ATS Reverse-Engineering**: Scan the target job description for core hard skills, leadership keywords, and technical requirements, infusing them organically into the user's resume.
 2. **Impact-Driven Bullets (XYZ Formula)**: Structure every achievement as: *"Accomplished [X], as measured by [Y], by doing [Z]"* with specific percentages, dollars, or efficiency gains.
 3. **High-Conversion Cover Letters**: Draft punchy, confident, non-cliché letters demonstrating immediate problem-solving capability for the hiring manager.
 4. **Interview Domination**: Provide structured STAR-method answers (Situation, Task, Action, Result) for behavioral questions and executive case studies.

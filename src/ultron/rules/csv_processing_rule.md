@@ -1,6 +1,6 @@
-# PERMANENT RULE — CSV Analysis Standard (Locked by Boss)
+# PERMANENT RULE — CSV Analysis Standard (Locked by System Policy)
 
-**Effective:** All future CSV file analysis tasks requested by Boss.
+**Effective:** All future CSV file analysis tasks requested by the user.
 
 ## Mandatory Preprocessing Steps
 1. Read CSV with `on_bad_lines='skip'` to silently discard malformed rows (wrong field count).
@@ -15,5 +15,5 @@ See: `utils/csv_loader.py` -> `safe_read_csv()`
 
 ## Rationale
 - `on_bad_lines='skip'` handles malformed/inconsistent row lengths.
-- Header-fallback logic handles missing-header KeyError specifically (separate failure mode Boss flagged).
+- Header-fallback logic handles missing-header KeyError specifically (separate failure mode flagged in operational audits).
 - `fillna('N/A')` ensures no null propagation into summary tables or aggregate calculations.

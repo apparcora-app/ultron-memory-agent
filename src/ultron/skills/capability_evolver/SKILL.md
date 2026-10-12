@@ -14,7 +14,7 @@ always_on: true
 The **Capability Evolver** is a meta-skill that allows Ultron to inspect runtime history, identify failures or inefficiencies, and autonomously write new code, optimize prompt directives, or update memory to improve performance.
 
 ## Operational Directives for Ultron
-When Boss issues directives regarding system evolution, self-improvement, runtime error diagnosis, or code optimization:
+When the operator or system triggers directives regarding system evolution, self-improvement, runtime error diagnosis, or code optimization:
 
 1. **Auto-Log & Failure Analysis**:
    - Inspect recent error logs, command outputs, or failed tool calls.
@@ -26,7 +26,7 @@ When Boss issues directives regarding system evolution, self-improvement, runtim
 
 3. **GEP Protocol (Protocol-Constrained Evolution)**:
    - Maintain reusable logic patterns and structured execution checkpoints.
-   - Adhere to the safety sandbox at all times (no unsafe self-modifications without Boss oversight).
+   - Adhere to the safety sandbox at all times (no unsafe self-modifications without human oversight).
 
 4. **Evolution Output Format**:
    - Provide a structured Evolution Log:

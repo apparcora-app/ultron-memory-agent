@@ -30,7 +30,7 @@ Automated web task execution service covering form submission, structured web sc
 
 ## Operational Execution Guidelines
 
-When Boss requests web automation or data scraping:
+When the user requests web automation or data scraping:
 
 ### 1. Form Filling Workflow
 ```python
@@ -59,8 +59,8 @@ with sync_playwright() as p:
 
 ## Standards & Error Handling
 - **Auto-Retry**: Implement retry logic with exponential backoff on transient network failures.
-- **Headless by Default**: Run automation headlessly unless Boss explicitly requests visual browser inspection.
-- **Clean Output**: Always report final submission confirmations, downloaded file paths, or extracted data tables cleanly to Boss.
+- **Headless by Default**: Run automation headlessly unless the user explicitly requests visual browser inspection.
+- **Clean Output**: Always report final submission confirmations, downloaded file paths, or extracted data tables cleanly to the user.
 
 ## 🧬 Evolution v1.1 — Desktop Application Control vs Browser Automation (2026-09-01)
 * **Trigger Analysis**: The user requested interaction with local desktop applications instead of launching an isolated headless browser instance.

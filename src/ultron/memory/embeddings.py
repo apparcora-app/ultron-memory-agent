@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from abc import abstractmethod
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 logger = logging.getLogger("ultron.memory.embeddings")
 
@@ -86,6 +86,23 @@ class FastEmbedProvider:
             return []
         embeddings = self._model.embed(texts)
         return [arr.tolist() for arr in embeddings]
+
+    @property
+    def tokenizer(self):
+        """Adapter exposing token offsets for RAG and text chunkers."""
+        if hasattr(self._model, "model") and hasattr(self._model.model, "tokenizer"):
+            raw_tok = self._model.model.tokenizer
+
+            class _TokenizerAdapter:
+                def __init__(self, t: Any) -> None:
+                    self._t = t
+
+                def __call__(self, text: str, add_special_tokens: bool = False, **kwargs: Any) -> dict[str, Any]:
+                    enc = self._t.encode(text, add_special_tokens=add_special_tokens)
+                    return {"offset_mapping": enc.offsets}
+
+            return _TokenizerAdapter(raw_tok)
+        return None
 
     def embed_query(self, text: str) -> list[float]:
         return self.embed_texts([text])[0]

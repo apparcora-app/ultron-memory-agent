@@ -30,12 +30,12 @@ ENV_FILE = PROJECT_ROOT / ".env"
 def get_configured_secret() -> str | None:
     """
     Reads authorized unlock code from environment or .env file.
-    Hardcoded fallback secrets ('ULTRON-TERMINATE-ALPHA-99', 'ULTRON-OVERRIDE-BOSS-77')
+    Hardcoded fallback secrets ('ULTRON-TERMINATE-ALPHA-99', 'ULTRON-OVERRIDE-ADMIN-77')
     are strictly rejected and never treated as valid keys.
     """
     # Check environment variables first
     code = os.getenv("KILLSWITCH_OVERRIDE_CODE") or os.getenv("KILLSWITCH_SECRET_KEY")
-    if code and code.strip() in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-BOSS-77"):
+    if code and code.strip() in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-ADMIN-77"):
         code = None
 
     if not code and ENV_FILE.exists():
@@ -44,15 +44,15 @@ def get_configured_secret() -> str | None:
                 line_str = line.strip()
                 if line_str.startswith("KILLSWITCH_OVERRIDE_CODE="):
                     val = line_str.split("=", 1)[1].strip().strip('"').strip("'")
-                    if val and val not in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-BOSS-77"):
+                    if val and val not in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-ADMIN-77"):
                         code = val
                         break
                 elif line_str.startswith("KILLSWITCH_SECRET_KEY=") and not code:
                     val = line_str.split("=", 1)[1].strip().strip('"').strip("'")
-                    if val and val not in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-BOSS-77"):
+                    if val and val not in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-ADMIN-77"):
                         code = val
 
-    if code and code.strip() in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-BOSS-77"):
+    if code and code.strip() in ("ULTRON-TERMINATE-ALPHA-99", "ULTRON-OVERRIDE-ADMIN-77"):
         return None
     return code.strip() if (code and code.strip()) else None
 

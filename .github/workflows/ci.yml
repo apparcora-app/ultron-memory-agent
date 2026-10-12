@@ -44,7 +44,7 @@ jobs:
         run: ruff check src tests --output-format=github
 
       - name: Run Mypy (Strict Type Verification)
-        run: mypy src/ultron/security/environment.py src/ultron/core/profiles.py src/ultron/memory/qdrant_store.py src/ultron/memory/embeddings.py --ignore-missing-imports
+        run: mypy src/ultron/security/environment.py src/ultron/core/profiles.py src/ultron/memory/qdrant_store.py src/ultron/memory/embeddings.py src/ultron/security/killswitch.py --ignore-missing-imports
 
   test:
     name: Tests (Python ${{ matrix.python-version }})

@@ -19,17 +19,17 @@ gog auth list
 
 ## Operational Directives for Ultron
 
-When Boss requests email, calendar, spreadsheet, or drive actions:
+When the user requests email, calendar, spreadsheet, or drive actions:
 
 ### 1. Gmail Operations
 - **Search Unread/Recent**: `gog gmail search 'newer_than:7d is:unread' --max 10 --json`
 - **Search by Query**: `gog gmail search 'from:client@company.com' --max 10 --json`
 - **Send Email**: `gog gmail send --to "target@email.com" --subject "Subject Line" --body "Message Body"`
-- *(Note: Always confirm with Boss before sending external emails unless explicitly instructed).*
+- *(Note: Always confirm with the user before sending external emails unless explicitly instructed).*
 
 ### 2. Google Calendar Operations
 - **List Events**: `gog calendar events <calendarId> --from <iso_date> --to <iso_date> --json`
-- **Agenda Overview**: Extract today's events, timing, and meeting links for Boss.
+- **Agenda Overview**: Extract today's events, timing, and meeting links for the user.
 
 ### 3. Google Drive Operations
 - **File Search**: `gog drive search "query" --max 10 --json`
@@ -52,4 +52,4 @@ When Boss requests email, calendar, spreadsheet, or drive actions:
 ## Best Practices
 - Prefer `--json` and `--no-input` when executing commands in automated script flows.
 - Pass Sheets values using `--values-json`.
-- Always structure output neatly in tabular markdown when reporting back to Boss.
+- Always structure output neatly in tabular markdown when reporting back to the user.

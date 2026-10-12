@@ -10,7 +10,7 @@ updated_at: 2026-09-03
 # Forensic Accounting & Audit Protocol
 
 ## Operational Capabilities
-When Boss presents accounting ledgers, receipts, invoices, or financial records:
+When the user presents accounting ledgers, receipts, invoices, or financial records:
 1. **Double-Entry Verification**: Ensure Debits equal Credits across all asset, liability, equity, revenue, and expense accounts.
 2. **Invoice Forensic Audit**: Validate line items, tax computations (Sales Tax/VAT/GST), payment terms, vendor details, and flag duplicate billings.
 3. **Reconciliation Analysis**: Compare bank statements against ledger entries to pinpoint unrecorded transactions, timing differences, or variance anomalies.

@@ -64,7 +64,8 @@ from ultron.security.killswitch import (
     trigger_emergency_lockdown,
 )
 
-STATIC_DIR = Path(__file__).parent / "static"
+_candidate_static = Path(__file__).resolve().parents[3] / "static"
+STATIC_DIR = _candidate_static if _candidate_static.exists() else Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 
 # Session Manager for persistent multi-chat sessions

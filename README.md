@@ -133,50 +133,38 @@ Operator: "Reconcile Q3 Bank Transactions against QBO ledger with strict groundi
 ```
 ultron-memory-agent/
 │
-├── core/                         # Agent runtime, model router, tool definitions
-├── memory/                       # Dual-phase memory pipeline & vector persistence
-├── reasoning/                    # ToT engine, Graph RAG, hierarchical planner, ExpeL
-├── pipelines/                    # LangGraph, CrewAI, multi-agent mesh, swarm orchestrator
-├── interfaces/                   # (internal) CLI, FastAPI, Discord entrypoints
-├── infrastructure/               # MCP client, sandbox, file processor, email, PDF
+├── src/                          # Production source tree (PEP 517/621 src-layout)
+│   └── ultron/                   # Primary ultron namespace package
+│       ├── core/                 # Agent runtime, polymorphic profiles, model router
+│       ├── memory/               # Dual-phase memory, FastEmbed & LocalQdrantStore
+│       ├── reasoning/            # ToT engine, Graph RAG, hierarchical planner, ExpeL
+│       ├── pipelines/            # LangGraph, CrewAI, multi-agent mesh, swarm orchestrator
+│       ├── interfaces/           # CLI, FastAPI, Discord entrypoints
+│       ├── cli/                  # Console script entrypoints (ultron, ultron-web)
+│       ├── infrastructure/       # MCP client, sandbox, file processor, email, PDF
+│       ├── governance/           # Budget tracker, execution ledger gate
+│       ├── guardrails/           # Critic gate, anti-fabrication, artifact verification
+│       ├── security/             # Sanitized environment builder, killswitch, lockdown
+│       ├── resilience/           # Retry logic, circuit breakers
+│       ├── concurrency/          # Async task management
+│       ├── telemetry/            # Metrics, tracing, event bus
+│       ├── skills/               # Agent skill registry & mutation engine
+│       ├── evals/                # Evaluation benchmarks & golden test sets
+│       └── rules/                # System policies & behavioral constraints
 │
-├── governance/                   # Budget tracker, execution ledger gate
-├── guardrails/                   # Critic gate, anti-fabrication, artifact verification
-├── security/                     # Sovereign killswitch, lockdown
-├── resilience/                   # Retry logic, circuit breakers
-├── concurrency/                  # Async task management
-├── telemetry/                    # Metrics, tracing, event bus
-│
-├── accounting_modules/           # US GAAP, bookkeeping, payroll, ledger service
-├── tax_modules/                  # Corporate & individual tax workflows
-│   └── variants/                 # Archived experimental workflow variants
-├── agentic-qbo-reconciler/       # QuickBooks Online reconciliation pipeline
-├── anti_fabrication_gate/        # Standalone grounding validation subsystem
-│
-├── skills/                       # Agent skill registry & mutation engine
-├── evals/                        # Evaluation benchmarks & golden test sets
-├── rules/                        # Operator-defined behavioral rules
-├── subsystems/                   # Auxiliary cognitive subsystems
-├── utils/                        # Shared utilities
-│
-├── tests/                        # Automated test suite
-│   ├── fixtures/                 # Sample financial data for testing
-│   └── conftest.py
+├── config/                       # Polymorphic configuration profiles (default, developer)
+│   └── profiles/                 # YAML persona & role definitions
+├── tests/                        # Comprehensive test suite (300+ automated tests)
+│   ├── fixtures/                 # Sample test fixtures & isolated test datasets
+│   └── conftest.py               # Test configuration & backwards-compatible aliases
+├── static/                       # Cybernetic Web HUD frontend (HTML/CSS/JS)
 ├── scripts/                      # Operational launchers & management utilities
-│   ├── verify/                   # Phase verification scripts
-│   ├── audit_all_systems.py      # Master 5-pillar architectural audit
 │   ├── kill.bat                  # Emergency killswitch (CMD)
 │   └── killswitch.ps1            # Emergency killswitch (PowerShell)
 ├── reference_data/               # Authoritative static datasets (US GAAP, SEC tickers)
-├── static/                       # Cybernetic Web HUD frontend (HTML/CSS/JS)
-├── config/                       # Runtime configuration files
 │
-├── agent.py                      # ← entry shim (imports core/agent.py)
-├── app.py                        # ← entry shim (imports interfaces/app.py)
-├── main.py                       # ← entry shim (imports interfaces/main.py)
-│
-├── Dockerfile                    # Multi-stage Docker image
-├── docker-compose.yml            # Compose: Ultron Web HUD + Qdrant
+├── Dockerfile                    # Multi-stage Docker container specification
+├── docker-compose.yml            # Compose: Ultron Web HUD + Embedded Qdrant
 ├── Makefile                      # Dev, lint, test, Docker targets
 ├── pyproject.toml                # PEP 517/621 build config, ruff/mypy/pytest settings
 ├── requirements.txt              # Production dependency manifest
@@ -227,9 +215,9 @@ docker-compose up --build -d
 
 ### Interactive Rich CLI
 ```bash
-python main.py
-# or
-make run-cli
+ultron
+# or: python -m ultron.interfaces.main
+# or: make run-cli
 ```
 
 CLI slash commands:
@@ -242,13 +230,15 @@ CLI slash commands:
 
 ### FastAPI Cybernetic Web HUD
 ```bash
-python app.py        # or: make run-web
+ultron-web
+# or: python -m ultron.cli.web
+# or: make run-web
 # Navigate to http://localhost:8000
 ```
 
 ### Discord Bot Gateway
 ```bash
-python discord_bot.py
+python -m ultron.interfaces.discord_bot
 ```
 
 ### Launch All Services
@@ -295,7 +285,7 @@ python scripts/audit_all_systems.py
 ## Security
 
 - **Zero Hardcoded Secrets** — All credentials loaded at runtime from `.env` only
-- **Local Memory Isolation** — Embeddings default to local disk (`./data/chroma`) — never exfiltrated
+- **Local Memory Isolation** — Vector persistence defaults to embedded Qdrant (`./data/qdrant`) with lightweight ONNX CPU embeddings (`fastembed`) — zero exfiltration and zero cloud dependency
 - **Anti-Fabrication Gate** — Grounding validation blocks hallucinated outputs before memory commit
 - **Emergency Killswitch** — Instant process lockdown: `scripts\kill.bat` or `scripts\killswitch.ps1`
 

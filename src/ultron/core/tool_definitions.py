@@ -35,6 +35,7 @@ from ultron.guardrails.limits import (
     dispatch_with_timeout,
 )
 from ultron.infrastructure.sandbox import Sandbox, SandboxViolation
+from ultron.security.environment import SanitizedEnvironmentBuilder, redact_secrets
 
 # ── Anthropic Tool Schemas ────────────────────────────────────────────────────
 
@@ -906,7 +907,7 @@ class ToolExecutor:
                     output += "\n--- STDERR ---\n"
                 output += stderr_data
 
-            output = self.sandbox.truncate_output(output or "(no output)")
+            output = self.sandbox.truncate_output(redact_secrets(output) or "(no output)")
 
             return {
                 "success": p.returncode == 0,
@@ -1080,7 +1081,7 @@ class ToolExecutor:
                         output += "\n--- STDERR ---\n"
                     output += result.stderr
 
-                output = self.sandbox.truncate_output(output or "(no output)")
+                output = self.sandbox.truncate_output(redact_secrets(output) or "(no output)")
 
                 return {
                     "success": result.returncode == 0,
@@ -1421,7 +1422,12 @@ class ToolExecutor:
             }}
             Write-Output "STATUS:OPENED"
             '''
-            subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True)
+            subprocess.run(
+                ["powershell", "-NoProfile", "-Command", ps_script],
+                capture_output=True,
+                text=True,
+                env=SanitizedEnvironmentBuilder().build(),
+            )
             launch_msg = "Note written to disk and popped up in Notepad on your active screen."
 
         return {
@@ -1492,7 +1498,12 @@ class ToolExecutor:
                 $res = $wshell.AppActivate("{window_title}");
                 if ($res) {{ Write-Output "FOCUSED: {window_title}" }} else {{ Write-Output "NOT_FOUND" }}
                 '''
-                res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True)
+                res = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command", ps_script],
+                    capture_output=True,
+                    text=True,
+                    env=SanitizedEnvironmentBuilder().build(),
+                )
                 out = res.stdout.strip()
                 if "FOCUSED" in out:
                     return {"success": True, "output": f"Window matching '{window_title}' brought to foreground.", "error": None}
@@ -1613,7 +1624,12 @@ class ToolExecutor:
                     }}
                 }}
                 '''
-                res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True)
+                res = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command", ps_script],
+                    capture_output=True,
+                    text=True,
+                    env=SanitizedEnvironmentBuilder().build(),
+                )
                 out = res.stdout.strip()
 
                 try:
@@ -1684,7 +1700,12 @@ class ToolExecutor:
                     Write-Output "STATUS:NOT_FOUND"
                 }}
                 '''
-                res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True)
+                res = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command", ps_script],
+                    capture_output=True,
+                    text=True,
+                    env=SanitizedEnvironmentBuilder().build(),
+                )
                 out = res.stdout.strip()
                 if "STATUS:CLOSED" in out:
                     return {"success": True, "output": f"Successfully closed application/window matching '{window_title}'.", "error": None}
@@ -1741,7 +1762,12 @@ class ToolExecutor:
                 ps_script = '''
                 Get-Process | Where-Object { $_.MainWindowTitle -ne "" } | Select-Object Id, ProcessName, MainWindowTitle | ConvertTo-Json
                 '''
-                res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True)
+                res = subprocess.run(
+                    ["powershell", "-NoProfile", "-Command", ps_script],
+                    capture_output=True,
+                    text=True,
+                    env=SanitizedEnvironmentBuilder().build(),
+                )
                 import json as _json
                 try:
                     data = _json.loads(res.stdout.strip())

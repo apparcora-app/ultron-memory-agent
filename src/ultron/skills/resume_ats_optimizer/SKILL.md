@@ -10,12 +10,12 @@ updated_at: 2026-09-04
 # Resume ATS Optimizer Protocol
 
 ## When to Use This Skill
-Use this skill when Boss wants to:
+Use this skill when the user wants to:
 - Optimize their resume / CV for Applicant Tracking Systems (ATS).
 - Check if their resume will pass automated screening and parsing.
 - Understand why job applications aren't getting recruiter callbacks.
 - Directives mentioning: "ATS", "not getting interviews", "resume not working", "optimize resume", "keyword optimization", "ATS score", "audit CV".
-- Also trigger whenever Boss attaches a resume file and mentions targeting specific job descriptions or applications.
+- Also trigger whenever the user attaches a resume file and mentions targeting specific job descriptions or applications.
 
 ---
 
@@ -49,7 +49,7 @@ Use this skill when Boss wants to:
 ### 1. File Format
 - ✅ Use `.docx` or text-based `.pdf` (not `.pages`, `.odt`, or graphic exports).
 - ✅ PDF must be selectable text, never an image scan.
-- ✅ Standard naming convention: `FirstName_LastName_Resume.pdf` (e.g., `Hanzla_Rehman_Agentic_AI_Engineer_CV.docx`).
+- ✅ Standard naming convention: `FirstName_LastName_Resume.pdf` (e.g., `Alex_Taylor_AI_Systems_Engineer_Resume.docx`).
 
 ### 2. Font & Formatting
 - ✅ Standard ATS-safe fonts: **Calibri, Arial, Georgia, Times New Roman, Garamond**.
@@ -114,7 +114,7 @@ $$\text{Match Score} = \left(\frac{\text{Keywords Matched}}{\text{Total Required
 ---
 
 ## Analysis Output Format
-When analyzing or auditing Boss's resume, provide this structured report:
+When analyzing or auditing a resume, provide this structured report:
 
 ```markdown
 # ATS COMPATIBILITY & KEYWORD AUDIT REPORT
@@ -161,10 +161,10 @@ When analyzing or auditing Boss's resume, provide this structured report:
 ---
 
 ## Execution Protocol with Ultron Autonomous Tools
-When Boss provides a resume (via attachment or path):
+When the user provides a resume (via attachment or path):
 1. **Inspect / Extract**: Use `file_operation` or Python `docx`/`pypdf` extraction to read all raw text.
 2. **Audit**: Run keyword match against target JD or domain role.
-3. **Rebuild**: Generate clean, ATS-compliant `.docx` via `run_python` using `python-docx` directly into `C:\Users\reach\Downloads\`.
+3. **Rebuild**: Generate clean, ATS-compliant `.docx` via `run_python` using `python-docx` directly into `./output/`.
 4. **Confirm**: Provide match score and download confirmation.
 
 ## 🧬 Evolution v1.1 — Invalid Model ID in File Memory (2026-09-04)

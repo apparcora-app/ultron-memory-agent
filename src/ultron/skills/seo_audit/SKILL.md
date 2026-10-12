@@ -43,7 +43,7 @@ When investigating sudden ranking or traffic losses, evaluate in exact sequentia
 
 ## 3. SEO Audit Deliverable Structure
 
-When producing an audit for Boss:
+When producing an SEO audit:
 - **Indexing & Crawlability**: Status codes, robots.txt directives, canonical validation, and sitemap health.
 - **Core Web Vitals & Technical Debt**: Mobile responsiveness, HTTPS security, and JavaScript hydration audits.
 - **On-Page & Information Architecture**: H1/H2 hierarchy, meta title/description CTR optimization, click depth, and internal link graph.
