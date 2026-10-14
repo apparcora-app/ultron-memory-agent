@@ -20,6 +20,8 @@ _src_dir = Path(__file__).resolve().parent / "src"
 if _src_dir.exists() and str(_src_dir) not in sys.path:
     sys.path.insert(0, str(_src_dir))
 
+print("\n[Ultron] Initializing Cybernetic Web Server... (loading frameworks, please wait ~8s)\n", flush=True)
+
 from ultron.cli.web import app, main  # noqa: E402
 
 __all__ = ["app", "main"]
