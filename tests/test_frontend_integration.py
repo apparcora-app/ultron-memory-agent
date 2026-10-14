@@ -45,6 +45,9 @@ def test_api_sessions_lifecycle():
     session_data = create_res.json()
     assert "session" in session_data
     assert "id" in session_data["session"]
+    # Clean up test session immediately so it does not pollute user sessions
+    del_res = client.delete(f"/api/sessions/{session_data['session']['id']}?user_id=boss")
+    assert del_res.status_code == 200
 
 def test_api_skills():
     """Verify /api/skills returns skill matrix items."""

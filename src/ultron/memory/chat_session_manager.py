@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import sys
 import time
@@ -35,8 +36,24 @@ from ultron.concurrency import (  # noqa: E402
     safe_read_json,
 )
 
-SESSIONS_DIR = Path(__file__).parent / "data" / "sessions"
-SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+def _resolve_canonical_sessions_dir() -> Path:
+    env_path = os.environ.get("ULTRON_SESSIONS_DIR")
+    if env_path:
+        p = Path(env_path)
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+
+    try:
+        project_root = Path(__file__).resolve().parents[3]
+        canonical = project_root / "data" / "sessions"
+        canonical.mkdir(parents=True, exist_ok=True)
+        return canonical
+    except Exception:
+        fallback = Path(__file__).parent / "data" / "sessions"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+SESSIONS_DIR = _resolve_canonical_sessions_dir()
 
 
 class ChatSessionManager:
@@ -51,28 +68,73 @@ class ChatSessionManager:
         self.sessions_dir = Path(target)
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
 
+    def _normalize_session_id(self, user_id: str, session_id: str) -> tuple[str, str]:
+        raw_user = (user_id or "boss").strip().lower()
+        if raw_user in ("default_user", "operator", ""):
+            raw_user = "boss"
+        clean_user = re.sub(r"[^a-zA-Z0-9_-]", "_", raw_user)
+
+        raw_session = str(session_id).strip()
+        if raw_session.endswith(".json"):
+            raw_session = raw_session[:-5]
+
+        # Strip user prefix if already included
+        user_prefix = f"{clean_user}_"
+        while raw_session.startswith(user_prefix):
+            raw_session = raw_session[len(user_prefix):]
+
+        clean_session = re.sub(r"[^a-zA-Z0-9_-]", "_", raw_session)
+        return clean_user, clean_session
+
     def _get_session_path(self, user_id: str, session_id: str) -> Path:
-        clean_user = re.sub(r"[^a-zA-Z0-9_-]", "_", (user_id or "default_user").lower())
-        clean_session = re.sub(r"[^a-zA-Z0-9_-]", "_", session_id)
-        return self.sessions_dir / f"{clean_user}_{clean_session}.json"
+        clean_user, clean_session = self._normalize_session_id(user_id, session_id)
+        canonical_target = self.sessions_dir / f"{clean_user}_{clean_session}.json"
+        if canonical_target.exists():
+            return canonical_target
+
+        direct_target = self.sessions_dir / f"{clean_session}.json"
+        if direct_target.exists():
+            return direct_target
+
+        matches = list(self.sessions_dir.glob(f"*{clean_session}*.json"))
+        if matches:
+            return matches[0]
+
+        return canonical_target
 
     def list_sessions(self, user_id: str = "default_user") -> list[dict[str, Any]]:
         """List all chat sessions for the given user, sorted by updated_at descending."""
-        clean_user = re.sub(r"[^a-zA-Z0-9_-]", "_", (user_id or "default_user").lower())
+        clean_user, _ = self._normalize_session_id(user_id, "")
         prefix = f"{clean_user}_"
         sessions = []
 
-        for p in self.sessions_dir.glob(f"{prefix}*.json"):
+        seen_ids = set()
+
+        for p in self.sessions_dir.glob("*.json"):
+            # Only match sessions belonging to user or prefixed with user
+            if not (p.name.startswith(prefix) or p.name.startswith("chat_")):
+                continue
             try:
                 with open(p, encoding="utf-8") as f:
                     data = json.load(f)
+
+                sid = data.get("id") or p.stem.replace(prefix, "")
+                if sid in seen_ids:
+                    continue
+                seen_ids.add(sid)
+
+                msg_count = len(data.get("messages", []))
+                # Skip empty abandoned drafts from listing
+                if msg_count == 0 and data.get("title") in ["New Directive", "New Directives", "Untitled Directive"]:
+                    continue
+
                 sessions.append({
-                    "id": data.get("id"),
+                    "id": sid,
                     "title": data.get("title", "Untitled Directive"),
                     "module_id": data.get("module_id", "ultron_prime"),
                     "created_at": data.get("created_at"),
                     "updated_at": data.get("updated_at"),
-                    "message_count": len(data.get("messages", [])),
+                    "message_count": msg_count,
                     "preview": self._get_preview(data.get("messages", [])),
                 })
             except Exception as e:
@@ -176,16 +238,31 @@ class ChatSessionManager:
         return session
 
     def delete_session(self, user_id: str, session_id: str) -> bool:
-        """Delete session file from disk."""
-        path = self._get_session_path(user_id, session_id)
-        if path.exists():
-            try:
-                path.unlink()
-                return True
-            except Exception as e:
-                print(f"  [SESSION] Error deleting {path}: {e}")
-                return False
-        return False
+        """Delete session file from disk reliably."""
+        try:
+            path = self._get_session_path(user_id, session_id)
+            deleted = False
+            if path.exists():
+                try:
+                    path.unlink()
+                    deleted = True
+                except Exception as e:
+                    print(f"  [SESSION] Error deleting {path}: {e}")
+
+            # Also check fallback by normalized session id
+            _, clean_session = self._normalize_session_id(user_id, session_id)
+            if clean_session:
+                for match in self.sessions_dir.glob(f"*{clean_session}*.json"):
+                    try:
+                        match.unlink()
+                        deleted = True
+                    except Exception:
+                        pass
+
+            return deleted
+        except Exception as e:
+            print(f"  [SESSION] Exception deleting session {session_id}: {e}")
+            return False
 
     def append_turn(
         self,

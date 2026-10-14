@@ -123,43 +123,21 @@ export const KimiChatWorkspace: React.FC = () => {
     };
   }, [isDragging]);
 
-  // Create new session
-  const handleNewSession = async () => {
-    try {
-      const formData = new FormData();
-      formData.append("user_id", "boss");
-      formData.append("module_id", "ultron_prime");
-      formData.append("title", "New Directive");
-
-      const res = await fetch("/api/sessions/new", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.session) {
-          setCurrentSessionId(data.session.id);
-          setSessionTitle(data.session.title || "New Directive");
-          setMessages([]);
-          setSessions((prev) => [data.session, ...prev]);
-        }
-      } else {
-        const newId = `sess_${Date.now()}`;
-        setCurrentSessionId(newId);
-        setSessionTitle("New Directive");
-        setMessages([]);
-      }
-    } catch {
-      const newId = `sess_${Date.now()}`;
-      setCurrentSessionId(newId);
-      setSessionTitle("New Directive");
-      setMessages([]);
-    }
+  // Create new session: lazy draft mode (zero eager backend POST)
+  const handleNewSession = () => {
+    setCurrentSessionId("");
+    setSessionTitle("New Directive");
+    setMessages([]);
   };
 
   // Select session & load its history if available
   const handleSelectSession = async (sessionId: string) => {
+    if (!sessionId) {
+      setCurrentSessionId("");
+      setSessionTitle("New Directive");
+      setMessages([]);
+      return;
+    }
     setCurrentSessionId(sessionId);
     const found = sessions.find((s) => s.id === sessionId);
     if (found) {
@@ -189,15 +167,22 @@ export const KimiChatWorkspace: React.FC = () => {
     }
   };
 
-  // Delete session
+  // Delete session: seamless handover without ghost directive creation
   const handleDeleteSession = async (sessionId: string) => {
     try {
       await fetch(`/api/sessions/${sessionId}?user_id=boss`, {
         method: "DELETE",
       });
-      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      const remaining = sessions.filter((s) => s.id !== sessionId);
+      setSessions(remaining);
       if (currentSessionId === sessionId) {
-        handleNewSession();
+        if (remaining.length > 0) {
+          await handleSelectSession(remaining[0].id);
+        } else {
+          setCurrentSessionId("");
+          setSessionTitle("New Directive");
+          setMessages([]);
+        }
       }
     } catch (err) {
       console.error("Failed to delete session:", err);
