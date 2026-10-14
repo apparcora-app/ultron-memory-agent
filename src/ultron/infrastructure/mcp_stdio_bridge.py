@@ -24,9 +24,9 @@ class MCPServerBridge:
         self._init_future = concurrent.futures.Future()
         asyncio.run_coroutine_threadsafe(self._init_server(), self.loop)
         try:
-            self._init_future.result(timeout=2.0)
-        except Exception as e:
-            print(f"  [MCP BRIDGE INIT TIMEOUT] {self.command}: {e}")
+            self._init_future.result(timeout=4.0)
+        except Exception:
+            pass
 
     def _run_loop(self):
         asyncio.set_event_loop(self.loop)
@@ -47,10 +47,21 @@ class MCPServerBridge:
         except Exception as e:
             self._init_future.set_exception(e)
 
-    def execute_tool(self, name: str, args: dict) -> dict:
+    def execute_tool(self, name: str, args: dict, timeout: float = 30.0) -> dict:
+        if not self._init_future.done():
+            try:
+                self._init_future.result(timeout=5.0)
+            except Exception as e:
+                return {"success": False, "output": "", "error": f"MCP bridge not ready: {e}"}
+        if self._init_future.exception():
+            return {"success": False, "output": "", "error": f"MCP bridge initialization failed: {self._init_future.exception()}"}
+
         future = concurrent.futures.Future()
         asyncio.run_coroutine_threadsafe(self._call_tool(name, args, future), self.loop)
-        return future.result()
+        try:
+            return future.result(timeout=timeout)
+        except Exception as e:
+            return {"success": False, "output": "", "error": f"MCP tool execution failed: {e}"}
 
     async def _call_tool(self, name: str, args: dict, future: concurrent.futures.Future):
         try:

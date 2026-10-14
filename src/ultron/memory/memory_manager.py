@@ -155,13 +155,18 @@ class MemoryManager:
         if not self.mem:
             raise RuntimeError("Mem0 Memory instance is not initialized")
         try:
-            results = self.mem.get_all(filters={"user_id": self.user_id}, top_k=top_k)
+            try:
+                results = self.mem.get_all(user_id=self.user_id)
+            except TypeError:
+                results = self.mem.get_all(filters={"user_id": self.user_id})
             if isinstance(results, dict):
-                return results.get("results", [])
-            return results or []
+                res_list = results.get("results", [])
+            else:
+                res_list = results or []
+            return res_list[:top_k] if top_k else res_list
         except Exception as e:
             print(f"[MEMORY GET_ALL ERROR] Error fetching memories for user '{self.user_id}': {e}", file=sys.stderr)
-            raise
+            return []
 
     def delete(self, memory_id: str) -> None:
         """Manually delete a specific memory by its ID."""

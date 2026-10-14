@@ -25,6 +25,8 @@ from qdrant_client.models import (
 
 logger = logging.getLogger(__name__)
 
+_CLIENTS: dict[str, QdrantClient] = {}
+
 
 class LocalQdrantStore:
     """
@@ -47,8 +49,31 @@ class LocalQdrantStore:
         self.vector_size = vector_size
         self.distance = distance
 
-        self.client = QdrantClient(path=str(self.path))
+        norm_path = str(self.path.resolve())
+        if norm_path not in _CLIENTS:
+            try:
+                _CLIENTS[norm_path] = QdrantClient(path=norm_path)
+            except Exception as e:
+                if "already accessed by another instance" in str(e) or "lock" in str(e).lower():
+                    logger.warning(
+                        "Storage folder '%s' locked by another active Ultron process. Falling back to shared in-memory store for this worker session.",
+                        norm_path,
+                    )
+                    _CLIENTS[norm_path] = QdrantClient(":memory:")
+                else:
+                    raise
+        self.client = _CLIENTS[norm_path]
         self._ensure_collection()
+
+    def close(self) -> None:
+        """Close client connection and release file locks."""
+        norm_path = str(self.path.resolve())
+        client = _CLIENTS.pop(norm_path, None)
+        if client:
+            try:
+                client.close()
+            except Exception:
+                pass
 
     def _ensure_collection(self) -> None:
         """Create collection if it does not already exist."""

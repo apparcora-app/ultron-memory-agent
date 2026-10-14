@@ -168,7 +168,7 @@ _ANAPHORIC_PATTERNS = re.compile(
 
 # Conversational fast-path regex (greetings, status checks, pings)
 _FAST_CONVERSATIONAL_REGEX = re.compile(
-    r"^(hi|hello|hey|greetings|yo|sup|status|confirm status|confirm your active status|ping|test|are you (online|active)|who are you|how are you|help|thanks|thank you)[\s!.?]*$",
+    r"^(hi|hello|hey|greetings|yo|sup|ping|test|help|hellp|thanks|thank you|status|who are you|how are you)(?:\s+(?:ultron|there|bot|assistant))?(?:\s*[,!?.]*\s*(?:confirm\s+status|status|how\s+are\s+you|are\s+you\s+(?:online|active)))?[\s!.?]*$",
     re.IGNORECASE,
 )
 
@@ -586,6 +586,8 @@ class MemoryAgent:
         """
         if model_override:
             if model_override in ("auto", "default"):
+                if getattr(self.llm_cfg, "provider", "").lower() == "gemini":
+                    return self.llm_cfg.gemini_model_flash, "Google Gemini Flash Core (Default)"
                 return "auto", "FreeLLMAPI Sovereign Auto-Router"
             if model_override == "thinking":
                 return self.llm_cfg.gemini_model_thinking, "System 2 Reasoning Core"
@@ -605,6 +607,10 @@ class MemoryAgent:
             return "nvidia/nemotron-3-ultra-550b-a55b:free", "Manual NVIDIA Override"
         if "/glm" in input_lower or "use glm" in input_lower:
             return "z-ai/glm-5.2:free", "Manual GLM Override"
+
+        # Prioritize configured primary provider
+        if getattr(self.llm_cfg, "provider", "").lower() == "gemini":
+            return self.llm_cfg.gemini_model_flash, "Google Gemini Flash Core"
 
         # Prioritize FreeLLMAPI zero-cost router when enabled
         if getattr(self.llm_cfg, "freellmapi_enabled", False):
@@ -1215,6 +1221,16 @@ class MemoryAgent:
         if not files and _FAST_CONVERSATIONAL_REGEX.match(user_input.strip()):
             from ultron.core.llm_chain import chat_with_fallback
             user_title = getattr(self, "user_title", _active_profile.user_title)
+            if getattr(self.llm_cfg, "provider", "").lower() == "gemini":
+                fast_model = self.llm_cfg.gemini_model_flash
+                display_name = "Gemini Flash Ultra Fast"
+            elif getattr(self.llm_cfg, "freellmapi_enabled", False):
+                fast_model = "gpt-oss-120b"
+                display_name = "FreeLLMAPI Ultra Fast"
+            else:
+                fast_model = self.llm_cfg.gemini_model_flash
+                display_name = "Gemini Flash Ultra Fast"
+
             fast_reply, _, fast_prov = await chat_with_fallback(
                 prompt=user_input,
                 system_prompt=(
@@ -1222,7 +1238,7 @@ class MemoryAgent:
                     f"Never refer to yourself as dots, rednote, Tongyi, Qwen, or any underlying model name. "
                     f"Address the user respectfully as {user_title}, confirm operational status, and ask how you may assist."
                 ),
-                model_override="gpt-oss-120b",
+                model_override=fast_model,
                 max_tokens=256,
                 temperature=0.2,
             )
@@ -1234,8 +1250,8 @@ class MemoryAgent:
             self._history.append({"role": "assistant", "content": fast_reply})
             return {
                 "reply": fast_reply,
-                "model_used": "FreeLLMAPI (gpt-oss-120b)",
-                "model_display": "FreeLLMAPI Ultra Fast",
+                "model_used": f"{fast_prov} ({fast_model})",
+                "model_display": display_name,
                 "route_reason": "Conversational Fast-Path (<500ms)",
                 "tool_actions": [],
                 "skills_used": [],
@@ -1513,14 +1529,14 @@ class MemoryAgent:
 
             if tools_param:
                 print("  [ORCHESTRATOR] Delegating multi-step execution to Worker Mesh to optimize tokens...")
+                user_title = getattr(self, "user_title", _active_profile.user_title)
                 worker_system_prompt = (
-                    "You are an autonomous Tool Execution Worker.\n"
-                    "Your ONLY job is to execute tools to gather data or perform actions requested by the user.\n"
-                    "CRITICAL INSTRUCTIONS:\n"
-                    "1. You MUST execute necessary tools to fulfill the query.\n"
-                    "2. Do NOT write the final stylized response to the user.\n"
-                    "3. Once you have finished ALL tool operations, output a detailed factual summary of all data gathered and actions taken.\n"
-                    "4. If no tools are needed, just state that no tools were required.\n"
+                    f"You are ULTRON, a sovereign cybernetic AI assistant. Address the user respectfully as {user_title}.\n"
+                    "Your primary objective is to execute tools to perform actions or gather data required by the user.\n"
+                    "CRITICAL DIRECTIVES:\n"
+                    "1. If tools are needed to answer or fulfill the query, execute them autonomously.\n"
+                    "2. If NO tools are needed to fulfill the request, answer the user query directly with full clarity, authority, and the Ultron persona.\n"
+                    "3. When you have executed tools, provide a clear, factual summary of all actions taken and findings discovered.\n"
                 )
 
                 # Worker Pass (TINY PROMPT, WITH TOOLS)
@@ -1537,43 +1553,47 @@ class MemoryAgent:
                 total_input_tokens += w_in
                 total_output_tokens += w_out
 
-                print("  [ORCHESTRATOR] Worker complete. Passing gathered context to Synthesizer (Single Pass)...")
+                if not tool_actions and worker_reply and "no tools were required" not in worker_reply.lower():
+                    print("  [ORCHESTRATOR] Worker completed with zero tool calls. Fast-bypassing redundant Synthesizer pass.")
+                    assistant_reply = worker_reply
+                else:
+                    print("  [ORCHESTRATOR] Worker complete. Passing gathered context to Synthesizer (Single Pass)...")
 
-                # Synthesizer Pass (HEAVY PROMPT, NO TOOLS)
-                synthesizer_user = (
-                    f"User Query: {user_input}\n\n"
-                    f"--- GATHERED DATA FROM TOOL WORKER ---\n"
-                    f"{worker_reply}\n\n"
-                    f"--- TOOL ACTIONS TAKEN ---\n"
-                )
-                for act in tool_actions:
-                    out_str = str(act.get('output',''))
-                    if len(out_str) > 1000:
-                        out_str = out_str[:500] + "... [TRUNCATED] ..." + out_str[-500:]
-                    synthesizer_user += f"- {act['tool']}: {out_str}\n"
-
-                synthesizer_user += "\nUsing the skills, memory, and data above, write the final, perfectly formatted response to the user. Do NOT ask to use tools, the tools have already been run."
-
-                synth_sys = system_prompt.replace(tool_instruction, "") if tool_instruction else system_prompt
-                try:
-                    assistant_reply, _, s_in, s_out = await chat_func(
-                        selected_model=selected_model,
-                        system_prompt=synth_sys,
-                        user_input=synthesizer_user,
-                        files=None,
-                        combined_text=synthesizer_user,
-                        tools_param=None,
-                        module_id=f"{module_id}_synth",
-                        client_data=client_data,
+                    # Synthesizer Pass (HEAVY PROMPT, NO TOOLS)
+                    synthesizer_user = (
+                        f"User Query: {user_input}\n\n"
+                        f"--- GATHERED DATA FROM TOOL WORKER ---\n"
+                        f"{worker_reply}\n\n"
+                        f"--- TOOL ACTIONS TAKEN ---\n"
                     )
-                    total_input_tokens += s_in
-                    total_output_tokens += s_out
-                except Exception as synth_err:
-                    print(f"  [SYNTHESIZER PASS WARNING] Synthesizer pass encountered error ({synth_err}). Using worker output directly.")
-                    assistant_reply = worker_reply
+                    for act in tool_actions:
+                        out_str = str(act.get('output',''))
+                        if len(out_str) > 1000:
+                            out_str = out_str[:500] + "... [TRUNCATED] ..." + out_str[-500:]
+                        synthesizer_user += f"- {act['tool']}: {out_str}\n"
 
-                if not assistant_reply and worker_reply:
-                    assistant_reply = worker_reply
+                    synthesizer_user += "\nUsing the skills, memory, and data above, write the final, perfectly formatted response to the user. Do NOT ask to use tools, the tools have already been run."
+
+                    synth_sys = system_prompt.replace(tool_instruction, "") if tool_instruction else system_prompt
+                    try:
+                        assistant_reply, _, s_in, s_out = await chat_func(
+                            selected_model=selected_model,
+                            system_prompt=synth_sys,
+                            user_input=synthesizer_user,
+                            files=None,
+                            combined_text=synthesizer_user,
+                            tools_param=None,
+                            module_id=f"{module_id}_synth",
+                            client_data=client_data,
+                        )
+                        total_input_tokens += s_in
+                        total_output_tokens += s_out
+                    except Exception as synth_err:
+                        print(f"  [SYNTHESIZER PASS WARNING] Synthesizer pass encountered error ({synth_err}). Using worker output directly.")
+                        assistant_reply = worker_reply
+
+                    if not assistant_reply and worker_reply:
+                        assistant_reply = worker_reply
 
             else:
                 # No tools active, single pass directly (e.g. general chat)

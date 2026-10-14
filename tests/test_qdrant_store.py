@@ -26,8 +26,20 @@ class TestLocalQdrantStore:
     @pytest.fixture
     def temp_store_dir(self) -> Path:
         """Create an isolated temporary directory for Qdrant storage."""
-        with tempfile.TemporaryDirectory() as tmp:
+        tmp = tempfile.mkdtemp()
+        try:
             yield Path(tmp)
+        finally:
+            norm = str(Path(tmp).resolve())
+            from memory.qdrant_store import _CLIENTS
+            c = _CLIENTS.pop(norm, None)
+            if c:
+                try:
+                    c.close()
+                except Exception:
+                    pass
+            import shutil
+            shutil.rmtree(tmp, ignore_errors=True)
 
     def test_initialization_creates_collection(self, temp_store_dir: Path) -> None:
         """Verify collection auto-creation with custom dimensionality."""

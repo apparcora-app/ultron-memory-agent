@@ -195,16 +195,18 @@ class SkillManager:
                             print(f"[Ultron Skill Error] Failed to load {skill_file}: {e}")
 
         for sid, origin in self._skill_origins.items():
-            logger.info(f"Active skill '{sid}' loaded from {origin}")
+            logger.debug(f"Active skill '{sid}' loaded from {origin}")
+        logger.info(f"Loaded {len(self._skills)} active skills into memory cache.")
 
         if self._vector_collection:
             self._sync_vector_index()
 
         return self._skills
 
-    def get_all_skills(self) -> list[dict[str, Any]]:
-        """Returns structured metadata for all installed skills."""
-        self.reload_skills()
+    def get_all_skills(self, force: bool = False) -> list[dict[str, Any]]:
+        """Returns structured metadata for all installed skills from in-memory cache."""
+        if not self._skills or force:
+            self.reload_skills()
         return [
             {
                 "id": s.id,
