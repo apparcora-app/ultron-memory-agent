@@ -16,11 +16,17 @@ async def chat_with_fallback(prompt, system_prompt="", max_tokens=1024, temperat
         raise ValueError("No approved provider for client data")
 
     cfg = LLMConfig()
-    active_providers = list(getattr(cfg, "providers", ["freellmapi"]))
+    active_providers = list(getattr(cfg, "providers", ["gemini", "freellmapi"]))
     if getattr(cfg, "gemini_api_key", "") and "gemini" not in active_providers:
         active_providers.append("gemini")
     if getattr(cfg, "openrouter_api_key", "") and "openrouter" not in active_providers:
         active_providers.append("openrouter")
+    
+    # Ensure user's configured provider is at the top of the waterfall
+    primary_p = getattr(cfg, "provider", "").lower()
+    if primary_p in active_providers:
+        active_providers.remove(primary_p)
+        active_providers.insert(0, primary_p)
 
     messages = []
     if system_prompt:
@@ -143,7 +149,8 @@ async def chat_with_fallback(prompt, system_prompt="", max_tokens=1024, temperat
 
                 # Timeout changed to 30000 milliseconds
                 client = genai.Client(api_key=cfg.gemini_api_key, http_options={'timeout': 30000})
-                model = cfg.gemini_model_flash
+                clean_override = (model_override or "").replace("gemini/", "").replace("google/", "").strip()
+                model = clean_override if clean_override.startswith("gemini") else cfg.gemini_model_flash
 
                 combined_prompt = ""
                 if system_prompt:

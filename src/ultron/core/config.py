@@ -157,7 +157,13 @@ class LLMConfig:
     freellmapi_model: str = field(default_factory=lambda: _get("FREELLMAPI_MODEL", "gpt-oss-120b"))
     providers: list[str] = field(
         default_factory=lambda: [
-            p for p in ["freellmapi", "gemini", "openrouter"]
+            p for p in (
+                ["gemini", "openrouter", "freellmapi"]
+                if _get("LLM_PROVIDER", "gemini").lower() == "gemini"
+                else ["openrouter", "gemini", "freellmapi"]
+                if _get("LLM_PROVIDER", "").lower() == "openrouter"
+                else ["freellmapi", "gemini", "openrouter"]
+            )
             if (p == "freellmapi" and _get("FREELLMAPI_ENABLED", "true").lower() in ("true", "1", "yes"))
             or (p == "gemini" and _get("GEMINI_API_KEY", ""))
             or (p == "openrouter" and _get("OPENROUTER_API_KEY", ""))
@@ -216,12 +222,13 @@ class LLMConfig:
         }
 
     def as_mem0_embedder_dict(self) -> dict:
-        provider = _get("EMBEDDER_PROVIDER", "fastembed").lower()
-        if provider == "fastembed":
+        provider = _get("EMBEDDER_PROVIDER", "huggingface").lower()
+        if provider == "gemini" and self.gemini_api_key:
             return {
-                "provider": "fastembed",
+                "provider": "gemini",
                 "config": {
-                    "model": "BAAI/bge-small-en-v1.5",
+                    "model": "models/text-embedding-004",
+                    "api_key": self.gemini_api_key,
                 },
             }
         return {

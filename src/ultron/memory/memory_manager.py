@@ -85,8 +85,8 @@ class MemoryManager:
         try:
             results = self.mem.search(
                 query=query,
-                filters={"user_id": self.user_id},
-                top_k=effective_k * 2,
+                user_id=self.user_id,
+                limit=effective_k * 2,
             )
             # Mem0 ≥0.1.x wraps results in {"results": [...]}
             if isinstance(results, dict):
