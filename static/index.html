@@ -4,14 +4,25 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ultron Protocol // Vivid Sky Blue Edition</title>
+    <title>Ultron Protocol // Autonomous Cognitive Mainframe</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/static/assets/index-CL2BQIMY.js"></script>
-    <link rel="stylesheet" crossorigin href="/static/assets/index-9xmz-ocb.css">
+    <script>
+      (function() {
+        var theme = 'dark';
+        try {
+          theme = localStorage.getItem('ultron-theme') || 'dark';
+        } catch (e) {
+          // Fallback if storage access is restricted or sandboxed
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+    <script type="module" crossorigin src="/static/assets/index-iIPlyMj9.js"></script>
+    <link rel="stylesheet" crossorigin href="/static/assets/index-YXolbmtA.css">
   </head>
-  <body class="bg-[#f8f9fa] text-[#0f172a] overflow-hidden">
+  <body class="bg-theme-ground text-theme-main overflow-hidden m-0 p-0">
     <div id="root"></div>
   </body>
 </html>

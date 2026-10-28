@@ -86,6 +86,7 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
   // Handle click events (Take the Wheel / remote control)
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!takeWheelActive || !isConnected) return;
       const coords = getNormalizedCoordinates(e);
       if (!coords) return;
 
@@ -101,13 +102,13 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
       setUserCursorPos(coords);
       setTimeout(() => setUserCursorPos(null), 300);
     },
-    [getNormalizedCoordinates, sendControlEvent]
+    [takeWheelActive, isConnected, getNormalizedCoordinates, sendControlEvent]
   );
 
   // Handle mouse move
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!takeWheelActive) return;
+      if (!takeWheelActive || !isConnected) return;
       const coords = getNormalizedCoordinates(e);
       if (coords) {
         sendControlEvent({
@@ -117,12 +118,13 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
         });
       }
     },
-    [takeWheelActive, getNormalizedCoordinates, sendControlEvent]
+    [takeWheelActive, isConnected, getNormalizedCoordinates, sendControlEvent]
   );
 
   // Keyboard navigation & typing
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!takeWheelActive || !isConnected) return;
       // Prevent scrolling page when interacting with player
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.key)) {
         e.preventDefault();
@@ -133,17 +135,18 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
         key: e.key,
       });
     },
-    [sendControlEvent]
+    [takeWheelActive, isConnected, sendControlEvent]
   );
 
   const handleKeyUp = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!takeWheelActive || !isConnected) return;
       sendControlEvent({
         type: "KEY_UP",
         key: e.key,
       });
     },
-    [sendControlEvent]
+    [takeWheelActive, isConnected, sendControlEvent]
   );
 
   // Fullscreen toggle
@@ -331,7 +334,10 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
 
         {/* ── Standby / Negotiating / Error Overlays ── */}
         {!isConnected && !isConnecting && !error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-sm text-center p-6 z-10">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-sm text-center p-6 z-10"
+          >
             <WifiOff className="w-12 h-12 text-zinc-600 mb-3" />
             <h3 className="font-mono text-sm font-semibold text-zinc-300">STREAM STANDBY</h3>
             <p className="text-xs text-zinc-500 mt-1 max-w-sm">
@@ -339,7 +345,10 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
             </p>
             {onReconnect && (
               <button
-                onClick={onReconnect}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReconnect();
+                }}
                 className="mt-4 px-4 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/40 text-cyan-400 font-mono text-xs hover:bg-cyan-500/20 transition-all"
               >
                 Connect Stream
@@ -349,7 +358,10 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
         )}
 
         {isConnecting && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-sm text-center p-6 z-10">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-sm text-center p-6 z-10"
+          >
             <div className="relative w-12 h-12 mb-4">
               <div className="absolute inset-0 rounded-full border-2 border-cyan-500/20" />
               <div className="absolute inset-0 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
@@ -364,13 +376,19 @@ export const WebRTCPlayer: React.FC<WebRTCPlayerProps> = ({
         )}
 
         {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-sm text-center p-6 z-10">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 backdrop-blur-sm text-center p-6 z-10"
+          >
             <AlertCircle className="w-12 h-12 text-rose-500 mb-3" />
             <h3 className="font-mono text-sm font-semibold text-rose-400">STREAM NEGOTIATION ERROR</h3>
             <p className="text-xs text-zinc-400 mt-1 max-w-sm">{error}</p>
             {onReconnect && (
               <button
-                onClick={onReconnect}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReconnect();
+                }}
                 className="mt-4 px-4 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/40 text-rose-300 font-mono text-xs hover:bg-rose-500/20 transition-all"
               >
                 Retry Connection

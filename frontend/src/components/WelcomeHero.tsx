@@ -1,9 +1,8 @@
 import React from "react";
 import {
-  ArrowUpRight,
-  Code2,
-  Globe,
-  Video,
+  Brain,
+  Network,
+  Terminal,
 } from "lucide-react";
 import { OrbAvatar } from "./OrbAvatar";
 import { ChatInput } from "./ChatInput";
@@ -45,46 +44,46 @@ export const WelcomeHero: React.FC<WelcomeHeroProps> = ({
   onOpenMemories,
   onSelectPrompt,
 }) => {
-  const CAPABILITY_CARDS = [
+  const SUGGESTED_DIRECTIVES = [
     {
-      title: "Image Generator",
-      desc: "Turn ideas into stunning visuals in seconds.",
-      icon: Globe,
-      prompt: "Generate a high-resolution, futuristic conceptual visual for an autonomous AI command interface.",
+      label: "System Status & Memory Audit",
+      prompt: "Inspect system metrics, query Mem0 vectors, and report active memory bank status.",
+      icon: Brain,
     },
     {
-      title: "Video Generator",
-      desc: "Create cinematic videos from simple prompts.",
-      icon: Video,
-      prompt: "Generate a cinematic storyboard and script for an autonomous AI operations video showcase.",
+      label: "Sandbox Financial Verification",
+      prompt: "Execute sandbox accounting engine to reconcile bank transactions against the ledger.",
+      icon: Terminal,
     },
     {
-      title: "Dev Assistant",
-      desc: "Accelerate development with intelligent assistance.",
-      icon: Code2,
-      prompt: "Execute a shell command in your sandbox to inspect system metrics and verify live backend APIs.",
+      label: "Swarm Research Dispatch",
+      prompt: "Dispatch the 6-agent swarm mesh to analyze system architecture and test coverage.",
+      icon: Network,
     },
   ];
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[82vh] px-4 py-8 max-w-4xl mx-auto w-full text-center relative z-20">
       {/* 3D Iridescent Glowing Sphere Avatar */}
-      <div className="mb-6 transform hover:scale-105 transition-transform duration-500">
-        <OrbAvatar size={110} />
+      <div className="mb-5 transform hover:scale-105 transition-transform duration-500">
+        <OrbAvatar size={100} />
       </div>
 
-      {/* Typography from Stitch Spec */}
-      <div className="mb-8 space-y-2">
+      {/* Typography — Confident Operator Command Voice */}
+      <div className="mb-7 space-y-2">
         <h2 className="text-xs sm:text-sm font-semibold tracking-[0.25em] text-[#0284c7] uppercase font-mono">
-          AI COLLABORATIVE WORKSPACE
+          AUTONOMOUS COGNITIVE SYSTEM
         </h2>
-        <h1 className="text-2xl sm:text-4xl font-bold text-[#0f172a] tracking-tight">
-          With What You Want To Work Today?
+        <h1 className="text-2xl sm:text-4xl font-bold text-theme-main tracking-tight">
+          Ultron Operational Command
         </h1>
+        <p className="text-xs sm:text-sm text-theme-muted max-w-xl mx-auto leading-relaxed">
+          Persistent dual memory, multi-agent swarm orchestration, and isolated computer execution.
+        </p>
       </div>
 
       {/* Centered Floating Chat Input Card */}
-      <div className="w-full mb-8">
+      <div className="w-full mb-6">
         <ChatInput
           value={inputVal}
           onChange={onChangeInput}
@@ -104,32 +103,43 @@ export const WelcomeHero: React.FC<WelcomeHeroProps> = ({
         />
       </div>
 
-      {/* 3 Stitch Capability Starter Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 w-full max-w-3xl text-left">
-        {CAPABILITY_CARDS.map((card, idx) => {
-          const IconComponent = card.icon;
+      {/* ── Subsystem Live Telemetry Strip (DESIGN.md Approved) ── */}
+      <div className="flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto mb-6">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-theme-panel border border-theme-border text-xs font-mono text-theme-muted shadow-xs transition-colors">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-theme-main font-semibold">Memory Bank:</span>
+          <span>Mem0 + Qdrant Active</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-theme-panel border border-theme-border text-xs font-mono text-theme-muted shadow-xs transition-colors">
+          <span className="w-2 h-2 rounded-full bg-purple-500" />
+          <span className="text-theme-main font-semibold">Swarm Mesh:</span>
+          <span>6 Agents Standby</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-theme-panel border border-theme-border text-xs font-mono text-theme-muted shadow-xs transition-colors">
+          <span className="w-2 h-2 rounded-full bg-sky-500" />
+          <span className="text-theme-main font-semibold">AST Sandbox:</span>
+          <span>Docker / E2B Armed</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-theme-panel border border-theme-border text-xs font-mono text-theme-muted shadow-xs transition-colors">
+          <span className="w-2 h-2 rounded-full bg-amber-500" />
+          <span className="text-theme-main font-semibold">Ledger Gate:</span>
+          <span>Physical Ground Truth</span>
+        </div>
+      </div>
+
+      {/* ── Authentic Directive Chips (Clean Operator Shortcuts) ── */}
+      <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl mx-auto text-left">
+        {SUGGESTED_DIRECTIVES.map((item, idx) => {
+          const IconComponent = item.icon;
           return (
             <button
               key={idx}
               type="button"
-              onClick={() => onSelectPrompt(card.prompt)}
-              className="group relative flex flex-col justify-between p-4 rounded-2xl bg-white border border-[#e2e8f0] hover:border-[#0284c7] hover:shadow-md transition-all duration-200 shadow-sm text-left"
+              onClick={() => onSelectPrompt(item.prompt)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-theme-panel/80 hover:bg-theme-card-hover border border-theme-border hover:border-theme-focus text-xs text-theme-muted hover:text-theme-main transition-all shadow-xs"
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#f1f5f9] text-slate-700 group-hover:text-[#0284c7] group-hover:bg-[#f0f9ff] transition-colors border border-[#e2e8f0]">
-                  <IconComponent className="w-4 h-4" />
-                </div>
-                <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-[#0284c7] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-              </div>
-
-              <div>
-                <h3 className="text-sm font-bold text-[#0f172a] group-hover:text-[#0284c7] transition-colors mb-1">
-                  {card.title}
-                </h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  {card.desc}
-                </p>
-              </div>
+              <IconComponent className="w-3.5 h-3.5 text-[#0284c7]" />
+              <span className="font-medium">{item.label}</span>
             </button>
           );
         })}

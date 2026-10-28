@@ -2,7 +2,7 @@
  * KimiChatWorkspace.tsx — Syntrix-Style Autonomous AI Workspace with Dynamic WebRTC Canvas.
  *
  * Implements the Syntrix interface:
- *   - Dark aesthetic with ambient cyan/teal radial backglow.
+ *   - Dark aesthetic (Obsidian Cyber) or Crisp Laboratory theme with dynamic CSS variables.
  *   - 3D glowing iridescent sphere avatar in Welcome Hero.
  *   - Centered floating ChatInput card with:
  *       • Solo Agent vs Swarm Agent toggle
@@ -10,10 +10,11 @@
  *       • LLM Shift dropdown in chat bar
  *       • Skills Matrix modal launcher
  *       • Voice recognition & circular Send button
- *   - 3 Syntrix starter cards: Image Generator, Video Generator, Dev Assistant.
- *   - Collapsible left sidebar with FEATURES, YOUR CHATS, and user profile (NO $49 Upgrade card).
- *   - Top bar with version pill, Dashboard, Settings, Help & Support, and user avatar.
- *   - Parallel 50/50 WebRTC Browser screencast canvas on browser/computer execution.
+ *   - Telemetry strip replacing legacy AI slop cards.
+ *   - Collapsible left sidebar with off-canvas mobile drawer and 5-state empty handling.
+ *   - Top bar with theme toggle (Sun/Moon), version pill, Dashboard, and mobile hamburger.
+ *   - Resizable 50/50 WebRTC Browser screencast canvas with mobile tab toggling.
+ *   - Global keyboard shortcuts: Ctrl+K / Cmd+K (new chat) and Escape (dismiss).
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -38,7 +39,9 @@ export const KimiChatWorkspace: React.FC = () => {
   const [inputVal, setInputVal] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [isCanvasOpen, setIsCanvasOpen] = useState<boolean>(false);
+  const [mobileViewTab, setMobileViewTab] = useState<"chat" | "canvas">("chat");
   const [operationMode, setOperationMode] = useState<"DIRECT" | "SWARM">("DIRECT");
   const [selectedModel, setSelectedModel] = useState<string>("auto");
   const [optimizePrompt, setOptimizePrompt] = useState<boolean>(false);
@@ -65,6 +68,47 @@ export const KimiChatWorkspace: React.FC = () => {
     fps: 60,
     pixelFormat: "yuv420p",
   });
+
+
+  // Create new session: lazy draft mode (zero eager backend POST)
+  const handleNewSession = () => {
+    setCurrentSessionId("");
+    setSessionTitle("New Directive");
+    setMessages([]);
+    setIsMobileSidebarOpen(false);
+  };
+
+  // Global Keyboard Shortcuts (Ctrl+K: New Chat, Escape: Hierarchical Dismissal)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        handleNewSession();
+      }
+      if (e.key === "Escape") {
+        // Layered dismissal: close top-level modals first before dismissing canvas
+        if (isSkillsModalOpen) {
+          setIsSkillsModalOpen(false);
+          return;
+        }
+        if (isMemoriesModalOpen) {
+          setIsMemoriesModalOpen(false);
+          return;
+        }
+        if (isMobileSidebarOpen) {
+          setIsMobileSidebarOpen(false);
+          return;
+        }
+        if (isCanvasOpen) {
+          setIsCanvasOpen(false);
+          return;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isCanvasOpen, isSkillsModalOpen, isMemoriesModalOpen, isMobileSidebarOpen]);
 
   // Fetch sessions on mount
   const fetchSessions = async () => {
@@ -123,12 +167,6 @@ export const KimiChatWorkspace: React.FC = () => {
     };
   }, [isDragging]);
 
-  // Create new session: lazy draft mode (zero eager backend POST)
-  const handleNewSession = () => {
-    setCurrentSessionId("");
-    setSessionTitle("New Directive");
-    setMessages([]);
-  };
 
   // Select session & load its history if available
   const handleSelectSession = async (sessionId: string) => {
@@ -205,6 +243,9 @@ export const KimiChatWorkspace: React.FC = () => {
     setInputVal("");
     setIsLoading(true);
 
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 60000);
+
     try {
       const formData = new FormData();
       formData.append("user_id", "boss");
@@ -224,7 +265,9 @@ export const KimiChatWorkspace: React.FC = () => {
       const response = await fetch("/api/chat", {
         method: "POST",
         body: formData,
+        signal: abortController.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`Chat API error (${response.status})`);
@@ -246,9 +289,10 @@ export const KimiChatWorkspace: React.FC = () => {
           typeof a.tool === "string" && (a.tool.includes("browser") || a.tool.includes("computer"))
         );
 
-      // Automatically open the Canvas when a browser or computer tool is used!
+      // Automatically open the Canvas when a browser or computer tool is used
       if (hasBrowserTool) {
         setIsCanvasOpen(true);
+        setMobileViewTab("canvas");
       }
 
       const assistantMessage: ChatMessage = {
@@ -266,7 +310,13 @@ export const KimiChatWorkspace: React.FC = () => {
       setMessages((prev) => [...prev, assistantMessage]);
       fetchSessions();
     } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
+      clearTimeout(timeoutId);
+      const isAbort = (err as Error)?.name === "AbortError";
+      const errMsg = isAbort
+        ? "Network request timed out after 60s"
+        : err instanceof Error
+        ? err.message
+        : String(err);
       setMessages((prev) => [
         ...prev,
         {
@@ -285,15 +335,16 @@ export const KimiChatWorkspace: React.FC = () => {
   // User prompts browser to navigate via Canvas address bar
   const handleNavigateUrl = (url: string) => {
     setIsCanvasOpen(true);
+    setMobileViewTab("canvas");
     handleSendMessage(`Navigate to ${url} and summarize the page content.`);
   };
 
   return (
-    <div className="flex w-screen h-screen overflow-hidden bg-[#f8f9fa] text-[#0f172a] font-sans select-none relative">
-      {/* Ambient sky-blue glow — top-right (Stitch spec) */}
-      <div className="absolute top-0 right-0 w-[550px] h-[450px] bg-gradient-to-b from-[#0ea5e9]/10 via-transparent to-transparent blur-3xl pointer-events-none z-0" />
+    <div className="flex w-screen h-screen overflow-hidden bg-theme-ground text-theme-main font-sans select-none relative transition-colors">
+      {/* Ambient sky-blue / cyan backglow */}
+      <div className="absolute top-0 right-0 w-[550px] h-[450px] bg-gradient-to-b from-theme-accent/10 via-transparent to-transparent blur-3xl pointer-events-none z-0" />
 
-      {/* ── Left Sidebar (Dark Matte #0f0f11 — Stitch spec) ── */}
+      {/* ── Left Sidebar (Desktop + Mobile Drawer) ── */}
       <Sidebar
         sessions={sessions}
         currentSessionId={currentSessionId}
@@ -304,18 +355,65 @@ export const KimiChatWorkspace: React.FC = () => {
         onOpenMemories={() => setIsMemoriesModalOpen(true)}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
-      {/* ── Main Content Area — padded, rounded, white card ── */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden p-2 sm:p-3 relative z-10 bg-[#f8f9fa]">
+      {/* ── Main Content Area ── */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden p-1.5 sm:p-3 relative z-10 bg-theme-ground">
         <div
           ref={containerRef}
-          className="flex-1 flex h-full overflow-hidden rounded-2xl sm:rounded-3xl bg-white border border-[#e2e8f0] shadow-xl relative"
+          className="flex-1 flex flex-col md:flex-row h-full overflow-hidden rounded-2xl sm:rounded-3xl bg-theme-panel border border-theme-border shadow-xl relative"
         >
-          {/* ── Chat Column (Pure White) ── */}
+          {/* ── Mobile Tab Switcher (When Canvas is Active on Mobile Viewports) ── */}
+          {isCanvasOpen && (
+            <div className="flex md:hidden items-center justify-between px-3 py-2 bg-theme-dock border-b border-theme-border gap-2 shrink-0 z-20">
+              <div className="flex items-center gap-1.5 flex-1">
+                <button
+                  type="button"
+                  onClick={() => setMobileViewTab("chat")}
+                  className={cn(
+                    "flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all min-h-[38px]",
+                    mobileViewTab === "chat"
+                      ? "bg-theme-panel text-theme-main shadow-xs border border-theme-border"
+                      : "text-theme-muted hover:text-theme-main"
+                  )}
+                >
+                  Directives Chat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileViewTab("canvas")}
+                  className={cn(
+                    "flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all min-h-[38px] flex items-center justify-center gap-1.5",
+                    mobileViewTab === "canvas"
+                      ? "bg-theme-panel text-theme-accent shadow-xs border border-theme-border"
+                      : "text-theme-muted hover:text-theme-main"
+                  )}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Browser Canvas
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCanvasOpen(false)}
+                className="text-xs text-theme-muted hover:text-rose-400 p-1.5"
+                title="Close Canvas"
+              >
+                Close
+              </button>
+            </div>
+          )}
+
+          {/* ── Chat Column ── */}
           <div
             style={{ width: isCanvasOpen ? `${splitRatio}%` : "100%" }}
-            className="flex flex-col h-full bg-white overflow-hidden transition-all duration-75 relative"
+            className={cn(
+              "flex-col h-full bg-theme-panel overflow-hidden transition-all duration-75 relative",
+              isCanvasOpen && mobileViewTab === "canvas" ? "hidden md:flex" : "flex",
+              !isCanvasOpen && "w-full"
+            )}
           >
             {/* Top Navigation Bar */}
             <TopBar
@@ -327,10 +425,11 @@ export const KimiChatWorkspace: React.FC = () => {
               isStreamConnected={isConnected}
               onOpenSettings={() => setIsSkillsModalOpen(true)}
               onOpenMemories={() => setIsMemoriesModalOpen(true)}
+              onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
             />
 
             {/* ── Center Content: Welcome Hero OR Chat Stream ── */}
-            <div className="flex-1 overflow-y-auto px-4 py-2 relative bg-white">
+            <div className="flex-1 overflow-y-auto px-4 py-2 relative bg-theme-panel">
               {messages.length === 0 ? (
                 /* Welcome Hero Screen */
                 <WelcomeHero
@@ -358,18 +457,21 @@ export const KimiChatWorkspace: React.FC = () => {
                     <ChatMessageItem
                       key={msg.id}
                       message={msg}
-                      onOpenCanvas={() => setIsCanvasOpen(true)}
+                      onOpenCanvas={() => {
+                        setIsCanvasOpen(true);
+                        setMobileViewTab("canvas");
+                      }}
                     />
                   ))}
 
-                  {/* Thinking / Processing Pulse — Stitch light style */}
+                  {/* Thinking / Processing Pulse */}
                   {isLoading && (
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="w-8 h-8 rounded-xl bg-[#0f0f11] border border-[#0ea5e9]/40 flex items-center justify-center text-[#38bdf8] shrink-0 shadow-[0_0_12px_rgba(14,165,233,0.3)] robot-idle">
-                        <BrainCircuit className="w-4 h-4 animate-spin text-[#38bdf8]" />
+                      <div className="w-8 h-8 rounded-xl bg-theme-dock border border-theme-focus/40 flex items-center justify-center text-theme-accent shrink-0 shadow-xs robot-idle">
+                        <BrainCircuit className="w-4 h-4 animate-spin text-theme-accent" />
                       </div>
-                      <div className="px-4 py-2.5 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] text-xs font-mono text-[#0284c7] flex items-center gap-2 shadow-sm">
-                        <span className="w-2 h-2 rounded-full bg-[#38bdf8] animate-ping" />
+                      <div className="px-4 py-2.5 rounded-2xl bg-theme-card border border-theme-border text-xs font-mono text-theme-accent flex items-center gap-2 shadow-xs">
+                        <span className="w-2 h-2 rounded-full bg-theme-accent animate-ping" />
                         <span>Ultron is reasoning and executing tools...</span>
                       </div>
                     </div>
@@ -380,16 +482,20 @@ export const KimiChatWorkspace: React.FC = () => {
               )}
             </div>
 
-            {/* ── Floating Input Card (only in chat mode) ── */}
+            {/* ── Floating Input Card (in active chat mode) ── */}
             {messages.length > 0 && (
-              <div className="pt-2 pb-1 bg-gradient-to-t from-white via-white/95 to-transparent">
+              <div className="pt-2 pb-1 bg-gradient-to-t from-theme-panel via-theme-panel/95 to-transparent">
                 <ChatInput
                   value={inputVal}
                   onChange={setInputVal}
                   onSend={(files) => handleSendMessage(undefined, files)}
                   isLoading={isLoading}
                   isCanvasOpen={isCanvasOpen}
-                  onToggleCanvas={() => setIsCanvasOpen(!isCanvasOpen)}
+                  onToggleCanvas={() => {
+                    const next = !isCanvasOpen;
+                    setIsCanvasOpen(next);
+                    if (next) setMobileViewTab("canvas");
+                  }}
                   isStreamConnected={isConnected}
                   operationMode={operationMode}
                   onChangeMode={setOperationMode}
@@ -404,13 +510,13 @@ export const KimiChatWorkspace: React.FC = () => {
             )}
           </div>
 
-          {/* ── Resizable Splitter Divider Bar — light version ── */}
+          {/* ── Resizable Splitter Divider Bar (Desktop) ── */}
           {isCanvasOpen && (
             <div
               onMouseDown={handleMouseDown}
               className={cn(
-                "relative flex items-center justify-center w-1.5 hover:w-2 bg-[#e2e8f0] hover:bg-[#0284c7]/50 cursor-col-resize transition-colors z-20 group shrink-0",
-                isDragging && "bg-[#0284c7] w-2"
+                "hidden md:flex relative items-center justify-center w-1.5 hover:w-2 bg-theme-border hover:bg-theme-focus/50 cursor-col-resize transition-colors z-20 group shrink-0",
+                isDragging && "bg-theme-focus w-2"
               )}
             />
           )}
@@ -419,7 +525,10 @@ export const KimiChatWorkspace: React.FC = () => {
           {isCanvasOpen && (
             <div
               style={{ width: `${100 - splitRatio}%` }}
-              className="h-full overflow-hidden bg-white"
+              className={cn(
+                "h-full overflow-hidden bg-theme-panel",
+                mobileViewTab === "chat" ? "hidden md:block" : "w-full md:block"
+              )}
             >
               <CanvasPane
                 mediaStream={mediaStream}
@@ -455,4 +564,3 @@ export const KimiChatWorkspace: React.FC = () => {
     </div>
   );
 };
-

@@ -6,6 +6,55 @@
 @tailwind utilities;
 
 /* ──────────────────────────────────────────
+   DESIGN.md — Dual-Theme Semantic Token Engine
+   Obsidian Cyber Default / Crisp Laboratory Toggle
+   ────────────────────────────────────────── */
+
+:root, [data-theme="dark"] {
+  --bg-ground: #07090e;
+  --bg-panel: #0d121d;
+  --bg-dock: #111827;
+  --bg-card: #0f1626;
+  --bg-card-hover: #162035;
+  --border-subtle: #1e293b;
+  --border-focus: #0284c7;
+  --border-accent: #38bdf8;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --accent-primary: #0284c7;
+  --accent-glow: rgba(2, 132, 199, 0.35);
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+}
+
+[data-theme="light"] {
+  --bg-ground: #f8f9fa;
+  --bg-panel: #ffffff;
+  --bg-dock: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --border-subtle: #e2e8f0;
+  --border-focus: #0284c7;
+  --border-accent: #0284c7;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #94a3b8;
+  --accent-primary: #0284c7;
+  --accent-glow: rgba(2, 132, 199, 0.15);
+  --accent-success: #059669;
+  --accent-warning: #d97706;
+  --accent-danger: #dc2626;
+}
+
+body {
+  background-color: var(--bg-ground);
+  color: var(--text-main);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* ──────────────────────────────────────────
    Stitch Design System — Ultron Protocol
    Vivid Sky Blue Edition
    ────────────────────────────────────────── */

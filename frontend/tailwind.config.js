@@ -8,6 +8,24 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Semantic Token Architecture (DESIGN.md Dual-Theme Engine)
+        theme: {
+          ground: 'var(--bg-ground)',
+          panel: 'var(--bg-panel)',
+          dock: 'var(--bg-dock)',
+          card: 'var(--bg-card)',
+          'card-hover': 'var(--bg-card-hover)',
+          border: 'var(--border-subtle)',
+          focus: 'var(--border-focus)',
+          accent: 'var(--border-accent)',
+          main: 'var(--text-main)',
+          muted: 'var(--text-muted)',
+          dim: 'var(--text-dim)',
+          primary: 'var(--accent-primary)',
+          success: 'var(--accent-success)',
+          warning: 'var(--accent-warning)',
+          danger: 'var(--accent-danger)',
+        },
         // Legacy cyber tokens (backward compat)
         cyber: {
           950: '#090a0f',

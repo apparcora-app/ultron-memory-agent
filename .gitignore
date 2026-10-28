@@ -131,3 +131,13 @@ skills/linkedin-skills/
 Thumbs.db
 ehthumbs.db
 [Dd]esktop.ini
+
+# Ruflo local secrets and runtime data
+.env.local
+.env.*.local
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+.claude/
+.swarm/
+*.tar.gz
