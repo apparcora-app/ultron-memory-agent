@@ -1,9 +1,11 @@
 import time
 import asyncio
+import pytest
 from fastapi.testclient import TestClient
 from ultron.cli.web import app
 from ultron.agent import MemoryAgent
 
+@pytest.mark.llm_live
 def test_live_chat_and_latency():
     print("=================================================================")
     print("       ULTRON FREEELLMAPI LATENCY & FAILOVER VERIFICATION        ")

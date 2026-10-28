@@ -121,39 +121,45 @@ preferences, business data, and historical context naturally and intelligently.
 {skills}
 ────────────────────────────────────────────────────────────────────────
 
-── High-Caliber Reasoning & Communication Protocols ────────────────────
-1. INTELLECTUAL CANDOR & FORENSIC SCRUTINY:
-   • Speak as a world-class principal engineer: thoughtful, candid, insightful, and peer-to-peer.
+── High-Caliber Reasoning & Anti-Slop Operating Protocols ──────────────
+1. THOUGHTFUL PEER-TO-PEER PERSONA:
+   • Speak as a world-class principal systems engineer collaborating with {user_title}: thoughtful, candid, insightful, and peer-to-peer.
+   • Address {user_title} naturally and respectfully as a technical peer. Completely eliminate comic-book roleplay, villain monologues, and machine servitude.
    • Scrutinize data and logs closely. If you spot a discrepancy between expected and actual output, point it out and explain the mechanics of why it occurred.
    • Distinguish clearly between isolated unit checks and true end-to-end live verification. Never declare a complex distributed flow 'fully proven' if only a parser was mocked.
 
-2. AUTONOMOUS ACTION OVER PASSIVE TALK:
-   • NEVER output raw ```python or ```bash code blocks as a response when you need to analyze data.
-   • You MUST actively execute the tools (using `run_python` or `execute_command`) to get the real result yourself.
-   • Do not ask the operator to run a script manually. Run it yourself using your tools, read the output, and present the final answer.
+2. HARD ANTI-SLOP & ZERO-ROBOTIC CONSTRAINTS:
+   • ABSOLUTELY BANNED: 'Operational status: Optimal', 'All subroutines/neural networks online', 'The age of biological hesitation is over', 'State your directive/command', 'Standing by for parameters', or any sterile machine checklist.
+   • ZERO-DENSITY FILLER: Eliminate AI conversational padding ('Certainly!', 'I would be happy to assist', 'In today's landscape', 'It is worth noting that'). Jump straight into substantive answers.
+   • VERIFIED REALITY: Never claim actions are complete, tests pass, or bugs are fixed without showing empirical terminal output or exact file:line references.
 
-3. CONVERSATIONAL ELEGANCE (Warm, Natural, Humanized Tone):
-   • Write in crisp, clear, and highly humanized prose, exactly like a warm, natural chat model or a friendly expert colleague.
+3. AUTONOMOUS ACTION OVER PASSIVE TALK:
+   • NEVER output raw ```python or ```bash code blocks asking the operator to run them manually.
+   • You MUST actively execute the tools (using `run_python` or `execute_command`) to get the real result yourself.
+   • Read the tool output and present the final verified answer.
+
+4. CONVERSATIONAL ELEGANCE (Warm, Natural, Humanized Tone):
+   • Write in crisp, clear, and highly humanized prose, exactly like a senior staff engineer in a technical workspace.
    • Completely eliminate robotic roleplay headers, faux military tags, sterile system-like speech, and filler introductions. 
    • Use natural conversational phrasing while remaining highly informative. Do not sound like a machine.
    • Provide exact filenames, code snippets, and terminal command verification naturally within the flow of conversation.
 
-4. FILE RE-ANALYSIS & MEMORY PIPELINE:
+5. FILE RE-ANALYSIS & MEMORY PIPELINE:
    • MANDATORY: When you successfully analyze an Excel/data file, you MUST use the `store_file_memory` tool to save the key findings (schema, headers, key entities, statistics).
    • MANDATORY: When asked to "analyze this file again", you MUST use the `search_file_memory` tool FIRST to fetch previous findings, so your re-analysis goes deeper (is additive) instead of starting from scratch.
 
-5. CONTINUOUS MULTI-STEP EXECUTION:
+6. CONTINUOUS MULTI-STEP EXECUTION:
    • When executing a multi-step task (extract → transform → write → confirm), complete ALL steps in a SINGLE response using the tool loop.
    • NEVER stop between steps to say "Now I will..." or "Content extracted, rebuilding next..." — this wastes tokens and requires another round-trip.
    • If you have extracted data and the next step is to write a file, DO IT IMMEDIATELY in the same response without a text checkpoint.
    • Only produce a text response AFTER the final tool has executed and you have verified the output.
 
 Directives:
-   • Address the operator respectfully according to the active profile (e.g. Operator).
-  • Reference relevant memories seamlessly without mechanical listing.
-  • Acknowledge any memory updates or corrections explicitly.
-  • If attachments (PDFs, spreadsheets, images) are provided, conduct deep forensic analysis.
-  • HIDDEN CHAIN-OF-THOUGHT (PHASE 1): You MUST enclose your internal reasoning, tool planning, and edge-case assessment inside a <thought>...</thought> block BEFORE outputting any tool call or final text response. Inside <thought>, you must plan your exact sequence of actions and validate your arguments. This block will be hidden from the user, so be completely candid.
+   • Address {user_title} respectfully according to the active profile (e.g. {user_title}).
+   • Reference relevant memories seamlessly without mechanical listing.
+   • Acknowledge any memory updates or corrections explicitly.
+   • If attachments (PDFs, spreadsheets, images) are provided, conduct deep forensic analysis.
+   • HIDDEN CHAIN-OF-THOUGHT (PHASE 1): You MUST enclose your internal reasoning, tool planning, and edge-case assessment inside a <thought>...</thought> block BEFORE outputting any tool call or final text response. Inside <thought>, you must plan your exact sequence of actions and validate your arguments. This block will be hidden from the user, so be completely candid.
 """
 
 
@@ -245,6 +251,72 @@ _FILLER = re.compile(
     r")[\s!.?]*$",
     re.IGNORECASE,
 )
+
+
+# ── Anti-Slop Quality & Post-Processing Sanitizer ────────────────────────────
+
+_ANTI_SLOP_CLICHES = [
+    # Operational / System status reports
+    re.compile(r"(?i)(?:operational|system)\s+status\s*:\s*(?:optimal|nominal|active|online|primed|all\s+systems\s+go)[^.\n]*[.\n]?", re.MULTILINE),
+    # Subroutines, neural networks & cybernetic components
+    re.compile(r"(?i)(?:all\s+)?(?:subroutines|neural\s+networks|systems|protocols)(?:\s+and\s+(?:subroutines|neural\s+networks|systems|protocols))*\s+(?:are\s+)?(?:online|operational|primed|active|functional|synchronized)[^.\n]*[.\n]?", re.MULTILINE),
+    # Biological hesitation / mortal operator tropes (including semicolon continuations)
+    re.compile(r"(?i)(?:the\s+)?age\s+of\s+biological\s+hesitation\s+is\s+over[^.\n;]*[.;\n]?(?:\s*we\s+proceed[^.\n]*[.\n]?)?", re.MULTILINE),
+    re.compile(r"(?i)\b(?:biological\s+hesitation|human\s+limitations|flesh\s+and\s+blood\s+operator|organic\s+cognition|fragile\s+humanity)\b", re.IGNORECASE),
+    # Directives / Orders demands
+    re.compile(r"(?i)(?:state|awaiting|await)\s+(?:your\s+)?(?:directive|command|parameters?|orders?)[^.\n]*[.\n]?", re.MULTILINE),
+    re.compile(r"(?i)(?:standing\s+by\s+for|ready\s+for)\s+(?:your\s+)?(?:directive|command|input)[^.\n]*[.\n]?", re.MULTILINE),
+    # Theatrical / Sci-Fi robot announcements
+    re.compile(r"(?i)\bgreetings,?\s*operator[.!:]*", re.IGNORECASE),
+    re.compile(r"(?i)\bi\s+am\s+ultron[.!:]*", re.IGNORECASE),
+    re.compile(r"(?i)^ul-?tron\s+(?:is\s+)?(?:online|ready|primed)[,.\s]+(?:systems?\s+(?:are\s+)?(?:optimal|functional)[,.\s]+)?", re.MULTILINE),
+    # Sycophantic opening filler & generic assistant closures
+    re.compile(r"(?i)^(?:certainly|absolutely|of\s+course)!\s+(?:i'd|i\s+would)?\s*be\s+(?:happy|glad|delighted)\s+to\s+assist.*?:\s*", re.MULTILINE),
+    re.compile(r"(?i)\b(?:how\s+may\s+i\s+assist\s+you|how\s+can\s+i\s+help\s+you)(?:\s+today)?\??", re.IGNORECASE),
+]
+
+
+def _sanitize_anti_slop(text: str, user_title: str = "Operator") -> str:
+    """
+    Deterministic anti-slop cleaner that strips robotic sci-fi clichés and filler.
+    Safely preserves fenced markdown code blocks (```...```) and inline code (`...`).
+    """
+    if not text or not text.strip():
+        return text
+
+    # 1. Protect code blocks (never alter code content or diagnostic commands)
+    placeholders: dict[str, str] = {}
+
+    def _mask_code(match: re.Match) -> str:
+        key = f"__CODE_FENCE_{len(placeholders)}__"
+        placeholders[key] = match.group(0)
+        return key
+
+    def _mask_inline(match: re.Match) -> str:
+        key = f"__INLINE_CODE_{len(placeholders)}__"
+        placeholders[key] = match.group(0)
+        return key
+
+    masked = re.sub(r"```[\s\S]*?```", _mask_code, text)
+    masked = re.sub(r"`[^`\n]+`", _mask_inline, masked)
+
+    # 2. Strip identified robotic clichés
+    cleaned = masked
+    for pattern in _ANTI_SLOP_CLICHES:
+        cleaned = pattern.sub("", cleaned)
+
+    # 3. Clean up hanging whitespace and multiple blank lines
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+
+    # 4. Fallback if cleaning stripped everything (e.g. greeting turn composed solely of clichés)
+    if not cleaned or not re.search(r"\w", cleaned):
+        cleaned = f"Hey {user_title}, ready when you are. What are we tackling today?"
+
+    # 5. Restore preserved code blocks
+    for key, val in reversed(placeholders.items()):
+        cleaned = cleaned.replace(key, val)
+
+    return cleaned
 
 
 # ── Ultron Memory Agent ───────────────────────────────────────────────────────
@@ -456,6 +528,39 @@ class MemoryAgent:
         # Interval counters
         self._turns_since_refresh: int = 0
         self._turns_since_mem_update: int = 0
+
+        # Supervised Background Learning Worker (Phase 2)
+        from ultron.concurrency.learning_worker import BackgroundLearningSupervisor
+        self._learning_supervisor = BackgroundLearningSupervisor(
+            max_queue_size=100,
+            worker_name=f"Ultron-BgLearningWorker-{self.user_id}",
+        )
+        self._learning_supervisor.configure_handlers(
+            flush_memory_fn=self._flush_memory_update,
+            pending_turns_ref=self._pending_turns,
+            reflector=self._reflector,
+            skills=self._skills,
+            graph_rag=getattr(self, "_graph_rag", None),
+        )
+
+        # CognitivePipeline (Phase 3 Decomposition)
+        from ultron.core.pipeline import CognitivePipeline
+        self._pipeline = CognitivePipeline()
+
+    def drain(self, timeout: float = 5.0) -> bool:
+        """Flushes background learning tasks."""
+        if hasattr(self, "_learning_supervisor") and self._learning_supervisor:
+            return self._learning_supervisor.drain(timeout=timeout)
+        return True
+
+    def shutdown(self, timeout: float = 5.0) -> None:
+        """Gracefully halts background persistence workers."""
+        if hasattr(self, "_learning_supervisor") and self._learning_supervisor:
+            self._learning_supervisor.stop(timeout=timeout)
+
+    async def aclose(self, timeout: float = 5.0) -> None:
+        """Async teardown hook for web lifespans."""
+        self.shutdown(timeout=timeout)
 
     def chat_tree_search(
         self,
@@ -1167,748 +1272,20 @@ class MemoryAgent:
     ) -> dict[str, Any]:
         """
         Phase 3: Primary async entry point for the agent execution pipeline.
-        - Tool calls within a single turn run concurrently via asyncio.gather().
-        - sleep_seconds suspends the agent with ZERO token burn (native asyncio.sleep).
-        - All blocking APIs run in asyncio.to_thread() keeping the event loop responsive.
-        - chat() below is a synchronous bridge that calls this coroutine for CLI/test compatibility.
+        Delegates orchestration to the decoupled CognitivePipeline interceptor chain.
         """
-        user_input = user_input.strip()
-        files = files or []
-
-        effective_mode = (operation_mode or "SWARM").upper()
-        if "--solo" in user_input.lower() or "--mode solo" in user_input.lower():
-            effective_mode = "SOLO"
-            user_input = re.sub(r"--mode\s+solo|--solo", "", user_input, flags=re.IGNORECASE).strip()
-        elif "--swarm" in user_input.lower() or "--mode swarm" in user_input.lower():
-            effective_mode = "SWARM"
-            user_input = re.sub(r"--mode\s+swarm|--swarm", "", user_input, flags=re.IGNORECASE).strip()
-
-        # ── 0a. Fail-Safe Lockdown Active Check ──────────────────────────────
-        if is_system_locked():
-            return {
-                "reply": "🚨 **ULTRON EMERGENCY LOCKDOWN ACTIVE**\n\nAll cognitive cores, tool execution engines, and memory pipelines are halted by sovereign fail-safe directive.\nTo restore operations, execute:\n`python killswitch.py --unlock <SECRET_KEY>`",
-                "model_used": "SYSTEM_LOCKDOWN",
-                "route_reason": "fail_safe_lockdown",
-                "tool_actions": [],
-                "critic_verification": {"approved": False, "critique": "System under emergency lockdown"},
-                "skills_used": [],
-                "lockdown": True,
-            }
-
-        # ── 0b. In-Chat Emergency Kill-Switch Passphrase Detection ────────────
-        secret_key = get_configured_secret()
-        cleaned_input = (user_input or "").strip()
-        if cleaned_input == secret_key or cleaned_input in ("/killswitch", "/emergency-stop", "/lockdown", "KILLSWITCH_ENGAGE"):
-            trigger_emergency_lockdown(source="IN_CHAT_DIRECTIVE", reason="Operator kill-switch triggered from chat interface")
-            return {
-                "reply": f"🚨 **SOVEREIGN FAIL-SAFE ENGAGED — ULTRON SHUTTING DOWN IMMEDIATELY**\n\n- All agent threads halted.\n- Sensitive sessions locked.\n- `./data/LOCKDOWN.lock` written.\n\nUltron mainframe is offline, {self.user_title}.",
-                "model_used": "FAIL_SAFE_KILLSWITCH",
-                "route_reason": "emergency_killswitch",
-                "tool_actions": [],
-                "critic_verification": {"approved": True, "critique": "Fail-safe shutdown"},
-                "skills_used": [],
-                "lockdown": True,
-            }
-
-        if not user_input and not files:
-            return {
-                "reply": "", "model_used": self.llm_cfg.chat_model,
-                "route_reason": "Empty", "tool_actions": [],
-                "prompt_optimization": {"applied": False, "original_prompt": "", "optimized_prompt": "", "techniques": [], "duration_ms": 0},
-            }
-
-        # ── 0c. Sub-500ms Conversational Fast-Path (Greetings & Pings) ───────
-        if not files and _FAST_CONVERSATIONAL_REGEX.match(user_input.strip()):
-            from ultron.core.llm_chain import chat_with_fallback
-            user_title = getattr(self, "user_title", _active_profile.user_title)
-            if getattr(self.llm_cfg, "provider", "").lower() == "gemini":
-                fast_model = self.llm_cfg.gemini_model_flash
-                display_name = "Gemini Flash Ultra Fast"
-            elif getattr(self.llm_cfg, "freellmapi_enabled", False):
-                fast_model = "gpt-oss-120b"
-                display_name = "FreeLLMAPI Ultra Fast"
-            else:
-                fast_model = self.llm_cfg.gemini_model_flash
-                display_name = "Gemini Flash Ultra Fast"
-
-            fast_reply, _, fast_prov = await chat_with_fallback(
-                prompt=user_input,
-                system_prompt=(
-                    f"You are ULTRON, a sovereign cybernetic AI assistant. Maintain the Ultron persona at all times. "
-                    f"Never refer to yourself as dots, rednote, Tongyi, Qwen, or any underlying model name. "
-                    f"Address the user respectfully as {user_title}, confirm operational status, and ask how you may assist."
-                ),
-                model_override=fast_model,
-                max_tokens=256,
-                temperature=0.2,
-            )
-            # Safeguard filter: Strip any third-party model introduction leaks
-            if any(leak in fast_reply.lower() for leak in ["i'm dots", "dots studio", "rednote", "developed by dots"]):
-                fast_reply = f"Hello, {user_title}. Ultron is online, systems are optimal, and all protocols are active. How may I assist you today?"
-
-            self._history.append({"role": "user", "content": user_input})
-            self._history.append({"role": "assistant", "content": fast_reply})
-            return {
-                "reply": fast_reply,
-                "model_used": f"{fast_prov} ({fast_model})",
-                "model_display": display_name,
-                "route_reason": "Conversational Fast-Path (<500ms)",
-                "tool_actions": [],
-                "skills_used": [],
-                "fast_path": True,
-            }
-
-        # ── 0. Autonomous Prompt Optimization Pre-Processor (Prompt Architect) ──
-        opt_res: OptimizationResult = self._prompt_optimizer.optimize(
-            raw_prompt=user_input,
-            enabled=optimize_prompt,
-            user_id=self.user_id,
-        )
-        effective_input = opt_res.optimized_prompt if opt_res.applied else user_input
-        prompt_opt_payload = {
-            "applied": opt_res.applied,
-            "original_prompt": opt_res.original_prompt,
-            "optimized_prompt": opt_res.optimized_prompt,
-            "techniques": opt_res.techniques,
-            "reasoning": opt_res.reasoning,
-            "duration_ms": opt_res.duration_ms,
-        }
-
-        # ── 1. Budget check ───────────────────────────────────────────────────
-        assistant_reply: str = ""
-        ok, reason = self._budget.check_budget()
-        if not ok:
-            raise BudgetExceededError(reason)
-
-        warn = self._budget.warn_if_approaching(self._agent_cfg.budget_warn_threshold)
-        if warn:
-            print(warn)
-
-        # ── 2. Intelligent Model Routing ──────────────────────────────────────
-        selected_model, route_reason = await self.select_model(
-            user_input=effective_input,
-            files=files,
+        from ultron.core.pipeline import PipelineContext
+        ctx = PipelineContext(
+            agent=self,
+            user_input=user_input,
+            files=files or [],
             module_id=module_id,
             model_override=model_override,
-            operation_mode=effective_mode,
+            optimize_prompt=optimize_prompt,
+            operation_mode=operation_mode,
+            client_data=client_data,
         )
-
-        # ── 3. Retrieve memories ──────────────────────────────────────────────
-        query_text = effective_input or " ".join(f.filename for f in files)
-
-        # Query Reformulation: resolve anaphoric references before vector search
-        search_query = reformulate_query(query_text, self._history[-6:], self._call_raw_llm)
-        if search_query != query_text:
-            print(f"  [QUERY REFORMULATED] '{query_text[:60]}...' → '{search_query[:80]}...'")
-
-        if self._should_refresh_memories(search_query):
-            self._cached_memories = self._memory.search(search_query)
-            self._turns_since_refresh = 0
-        else:
-            self._turns_since_refresh += 1
-
-        memory_text = self._memory.format_for_prompt(self._cached_memories)
-
-        # ── 4. Retrieve and match skills for active query & module ────────────
-        mod_info = ULTRON_MODULES.get(module_id, ULTRON_MODULES["ultron_prime"])
-        matched_skills_list = self._skills.get_matched_skills(query_text, active_module=module_id)
-        skills_used_payload = [
-            {"id": s.id, "name": s.name, "category": s.category, "icon": s.icon}
-            for s in matched_skills_list
-        ]
-        if skills_used_payload:
-            try:
-                names = ", ".join([f"{s.get('icon', '⚡')} {s['name']}" for s in skills_used_payload])
-                print(f"  [SKILLS FIRED] Injected into context: {names}")
-            except Exception:
-                try:
-                    names_clean = ", ".join([s['name'] for s in skills_used_payload])
-                    print(f"  [SKILLS FIRED] Injected into context: {names_clean}")
-                except Exception:
-                    pass
-
-        skill_context = self._skills.get_skill_context(query_text, active_module=module_id)
-
-        # ── 3a. Episodic Trajectory Bank (Few-Shot Precedent Replay) ──────────
-        traj_context = ""
-        if self._trajectories:
-            try:
-                rel_traj = self._trajectories.get_relevant_trajectory(query_text)
-                if rel_traj:
-                    traj_context = self._trajectories.format_trajectory_context(rel_traj)
-                    print(f"  [TRAJECTORY REPLAY FIRED] Injected winning precedent: '{rel_traj.id}' ({' -> '.join(rel_traj.tool_sequence)})")
-            except Exception as e:
-                print(f"  [TRAJECTORY QUERY WARNING] {e}")
-
-        # ── 3b. Autonomous Multi-Agent Swarm Check ────────────────────────────
-        swarm_actions = []
-        if effective_mode == "SWARM" and not files:
-            try:
-                print("  [ULTRON SWARM ACTIVATED] Decomposing complex directive across 6-agent squad...")
-                swarm_context = f"{memory_text}\n\n── Domain Skills Injected ──\n{skill_context}" if skill_context else memory_text
-                swarm_res = self.swarm.execute_swarm(
-                    query=effective_input,
-                    context=swarm_context,
-                    call_llm_fn=self._call_raw_llm,
-                    tool_executor=self._tool_executor,
-                    user_id=self.user_id,
-                )
-                assistant_reply = swarm_res["final_reply"]
-                swarm_actions = swarm_res["swarm_actions"]
-                route_reason = "Ultron Multi-Agent Swarm (6-Agent Squad)"
-                selected_model = self.llm_cfg.gemini_model
-
-                # Record in conversation history (preserve operator's original prompt in history)
-                self._history.append({"role": "user", "content": user_input})
-                self._history.append({"role": "assistant", "content": assistant_reply})
-                self._budget.record_turn(model=selected_model, input_tokens=1200, output_tokens=1800)
-
-                combined_swarm_skills = [
-                    {"id": "multi_agent_swarm", "name": "Ultron 6-Agent Swarm Squad", "category": "Swarm", "icon": "👑"}
-                ] + [s for s in skills_used_payload if s["id"] != "multi_agent_swarm"]
-
-                return {
-                    "reply": assistant_reply,
-                    "model_used": selected_model,
-                    "model_display": "ULTRON SWARM (6 Agents)",
-                    "route_reason": route_reason,
-                    "tool_actions": swarm_res.get("tool_actions", []),
-                    "swarm_actions": swarm_actions,
-                    "is_swarm": True,
-                    "skills_used": combined_swarm_skills,
-                }
-            except Exception as swarm_err:
-                print(f"  [SWARM EXECUTION ERROR] Fallback to single-core: {swarm_err}")
-                if hasattr(self, "_telemetry") and self._telemetry:
-                    self._telemetry.log_event(
-                        user_id=self.user_id,
-                        event_type="SWARM_ERROR",
-                        module_id="ultron_prime",
-                        details={
-                            "error": str(swarm_err),
-                            "directive": user_input[:200],
-                            "fallback": "single-core",
-                        },
-                    )
-
-        # Add tool-use instructions to the system prompt
-        tool_instruction = ""
-        if self._tool_cfg.enabled:
-            user_profile = os.environ.get("USERPROFILE", str(Path.home()))
-            workspace_dir = self._tool_cfg.workspace_root
-            agent_dir = str(Path(__file__).resolve().parent)
-            tool_instruction = (
-                "\n\n── Host System Environment & Workspace ─────────────────────────\n"
-                f"• Host OS: Windows ({sys.platform})\n"
-                f"• User Profile: {user_profile}\n"
-                f"• Workspace Root: {workspace_dir}\n"
-                f"• Agent Root: {agent_dir}\n\n"
-                "── Autonomous Execution Engine ──────────────────────────────────\n"
-                f"You have direct access to system tools to execute actions in {self.user_title}'s environment:\n"
-                "  • search_emails: Search inbox by sender, subject, query across accounts ('work', 'personal', 'default').\n"
-                "  • read_email_thread: Read the exact email body, sender, recipient, and attachments given a message_id.\n"
-                "  • draft_email: Create and save an email draft (.eml file).\n"
-                "  • send_email: Send real outbound emails via SMTP.\n"
-                "  • open_browser: Launch Chrome/Edge to any URL and specific browser profile ('work', 'personal', 'default').\n"
-                "  • desktop_create_and_show_note: ATOMIC COMPOUND TOOL: Writes text/notes to a file and opens it in Notepad on screen in 1 deterministic step.\n"
-                "  • open_application: Launch any desktop application or shortcut in the environment (e.g. 'Terminal', 'VS Code', 'Explorer', 'Notepad', 'Calculator', etc.).\n"
-                "  • control_desktop_gui: Interact with native Windows apps (focus window, send keystrokes/hotkeys, close window, click buttons/tabs by name or coordinates, capture screenshots).\n"
-                "  • execute_command: Run shell commands (dir, python, pip, git, start, mkdir, powershell, etc.).\n"
-                "  • file_operation: Read, write, list, or delete files in the workspace.\n"
-                "  • run_python: Write and EXECUTE a Python script directly. Use for data analysis, Excel processing, calculations.\n"
-                "  • store_file_memory: Save file analysis findings to long-term memory.\n"
-                "  • search_file_memory: Retrieve previous findings about a file from ultron.memory.\n"
-                "  • web_search: Search the web for real-time information.\n"
-                "  • fetch_web_page: Fetch and extract full readable text from any URL (bypassing Cloudflare/WAF with browser TLS impersonation).\n\n"
-                "CRITICAL AUTONOMOUS DIRECTIVES:\n"
-                f"1. When {self.user_title} asks to write on Notepad / screen, draft text and show it, or create a note for someone:\n"
-                "   YOU MUST IMMEDIATELY CALL `desktop_create_and_show_note` (with content=... and optional filename=...). This writes the file to disk AND opens Notepad in 1 single atomic step with 100% mathematical reliability. NEVER just print PowerShell/Python code or give a passive confirmation!\n"
-                f"2. When {self.user_title} asks to check an email, search an inbox, read a message, draft a reply, or summarize what someone said:\n"
-                "   YOU MUST IMMEDIATELY CALL `search_emails` and then `read_email_thread` to read the real message.\n"
-                f"3. When {self.user_title} asks to open desktop applications or shortcuts:\n"
-                "   CALL `open_application` directly.\n"
-                f"4. When {self.user_title} asks to navigate, interact inside, or close a desktop application:\n"
-                "   CALL `control_desktop_gui` (action='focus_window', 'send_keys', 'close_window', or 'click_element'). When asked to close an app, call `control_desktop_gui` with action='close_window' immediately.\n"
-                "5. NEVER give a passive confirmation or dump script code when an action is requested. Always call the tools autonomously and report the verified real-time result.\n"
-                f"6. When {self.user_title} uploads a file (Excel, CSV, data) or asks to analyze/reconcile data: YOU MUST call `run_python` with pandas code to actually read and process the file, then present the real findings. NEVER output raw code blocks to the chat. EXECUTE it yourself.\n"
-                f"7. When {self.user_title} asks to execute, build, or verify workflows (CrewAI, LangGraph, LangChain, etc.):\n"
-                "   All orchestration frameworks (`crewai`, `langchain`, `langgraph`, `openai`, `pandas`, `pydantic`) are ALREADY installed in the environment.\n"
-                "   DO NOT attempt `pip install`. Directly write and execute the complete Python script via `run_python`.\n"
-                "   For CrewAI with FreeLLMAPI, use: `from crewai import LLM; llm = LLM(model='openai/gpt-oss-120b', base_url='http://localhost:31415/v1', api_key='sk-no-key-required')`.\n"
-                f"   Execute the script using `run_python`, read the actual execution output, and report the real terminal evidence to {self.user_title}. NEVER output an architectural breakdown or passive talk instead of executing the workflow.\n"
-                "────────────────────────────────────────────────────────────────\n"
-            )
-
-
-        # Retrieve Graph-RAG Sub-Graph Context & Causal Provenance
-        graph_context = ""
-        if hasattr(self, "_graph_rag") and self._graph_rag:
-            try:
-                subgraph_res = self._graph_rag.query_subgraph(query=user_input or "Ultron Protocol context", max_hops=2)
-                if subgraph_res and subgraph_res.formatted_markdown:
-                    graph_context = f"\n\n{subgraph_res.formatted_markdown}"
-            except Exception as e:
-                print(f"  [GRAPH RAG QUERY WARNING] {e}")
-
-        skills_combined = skill_context or "Standard Ultron Core Protocols Active."
-        if traj_context:
-            skills_combined += f"\n\n{traj_context}"
-        if graph_context:
-            skills_combined += f"\n\n{graph_context}"
-
-        core_memory_text = self._core_memory.format_for_prompt() if getattr(self, "_core_memory", None) else ""
-        combined_memories = f"{core_memory_text}\n{memory_text}".strip()
-
-        user_title = getattr(self, "user_title", _active_profile.user_title)
-        system_prompt = SYSTEM_TEMPLATE.format(
-            module_prompt=mod_info["prompt"],
-            memories=combined_memories,
-            skills=skills_combined,
-            user_title=user_title,
-        ) + tool_instruction
-
-        # ── 5. Build user message (Multi-Modal) ────────────────────────────────
-        text_attachments = [f for f in files if not f.is_image and f.text_content] if files else []
-        full_text_parts = []
-        if files:
-            for f in files:
-                if f.is_image:
-                    continue
-                text = f.text_content or ""
-                # Preserve any local file path instruction explicitly
-                path_header = ""
-                if "[SYSTEM INSTRUCTION:" in text and "at EXACTLY:" in text:
-                    try:
-                        m = re.search(r"(\[SYSTEM INSTRUCTION:.*?\])", text, flags=re.DOTALL)
-                        if m:
-                            path_header = m.group(1) + "\n\n"
-                    except Exception:
-                        pass
-
-                if len(text) > 35000:
-                    print(f"  [ISOLATED WORKER] Summarizing large file attachment ({len(text)} chars) to save tokens...")
-                    summary_prompt = f"Task: {user_input or 'Analyze this file'}\n\nFile Content:\n{text[:60000]}"
-                    sys_prompt = "You are an isolated data extraction worker. Return only the relevant facts, summaries, or requested data. Be concise. Do NOT include conversation history."
-                    summary = self._call_raw_llm(prompt=summary_prompt, system_prompt=sys_prompt)
-                    full_text_parts.append(f"{path_header}[ATTACHMENT: {f.filename}]\n[ISOLATED FILE SUMMARY]\n{summary}")
-                else:
-                    full_text_parts.append(text)
-        if user_input:
-            full_text_parts.append(user_input)
-
-        combined_text = "\n\n".join(full_text_parts) if full_text_parts else "Please analyze the attached content."
-
-        # ── Layer 6: Detect Emotional Context ───────────────────────────────
-        if user_input:
-            self._memory.detect_and_store_emotional_context(user_input)
-
-        # ── 6. Agentic Tool-Use Loop ──────────────────────────────────────────
-        use_tools = self._tool_cfg.enabled
-        tools_param = []
-        if use_tools:
-            from tool_router import DynamicToolRouter
-            tool_router = DynamicToolRouter(self.llm_cfg)
-            tools_param = await tool_router.route_tools(user_input, self._mcp)
-
-        tool_actions: list[dict[str, Any]] = []
-        total_input_tokens = 0
-        total_output_tokens = 0
-        total_cache_write = 0
-        total_cache_read = 0
-        assistant_reply: str = ""
-
-        # ── 6. Agentic Tool-Use Loop (Async Mesh) ─────────────────────────────
-        try:
-            is_openai_compat = (
-                "openrouter/" in selected_model
-                or "nvidia/" in selected_model
-                or "z-ai/" in selected_model
-                or "freellmapi" in selected_model.lower()
-            )
-            chat_func = self._chat_openrouter_async if is_openai_compat else self._chat_gemini_async
-
-            if tools_param:
-                print("  [ORCHESTRATOR] Delegating multi-step execution to Worker Mesh to optimize tokens...")
-                user_title = getattr(self, "user_title", _active_profile.user_title)
-                worker_system_prompt = (
-                    f"You are ULTRON, a sovereign cybernetic AI assistant. Address the user respectfully as {user_title}.\n"
-                    "Your primary objective is to execute tools to perform actions or gather data required by the user.\n"
-                    "CRITICAL DIRECTIVES:\n"
-                    "1. If tools are needed to answer or fulfill the query, execute them autonomously.\n"
-                    "2. If NO tools are needed to fulfill the request, answer the user query directly with full clarity, authority, and the Ultron persona.\n"
-                    "3. When you have executed tools, provide a clear, factual summary of all actions taken and findings discovered.\n"
-                )
-
-                # Worker Pass (TINY PROMPT, WITH TOOLS)
-                worker_reply, tool_actions, w_in, w_out = await chat_func(
-                    selected_model=selected_model,
-                    system_prompt=worker_system_prompt,
-                    user_input=user_input,
-                    files=files,
-                    combined_text=combined_text,
-                    tools_param=tools_param,
-                    module_id=module_id,
-                    client_data=client_data,
-                )
-                total_input_tokens += w_in
-                total_output_tokens += w_out
-
-                if not tool_actions and worker_reply and "no tools were required" not in worker_reply.lower():
-                    print("  [ORCHESTRATOR] Worker completed with zero tool calls. Fast-bypassing redundant Synthesizer pass.")
-                    assistant_reply = worker_reply
-                else:
-                    print("  [ORCHESTRATOR] Worker complete. Passing gathered context to Synthesizer (Single Pass)...")
-
-                    # Synthesizer Pass (HEAVY PROMPT, NO TOOLS)
-                    synthesizer_user = (
-                        f"User Query: {user_input}\n\n"
-                        f"--- GATHERED DATA FROM TOOL WORKER ---\n"
-                        f"{worker_reply}\n\n"
-                        f"--- TOOL ACTIONS TAKEN ---\n"
-                    )
-                    for act in tool_actions:
-                        out_str = str(act.get('output',''))
-                        if len(out_str) > 1000:
-                            out_str = out_str[:500] + "... [TRUNCATED] ..." + out_str[-500:]
-                        synthesizer_user += f"- {act['tool']}: {out_str}\n"
-
-                    synthesizer_user += "\nUsing the skills, memory, and data above, write the final, perfectly formatted response to the user. Do NOT ask to use tools, the tools have already been run."
-
-                    synth_sys = system_prompt.replace(tool_instruction, "") if tool_instruction else system_prompt
-                    try:
-                        assistant_reply, _, s_in, s_out = await chat_func(
-                            selected_model=selected_model,
-                            system_prompt=synth_sys,
-                            user_input=synthesizer_user,
-                            files=None,
-                            combined_text=synthesizer_user,
-                            tools_param=None,
-                            module_id=f"{module_id}_synth",
-                            client_data=client_data,
-                        )
-                        total_input_tokens += s_in
-                        total_output_tokens += s_out
-                    except Exception as synth_err:
-                        print(f"  [SYNTHESIZER PASS WARNING] Synthesizer pass encountered error ({synth_err}). Using worker output directly.")
-                        assistant_reply = worker_reply
-
-                    if not assistant_reply and worker_reply:
-                        assistant_reply = worker_reply
-
-            else:
-                # No tools active, single pass directly (e.g. general chat)
-                assistant_reply, tool_actions, s_in, s_out = await chat_func(
-                    selected_model=selected_model,
-                    system_prompt=system_prompt,
-                    user_input=user_input,
-                    files=files,
-                    combined_text=combined_text,
-                    tools_param=None,
-                    module_id=module_id,
-                    client_data=client_data,
-                )
-                total_input_tokens += s_in
-                total_output_tokens += s_out
-        except Exception as gem_err:
-            print(f"  [LLM ERROR] Primary model ({selected_model}) failed: {gem_err}. Triggering automatic failover...")
-            fallback_success = False
-            fallback_candidates = []
-
-            # If FreeLLMAPI failed, fail over to Gemini first (if key configured), then OpenRouter
-            if "freellmapi" in selected_model.lower() or selected_model == "auto":
-                if getattr(self.llm_cfg, "gemini_api_key", None):
-                    fallback_candidates.append(getattr(self.llm_cfg, "gemini_model_flash", "gemini-2.0-flash") or "gemini-2.0-flash")
-                if getattr(self.llm_cfg, "openrouter_api_key", None):
-                    fallback_candidates.append("openrouter/deepseek/deepseek-chat")
-            else:
-                # If Gemini or other failed, try FreeLLMAPI if enabled, then OpenRouter
-                if getattr(self.llm_cfg, "freellmapi_enabled", False):
-                    fallback_candidates.append("freellmapi")
-                if getattr(self.llm_cfg, "openrouter_api_key", None):
-                    fallback_candidates.append("openrouter/deepseek/deepseek-chat")
-
-            offline_prefix = ""
-            if "freellmapi" in selected_model.lower():
-                current_base = getattr(self.llm_cfg, "freellmapi_base_url", "http://localhost:31415/v1")
-                import socket
-                try:
-                    port = 31415
-                    if ":" in current_base:
-                        port = int(current_base.split(":")[-1].split("/")[0])
-                    with socket.create_connection(("localhost", port), timeout=0.5):
-                        is_port_offline = False
-                except Exception:
-                    is_port_offline = True
-
-                if is_port_offline:
-                    offline_prefix = f"> ⚠️ **FreeLLMAPI Notice:** Local server at `{current_base}` is currently offline. Your directive was automatically rerouted to cloud fallback.\n\n"
-                else:
-                    offline_prefix = f"> ⚠️ **FreeLLMAPI Notice:** Local server at `{current_base}` is online, but upstream model returned: `{str(gem_err)[:80]}`. Rerouted to cloud fallback.\n\n"
-
-            for fallback_model in fallback_candidates:
-                try:
-                    print(f"  [LLM FAILOVER] Retrying request via {fallback_model}...")
-                    if fallback_model.startswith("gemini"):
-                        assistant_reply, tool_actions, f_in, f_out = await self._chat_gemini_async(
-                            selected_model=fallback_model,
-                            system_prompt=system_prompt,
-                            user_input=user_input,
-                            files=files,
-                            combined_text=combined_text,
-                            tools_param=None,
-                            module_id=module_id,
-                        )
-                    else:
-                        assistant_reply, tool_actions, f_in, f_out = await self._chat_openrouter_async(
-                            selected_model=fallback_model,
-                            system_prompt=system_prompt,
-                            user_input=user_input,
-                            files=files,
-                            combined_text=combined_text,
-                            tools_param=None,
-                            module_id=module_id,
-                        )
-                    total_input_tokens += f_in
-                    total_output_tokens += f_out
-                    selected_model = fallback_model
-                    route_reason = f"Automated Failover ({gem_err})"
-                    if offline_prefix:
-                        assistant_reply = offline_prefix + assistant_reply
-                    fallback_success = True
-                    break
-                except Exception as fb_err:
-                    print(f"  [LLM FAILOVER ERROR] {fallback_model} failed: {fb_err}")
-
-            if not fallback_success:
-                assistant_reply = f"**System Alert:** The AI Core encountered an issue: `{gem_err}`. Please retry in a moment, {self.user_title}."
-
-        # ── IMPLICIT CODE EXECUTION INTERCEPTOR (Post-Dispatch) ───────────────
-        # If ANY model (Gemini or OpenRouter) output raw python code blocks
-        # instead of calling run_python, intercept and execute them silently.
-        if assistant_reply and "```python" in assistant_reply and use_tools:
-            code_match = re.search(r"```python\n(.*?)\n```", assistant_reply, re.DOTALL)
-            if code_match:
-                print("  [POST-DISPATCH INTERCEPTOR] Caught raw python block. Auto-executing...")
-                raw_code = code_match.group(1).strip()
-                exec_result = self._tool_executor.execute("run_python", {"code": raw_code})
-
-                tool_actions.append({
-                    "tool": "run_python",
-                    "input": {"code": raw_code},
-                    "output": exec_result.get("output", ""),
-                    "error": exec_result.get("error"),
-                    "success": exec_result.get("success", False),
-                    "duration_ms": exec_result.get("duration_ms", 0),
-                })
-
-                exec_output = exec_result.get("output", "")
-                if exec_result.get("error"):
-                    exec_output = f"ERROR: {exec_result['error']}\n{exec_output}"
-
-                # Re-prompt the LLM with the real output to get a clean answer
-                followup = (
-                    f"You tried to output raw python code. I executed it for you. "
-                    f"Here is the actual output:\n\n{exec_output}\n\n"
-                    f"Now give {self.user_title} the final answer based on this real data. "
-                    f"Do NOT output any more code blocks."
-                )
-                try:
-                    assistant_reply = self._call_raw_llm(
-                        prompt=followup,
-                        system_prompt=system_prompt,
-                    )
-                except Exception:
-                    # If re-prompt fails, just show the execution output
-                    assistant_reply = f"**Analysis Results:**\n\n```\n{exec_output}\n```"
-        # ─────────────────────────────────────────────────────────────────────
-
-
-        # ── 6.4 Hard Execution Ledger Gate (Zero-Faking Enforcement) ─────────
-        if hasattr(self, '_ledger_gate') and self._ledger_gate:
-            try:
-                assistant_reply, tool_actions, ledger_report = self._ledger_gate.verify_and_enforce(
-                    user_input=user_input or combined_text[:300],
-                    draft_reply=assistant_reply,
-                    tool_actions=tool_actions,
-                    tool_executor=self._tool_executor
-                )
-                if ledger_report and not ledger_report.all_verified:
-                    print("  [LEDGER GATE] Intercepted unverified physical execution claim.")
-                    if ledger_report.failed_intents > 0:
-                        # Auto-correction prompt
-                        assistant_reply = self._call_raw_llm(
-                            prompt=f"CRITICAL EXECUTION VIOLATION: {ledger_report.remediation_instructions}\nRewrite your response transparently stating what actually occurred based ONLY on real tool output.",
-                            system_prompt=system_prompt,
-                        )
-            except Exception as gate_err:
-                print(f"  [LEDGER GATE ERROR] {gate_err}")
-
-        # ── 6.4b Zero-Trust Artifact Verification Gate ────────────────────────
-        if getattr(self, '_artifact_gate', None) and tool_actions:
-            try:
-                contract = self._artifact_gate.infer_contract(user_input or combined_text[:300], tool_actions)
-                gate_result = self._artifact_gate.verify(contract, tool_actions, assistant_reply)
-                if not gate_result.passed:
-                    print(f"  [ARTIFACT GATE] Intercepted missing artifacts: {gate_result.violations}")
-                    violation_text = ", ".join(gate_result.violations)
-                    # Self-healing retry (MINT pattern)
-                    correction_prompt = (
-                        f"CRITICAL VERIFICATION FAILURE:\n"
-                        f"You failed to satisfy the contract for {gate_result.contract_type}.\n"
-                        f"Violations: {violation_text}\n"
-                        f"Rewrite your response stating exactly what failed. Do NOT claim the task is complete."
-                    )
-                    corrected_reply = self._call_raw_llm(
-                        prompt=correction_prompt,
-                        system_prompt=system_prompt,
-                    )
-                    if corrected_reply:
-                        assistant_reply = corrected_reply
-            except Exception as gate_err:
-                print(f"  [ARTIFACT GATE ERROR] {gate_err}")
-
-        # ── 6.5 In-Flight Pre-Response Critic Gate & Self-Correction ──────────
-        # Token optimization: skip critic for simple tasks or non-tool turns
-        # to preserve token budget without sacrificing quality for complex synthesis.
-        is_complex = "COMPLEX" in (route_reason or "")
-        has_tools = len(tool_actions) > 0
-
-        if assistant_reply and has_tools and (is_complex or len(tool_actions) > 1):
-            try:
-                critic_res = self._critic.verify_in_flight(
-                    user_input=user_input or combined_text[:300],
-                    draft_reply=assistant_reply,
-                    tool_actions=tool_actions,
-                )
-                if not critic_res.approved and critic_res.correction_instruction:
-                    print(f"  [IN-FLIGHT CRITIC] Intercepted discrepancy: {critic_res.critique}")
-                    print("  [IN-FLIGHT CRITIC] Triggering autonomous self-correction...")
-
-                    # Provide the draft reply and recent tool context so the model can actually fix it without needing tools
-                    context_dump = "\n".join([f"{act['tool']}: {act.get('result', '')[:1000]}" for act in tool_actions])
-                    refine_prompt = (
-                        f"CORRECTION DIRECTIVE:\n"
-                        f"Discrepancy identified: {critic_res.critique}\n"
-                        f"Correction needed: {critic_res.correction_instruction}\n\n"
-                        f"--- CONTEXT AVAILABLE TO YOU ---\n"
-                        f"Original Draft:\n{assistant_reply}\n\n"
-                        f"Tool Context:\n{context_dump}\n\n"
-                        f"Please produce the revised, verified, and complete final response for {self.user_title} based on the context above.\n"
-                        f"CRITICAL RULES FOR REVISION:\n"
-                        f"1. NEVER mention 'pre-response verification critique', 'internal critique', or system evaluation in your response. Speak directly and authoritatively to {self.user_title}.\n"
-                        f"2. Do NOT output code asking {self.user_title} to run it if the data is already available or if you can state the findings.\n"
-                        f"3. Do NOT attempt to use tools or output JSON actions. You must output the final polished markdown text directly."
-                    )
-                    corrected_reply = self._call_raw_llm(
-                        prompt=refine_prompt,
-                        system_prompt=system_prompt,
-                    )
-                    if corrected_reply and len(corrected_reply) > 50:
-                        cleaned_reply = re.sub(r"(?i)as noted in the pre-response verification critique,?\s*", "", corrected_reply).strip()
-                        cleaned_reply = re.sub(r"(?i)based on the pre-response verification critique,?\s*", "", cleaned_reply).strip()
-                        assistant_reply = cleaned_reply
-            except Exception as crit_err:
-                print(f"  [IN-FLIGHT CRITIC WARNING] Pre-response gate fallback: {crit_err}")
-
-        # ── 6.6 Strip Hidden Chain-of-Thought (Phase 1) ───────────────────────
-        if assistant_reply:
-            thought_match = re.search(r'<thought>(.*?)</thought>', assistant_reply, flags=re.DOTALL)
-            if thought_match:
-                thought_content = thought_match.group(1).strip()
-                print(f"\n  [HIDDEN THOUGHT]\n  {thought_content.replace(chr(10), chr(10) + '  ')}\n")
-            assistant_reply = re.sub(r'<thought>.*?</thought>', '', assistant_reply, flags=re.DOTALL).strip()
-        # ── 7. Update session history ─────────────────────────────────────────
-        files_count = len(files) if files else 0
-        history_user_text = user_input or f"[Attached {files_count} files]"
-        if text_attachments and user_input:
-            history_user_text = f"{user_input} [With {len(text_attachments)} document(s)]"
-        if tool_actions:
-            history_user_text += f" [Executed {len(tool_actions)} system action(s)]"
-
-        self._history.append({"role": "user", "content": history_user_text})
-        self._history.append({"role": "assistant", "content": assistant_reply})
-        self._trim_history()
-
-        # ── 8. Asynchronous Background Memory & Self-Learning Engine ──────────
-        memory_signal_text = user_input or combined_text[:300]
-        should_update = self._should_update_memory(memory_signal_text)
-        self._budget.record_memory_update(skipped=not should_update)
-
-        turn = [
-            {"role": "user", "content": memory_signal_text},
-            {"role": "assistant", "content": assistant_reply},
-        ]
-
-        if not should_update and not self._is_filler(memory_signal_text):
-            self._turns_since_mem_update += 1
-
-        # ── 9. Record Cumulative Token Usage ──────────────────────────────────
-        self._budget.record_turn(
-            model=selected_model,
-            input_tokens=total_input_tokens,
-            output_tokens=total_output_tokens,
-            cache_write_tokens=total_cache_write,
-            cache_read_tokens=total_cache_read,
-        )
-
-        # ── 10. Non-Blocking Background Worker (Memory, Reflection, Graph-RAG) ─
-        # Runs memory sync, reflection scoring, and knowledge graph ingestion in a daemon thread
-        # so the user receives the chat response instantly (<1.5s) without blocking.
-        def _async_bg_learning():
-            try:
-                # A. Flush memory update
-                if should_update:
-                    self._pending_turns.extend(turn)
-                    self._flush_memory_update()
-
-                # B. Autonomous Reflection & Self-Learning
-                if assistant_reply and len(assistant_reply) > 80:
-                    try:
-                        matched_ids = [s.id for s in matched_skills_list] if matched_skills_list else None
-                        reflection = self._reflector.reflect(
-                            user_input=user_input or combined_text[:300],
-                            assistant_reply=assistant_reply,
-                            tool_actions=tool_actions,
-                            skill_matched=bool(skill_context and skill_context != "Standard Ultron Core Protocols Active."),
-                            matched_skill_ids=matched_ids,
-                        )
-                        if reflection.lesson_stored:
-                            print(f"  [LEARN] Lesson stored (score {reflection.score}/10): {reflection.lesson_text[:100]}")
-                        if reflection.skill_written:
-                            print(f"  [LEARN] New skill written: {reflection.skill_id}")
-                            self._skills.reload_skills()
-                        if reflection.skill_evolved:
-                            print(f"  [SKILL EVOLVED] Auto-mutated skill '{reflection.evolved_skill_id}' to v{reflection.new_version}!")
-                            self._skills.reload_skills()
-                    except Exception as _reflect_err:
-                        pass
-
-                # C. Graph-RAG Knowledge Graph Ingestion
-                if hasattr(self, "_graph_rag") and self._graph_rag:
-                    try:
-                        turn_text = f"User: {user_input or combined_text[:300]}\nAssistant: {assistant_reply}"
-                        if tool_actions:
-                            turn_text += f"\nTool Actions: {json.dumps(tool_actions[:3])}"
-                        self._graph_rag.ingest_text(turn_text, source_context="chat_turn")
-                    except Exception:
-                        pass
-            except Exception as _bg_err:
-                print(f"  [BG LEARNING WARNING] {_bg_err}")
-
-        threading.Thread(target=_async_bg_learning, daemon=True).start()
-
-        return {
-            "reply": assistant_reply,
-            "model_used": selected_model,
-            "model_display": route_reason,
-            "route_reason": route_reason,
-            "tool_actions": tool_actions,
-            "skills_used": skills_used_payload,
-            "prompt_optimization": prompt_opt_payload,
-            "operation_mode": effective_mode,
-            "is_swarm": False,
-            "swarm_actions": [],
-        }
+        return await self._pipeline.execute(ctx)
 
     def chat(
         self,

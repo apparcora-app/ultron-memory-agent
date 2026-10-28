@@ -8,6 +8,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 import asyncio
+import pytest
 from agent import MemoryAgent
 from file_processor import ProcessedFile
 
@@ -41,6 +42,7 @@ async def run_test():
     assert len(reply) > 0
 
 
+@pytest.mark.llm_live
 def test_isolation():
     asyncio.run(run_test())
 

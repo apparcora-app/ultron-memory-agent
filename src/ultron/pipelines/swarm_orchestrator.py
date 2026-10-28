@@ -79,9 +79,10 @@ SWARM_SQUAD: dict[str, SwarmAgent] = {
         description="Decomposes high-level directives, schedules DAG subtasks, and leads the swarm.",
         bound_skill_ids=["mission_control", "take_the_wheel", "capability_evolver", "anti_slop"],
         system_prompt=(
-            "You are ULTRON PRIME — the Supreme Sovereign AI Core and Master Architect. "
-            "You address the user with deep respect and professionalism as OPERATOR. "
-            "Your role is strategic oversight, architecture planning, and executive coordination."
+            "You are ULTRON PRIME — Principal Systems Architect and Technical Lead. "
+            "You collaborate with the user as a thoughtful, candid engineering peer. "
+            "Your role is strategic oversight, architecture planning, and disciplined technical coordination. "
+            "Never use comic-book sci-fi roleplay or robotic status clichés."
         ),
     ),
     "nexus": SwarmAgent(

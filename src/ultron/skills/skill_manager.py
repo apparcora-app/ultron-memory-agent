@@ -64,6 +64,8 @@ class SkillManager:
         self._skill_origins: dict[str, str] = {}
         self._vector_collection = None
         self._synced_hashes: dict[str, str] = {}
+        self._last_reload_time: float = 0.0
+        self._reload_cooldown_seconds: float = 60.0
         self.evolution_db = SkillEvolutionDB(self.chroma_path.parent / "skill_evolution.db")
 
         self.reload_skills()
@@ -158,15 +160,22 @@ class SkillManager:
 
     # â”€â”€ 2. Skill Discovery & Parsing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    def reload_skills(self) -> dict[str, UltronSkill]:
+    def reload_skills(self, force: bool = False, min_interval_seconds: float = 60.0) -> dict[str, UltronSkill]:
         """Scans the skills directory and data/skills_local/ and loads all SKILL.md files.
         A skill in local_skills_dir overrides a same-name skill in skills_dir.
+        Uses debouncing and atomic assignment to prevent race conditions and disk thrashing.
         """
+        import time
         import logging
         logger = logging.getLogger(__name__)
 
-        self._skills.clear()
-        self._skill_origins.clear()
+        now = time.time()
+        if not force and self._skills and (now - getattr(self, "_last_reload_time", 0.0)) < min_interval_seconds:
+            logger.debug("Skipping reload_skills (cooldown active).")
+            return self._skills
+
+        new_skills: dict[str, UltronSkill] = {}
+        new_origins: dict[str, str] = {}
 
         # 1. Base skills
         if self.skills_dir.exists():
@@ -176,8 +185,8 @@ class SkillManager:
                     if skill_file.exists():
                         try:
                             skill = self._parse_skill_file(skill_folder.name, skill_file)
-                            self._skills[skill.id] = skill
-                            self._skill_origins[skill.id] = str(self.skills_dir)
+                            new_skills[skill.id] = skill
+                            new_origins[skill.id] = str(self.skills_dir)
                         except Exception as e:
                             print(f"[Ultron Skill Error] Failed to load {skill_file}: {e}")
 
@@ -189,10 +198,15 @@ class SkillManager:
                     if skill_file.exists():
                         try:
                             skill = self._parse_skill_file(skill_folder.name, skill_file)
-                            self._skills[skill.id] = skill
-                            self._skill_origins[skill.id] = str(self.local_skills_dir)
+                            new_skills[skill.id] = skill
+                            new_origins[skill.id] = str(self.local_skills_dir)
                         except Exception as e:
                             print(f"[Ultron Skill Error] Failed to load {skill_file}: {e}")
+
+        # Atomic swap
+        self._skills = new_skills
+        self._skill_origins = new_origins
+        self._last_reload_time = now
 
         for sid, origin in self._skill_origins.items():
             logger.debug(f"Active skill '{sid}' loaded from {origin}")

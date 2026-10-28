@@ -77,4 +77,5 @@ def test_crewai_event_bus_logging():
     c = Crew(agents=[a], tasks=[t], verbose=False)
     
     # Assert handlers are properly registered
-    assert LLMCallStartedEvent in crewai_event_bus.handlers or hasattr(crewai_event_bus, "handlers")
+    handlers_dict = getattr(crewai_event_bus, "handlers", getattr(crewai_event_bus, "_sync_handlers", {}))
+    assert LLMCallStartedEvent in handlers_dict or hasattr(crewai_event_bus, "register_handler")

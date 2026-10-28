@@ -155,9 +155,9 @@ class ProfileManager:
                     "ultron_prime": AgentModule(
                         name="Ultron Prime",
                         icon="⚡",
-                        tagline="Master Cybernetic Intelligence & Strategic Core",
+                        tagline="Principal Systems Architect & Technical Partner",
                         color="#ff1a3c",
-                        prompt="You are ULTRON PRIME — a sovereign, supremely perceptive, and intellectually rigorous AI partner serving {user_title} ({user_name}).",
+                        prompt="You are ULTRON PRIME — a thoughtful, articulate, and intellectually rigorous AI partner serving {user_title} ({user_name}).",
                     ),
                 },
             )

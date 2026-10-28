@@ -10,6 +10,10 @@ from ultron.concurrency.atomic_io import (
     safe_read,
     safe_read_json,
 )
+from ultron.concurrency.learning_worker import (
+    BackgroundLearningSupervisor,
+    LearningTask,
+)
 from ultron.concurrency.locks import (
     AsyncLockRegistry,
     LockAcquisitionTimeoutError,
@@ -30,6 +34,8 @@ __all__ = [
     "OCCStateManager",
     "StateConcurrencyConflictError",
     "default_occ_manager",
+    "BackgroundLearningSupervisor",
+    "LearningTask",
     "atomic_write",
     "atomic_write_json",
     "async_atomic_write",
